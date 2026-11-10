@@ -4,11 +4,12 @@ import {
   ModalForm,
   PageContainer,
   ProFormRadio,
+  ProFormSelect,
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
 import { history } from '@umijs/max';
-import { App, Button, Popconfirm } from 'antd';
+import { App, Button, Popconfirm, Tag } from 'antd';
 import React, { useRef, useState } from 'react';
 import { ROLE_NAME_RULES, ROLE_STATUS_OPTIONS } from '@/constants';
 import { usePermissions } from '@/services/system/permissions';
@@ -26,6 +27,52 @@ const ROLE_STATUS_ENUM: NonNullable<ProColumns<SystemRole>['valueEnum']> = {
   1: { text: '启用', status: 'Success' },
   0: { text: '禁用', status: 'Default' },
 };
+
+/** 通知 biz 标识格式（与后端 proto 校验一致） */
+const BIZ_ID_PATTERN = /^[a-z0-9_-]{1,64}$/;
+
+/** 角色表单值（新建含 code；通知 biz 范围空 = 不限） */
+interface RoleFormValues {
+  name: string;
+  code: string;
+  status: RoleStatus;
+  bizScope?: string[];
+}
+
+/**
+ * 通知 biz 范围字段（新建/编辑共用）：空 = 不限（现有角色缺省）。
+ * 用户可管范围 = 启用角色 scope 并集，任一角色不限即不限；超管恒不限。
+ */
+const bizScopeField = (
+  <ProFormSelect
+    name="bizScope"
+    label="通知业务范围"
+    tooltip="限制该角色可管理的通知业务（biz）；留空 = 不限。多角色取并集，任一角色不限即不限"
+    fieldProps={{
+      mode: 'tags',
+      open: false,
+      tokenSeparators: [',', ' '],
+      placeholder: '输入 biz 标识后回车，留空 = 不限',
+    }}
+    rules={[
+      {
+        validator: (_: unknown, value?: string[]) => {
+          const list = value ?? [];
+          if (list.length > 64) return Promise.reject(new Error('最多 64 项'));
+          if (new Set(list).size !== list.length) {
+            return Promise.reject(new Error('条目不可重复'));
+          }
+          if (list.some((item) => !BIZ_ID_PATTERN.test(item))) {
+            return Promise.reject(
+              new Error('1-64 位小写字母/数字/下划线/连字符'),
+            );
+          }
+          return Promise.resolve();
+        },
+      },
+    ]}
+  />
+);
 
 const RoleList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
@@ -69,6 +116,16 @@ const RoleList: React.FC = () => {
       dataIndex: 'status',
       valueEnum: ROLE_STATUS_ENUM,
       width: 90,
+    },
+    {
+      title: '通知业务范围',
+      dataIndex: 'bizScope',
+      search: false,
+      ellipsis: true,
+      render: (_, record) =>
+        record.bizScope?.length
+          ? record.bizScope.map((bizId) => <Tag key={bizId}>{bizId}</Tag>)
+          : '不限',
     },
     {
       title: '创建时间',
@@ -175,7 +232,7 @@ const RoleList: React.FC = () => {
       </PageContainer>
 
       {/* 新建角色（code 创建后不可修改） */}
-      <ModalForm
+      <ModalForm<RoleFormValues>
         key="create-role"
         title="新建角色"
         width={480}
@@ -191,6 +248,7 @@ const RoleList: React.FC = () => {
             name: values.name,
             code: values.code,
             status: values.status,
+            bizScope: values.bizScope?.length ? values.bizScope : undefined,
           });
           message.success('创建成功');
           reload();
@@ -215,11 +273,12 @@ const RoleList: React.FC = () => {
           label="状态"
           options={ROLE_STATUS_OPTIONS}
         />
+        {bizScopeField}
       </ModalForm>
 
-      {/* 编辑角色：仅 name / status 可改，打开时拉取详情 */}
+      {/* 编辑角色：name / status / 通知业务范围（整组替换）可改，打开时拉取详情 */}
       {editRow && (
-        <ModalForm
+        <ModalForm<RoleFormValues>
           key={`edit-role-${editRow.id}`}
           title={`编辑角色：${editRow.name}`}
           width={480}
@@ -231,7 +290,12 @@ const RoleList: React.FC = () => {
           params={{ id: editRow.id }}
           request={async ({ id }) => {
             const { role } = await getRole(id);
-            return { name: role.name, code: role.code, status: role.status };
+            return {
+              name: role.name,
+              code: role.code,
+              status: role.status,
+              bizScope: role.bizScope ?? [],
+            };
           }}
           submitter={{
             searchConfig: { submitText: '保存', resetText: '取消' },
@@ -240,6 +304,8 @@ const RoleList: React.FC = () => {
             await updateRole(editRow.id, {
               name: values.name,
               status: values.status,
+              // 整组替换：表单回显即当前值，空列表 = 清空 = 不限
+              bizScope: { items: values.bizScope ?? [] },
             });
             message.success('保存成功');
             reload();
@@ -258,6 +324,7 @@ const RoleList: React.FC = () => {
             label="状态"
             options={ROLE_STATUS_OPTIONS}
           />
+          {bizScopeField}
         </ModalForm>
       )}
     </>

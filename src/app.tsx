@@ -41,6 +41,10 @@ export async function getInitialState(): Promise<{
   roles?: SystemRole[];
   menus?: string[];
   elements?: string[];
+  /** 可管理的通知 biz 并集；bizUnrestricted=true 时为空 */
+  bizScope?: string[];
+  /** 通知 biz 不受限（超管或任一启用角色 scope 为空） */
+  bizUnrestricted?: boolean;
   loading?: boolean;
   fetchUserInfo?: () => Promise<LoginProfile | undefined>;
   settingDrawerOpen?: boolean;
@@ -80,6 +84,8 @@ export async function getInitialState(): Promise<{
       roles: profile?.roles,
       menus: profile?.menus ?? [],
       elements: profile?.elements ?? [],
+      bizScope: profile?.bizScope ?? [],
+      bizUnrestricted: profile?.bizUnrestricted,
       settings,
       systemConfig,
       settingDrawerOpen: false,

@@ -18,10 +18,31 @@ export default function access(
   const isAdmin = currentUser?.isAdmin === true;
   const has = (code: MenuPermissionCode) =>
     isAdmin || (menus ?? []).includes(code);
+  // 通知模块 Tab 容器页：任一子页可见即可进入容器（Tab 级再按子页权限过滤）
+  const canNotifyRule =
+    has('notify.route') || has('notify.silence') || has('notify.template');
+  const canNotifyTrace =
+    has('notify.event') ||
+    has('notify.dispatch') ||
+    has('notify.delivery_log') ||
+    has('notify.dlq');
   return {
     canAdmin: isAdmin,
     canSystemUser: has('system.user'),
     canSystemRole: has('system.role'),
+    canSystemLoginLog: has('system.login_log'),
     canSystemConfig: has('system.config'),
+    canNotifyChannel: has('notify.channel'),
+    canNotifyTemplate: has('notify.template'),
+    canNotifyRoute: has('notify.route'),
+    canNotifySilence: has('notify.silence'),
+    canNotifySubscription: has('notify.subscription'),
+    canNotifyProducer: has('notify.producer'),
+    canNotifyEvent: has('notify.event'),
+    canNotifyDispatch: has('notify.dispatch'),
+    canNotifyDeliveryLog: has('notify.delivery_log'),
+    canNotifyDlq: has('notify.dlq'),
+    canNotifyRule,
+    canNotifyTrace,
   };
 }

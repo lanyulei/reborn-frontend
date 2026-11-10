@@ -6,7 +6,7 @@ Ant Design Pro — React enterprise boilerplate on Umi Max v4, antd v6, ProCompo
 
 ## Commands
 
-`npm start` / `npm run dev` (dev server), `npm run build` (utoopack), `npm run lint` (Biome+tsc), `npm run test` (Jest), `npx antd lint ./src` (antd-specific checks).
+`npm start` / `npm run dev` (dev server), `npm run build` (utoopack), `npm run lint` (Biome+tsc), `npm run test` (Vitest, browser mode via Playwright Chromium), `npx antd lint ./src` (antd-specific checks).
 
 Other: `npm run openapi` (regenerate `src/services/`), `npm run simple` (**irreversible** — commit first), `npm run biome` (auto-fix), `npm run tsc` (type-check only).
 
@@ -28,7 +28,7 @@ Other: `npm run openapi` (regenerate `src/services/`), `npm run simple` (**irrev
 
 **Auth**: real Go Kratos backend (`/api/v1/*`, spec: `../backend/core/api/openapi.swagger.json`). `POST /api/v1/login` → accessToken + refreshToken stored in localStorage (`src/utils/auth.ts`). `getInitialState()` → `GET /api/v1/me`; 401 → single-flight refresh via `POST /api/v1/token/refresh` (`src/services/system/request.ts`) → retry → login redirect. `access.ts`: `canAdmin = currentUser.isAdmin === true` (gates `/system`). Dev proxy `/api/` → `http://127.0.0.1:8010`. System pages: `src/pages/system/{user,role}`.
 
-**State**: `useModel('filename')` for global hooks (`src/models/`). `useModel('@@initialState')` for currentUser/settings. ProTable `request` prop for most data loading. `@tanstack/react-query` for complex server state.
+**State**: `useModel('@@initialState')` for currentUser/settings/permissions — the only model in use today; `src/models/` doesn't exist yet (model plugin is enabled, adding `src/models/*.ts` works out of the box). ProTable `request` prop for all data loading today. `@tanstack/react-query` is wired with default options but currently unused — sanctioned for complex server state.
 
 **Styling priority**: Tailwind CSS v4 (layout) → antd-style v4 / `createStyles` (theme tokens) → CSS Modules → Less (legacy only).
 
@@ -57,7 +57,7 @@ Run `/antd` in Claude Code for any antd-related work. It provides access to `@an
 
 ## Page Co-location
 
-Each page dir: `index.tsx`, optional `service.ts`, `_mock.ts`, `data.d.ts`, style files. Keep page-specific code with the page.
+System pages are single `index.tsx` files — services live in `src/services/system/`, shared enums/options in `src/constants/`. Co-location (`index.tsx` + `service.ts`/`style.ts`/`data.d.ts`) currently only in `src/components/ChatPanel/` and `src/pages/account/settings/`. No `_mock.ts` anywhere — there is no mock layer, dev requires the Go backend on `127.0.0.1:8010`.
 
 # CLAUDE.md
 

@@ -17,6 +17,8 @@ export interface SystemRole {
   name: string;
   code: string;
   status: RoleStatus;
+  /** 可管理的通知 biz 列表；空 = 不限。用户可管范围 = 启用角色 scope 并集，任一角色不限即不限 */
+  bizScope?: string[];
   createTime?: string;
   updateTime?: string;
 }
@@ -84,6 +86,26 @@ export interface SystemUser {
   status: UserStatus;
   createTime?: string;
   updateTime?: string;
+}
+
+/** 登录结果：1=成功 2=用户不存在 3=密码错误 4=账号禁用 5=签发令牌失败（对外登录接口 2/3 统一口径防枚举，细分值仅供审计检索） */
+export type LoginLogResult = 1 | 2 | 3 | 4 | 5;
+
+/** LoginLog 登录日志实体（append-only 审计，由登录链路自动落库，无写接口） */
+export interface LoginLog {
+  /** 日志唯一标识（UUIDv7） */
+  id: string;
+  /** 用户 ID；用户不存在的失败尝试为空串 */
+  userId: string;
+  /** 尝试的登录名原文 */
+  username: string;
+  result: LoginLogResult;
+  /** 客户端 IP，未取到为空串 */
+  ip: string;
+  /** 客户端 User-Agent，未取到为空串 */
+  userAgent: string;
+  /** 登录尝试时间 */
+  createTime?: string;
 }
 
 /** 通用分页查询参数 */

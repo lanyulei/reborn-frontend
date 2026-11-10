@@ -23,6 +23,8 @@ export interface CreateRoleParams {
   code: string;
   /** 未指定默认启用（1） */
   status?: RoleStatus;
+  /** 可管理的通知 biz 列表，≤64 项去重；空 = 不限 */
+  bizScope?: string[];
 }
 
 export interface UpdateRoleParams {
@@ -30,6 +32,8 @@ export interface UpdateRoleParams {
   name?: string;
   /** 新状态：1=启用 0=禁用 */
   status?: RoleStatus;
+  /** 通知 biz 范围整组替换：items 为空 = 清空 = 不限；不传 = 不改 */
+  bizScope?: { items: string[] };
 }
 
 /** ListRoles 分页查询角色，page_size 上限 100 */

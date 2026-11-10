@@ -31,6 +31,10 @@ export interface LoginProfile {
   menus?: string[];
   /** 有效页面元素码并集（仅启用角色），页面内按钮/操作显隐用 */
   elements?: string[];
+  /** 可管理的通知 biz 并集（字典序）；bizUnrestricted=true 时为空 */
+  bizScope?: string[];
+  /** 通知 biz 不受限（超管或任一启用角色 scope 为空）；受限用户列表查询须带 biz 过滤 */
+  bizUnrestricted?: boolean;
 }
 
 /** Login 登录：校验用户名密码，签发 access + refresh 双令牌 */

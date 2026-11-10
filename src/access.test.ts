@@ -78,6 +78,71 @@ describe('access', () => {
     expect(result.canSystemRole).toBe(false);
   });
 
+  it('should grant login log access by granted menu code', () => {
+    // 仅授予登录日志：可见登录日志、不可见用户管理
+    const result = access({
+      currentUser: normalUser,
+      menus: ['system.login_log'],
+    });
+
+    expect(result.canSystemLoginLog).toBe(true);
+    expect(result.canSystemUser).toBe(false);
+  });
+
+  it('should grant notify channel access by granted menu code', () => {
+    // 仅授予通知渠道：可见通知渠道、不可见系统菜单
+    const result = access({
+      currentUser: normalUser,
+      menus: ['notify.channel'],
+    });
+
+    expect(result.canNotifyChannel).toBe(true);
+    expect(result.canSystemUser).toBe(false);
+  });
+
+  it('should grant each notify menu independently by granted code', () => {
+    // 通知模块各菜单独立授权：授予配置面 + 运行面各一，未授予的不可见
+    const result = access({
+      currentUser: normalUser,
+      menus: ['notify.route', 'notify.dlq'],
+    });
+
+    expect(result.canNotifyRoute).toBe(true);
+    expect(result.canNotifyDlq).toBe(true);
+    // 其余通知菜单（渠道/模板/静默/订阅/生产者/事件/任务/明细）均未授予
+    expect(result.canNotifyChannel).toBe(false);
+    expect(result.canNotifyTemplate).toBe(false);
+    expect(result.canNotifySilence).toBe(false);
+    expect(result.canNotifySubscription).toBe(false);
+    expect(result.canNotifyProducer).toBe(false);
+    expect(result.canNotifyEvent).toBe(false);
+    expect(result.canNotifyDispatch).toBe(false);
+    expect(result.canNotifyDeliveryLog).toBe(false);
+  });
+
+  it('should open notify tab containers when any child menu is granted', () => {
+    // 仅授予发送任务：投递追踪容器可见，通知规则容器不可见
+    const result = access({
+      currentUser: normalUser,
+      menus: ['notify.dispatch'],
+    });
+
+    expect(result.canNotifyTrace).toBe(true);
+    expect(result.canNotifyDispatch).toBe(true);
+    expect(result.canNotifyEvent).toBe(false);
+    expect(result.canNotifyRule).toBe(false);
+  });
+
+  it('should close notify tab containers when no child menu is granted', () => {
+    const result = access({
+      currentUser: normalUser,
+      menus: ['notify.channel'],
+    });
+
+    expect(result.canNotifyRule).toBe(false);
+    expect(result.canNotifyTrace).toBe(false);
+  });
+
   it('should grant all menus for admin regardless of permissions', () => {
     const result = access({ currentUser: adminUser, menus: [] });
 
