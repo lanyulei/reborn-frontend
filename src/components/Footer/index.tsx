@@ -21,7 +21,8 @@ const Footer: React.FC = () => {
   const text = initialState?.systemConfig?.footer || `LanYuLei © ${year}`;
 
   return (
-    <div className={styles.footer}>
+    // data-layout-footer：供需要扣除页脚高度的整页（如智能助手）定位测量
+    <div className={styles.footer} data-layout-footer>
       <div>{text}</div>
     </div>
   );

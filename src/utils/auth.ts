@@ -15,6 +15,14 @@ export function getRefreshToken(): string | null {
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
+/** access token 过期时间戳（毫秒）；未知返回 null */
+export function getTokenExpiresAt(): number | null {
+  const raw = localStorage.getItem(EXPIRES_AT_KEY);
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
 export function setTokens(
   accessToken: string,
   refreshToken: string,

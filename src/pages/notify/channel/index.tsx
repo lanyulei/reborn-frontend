@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   DrawerForm,
@@ -15,12 +14,12 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import { Link, useAccess } from '@umijs/max';
-import { App, Button, Modal, Popconfirm, Tag, Typography } from 'antd';
+import { App, Modal, Tag, Typography } from 'antd';
 import React, { useRef, useState } from 'react';
+import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
 import {
-  NOTIFY_CHANNEL_TYPE_ENUM,
+  ENABLED_META,
   NOTIFY_CHANNEL_TYPE_META,
-  NOTIFY_CHANNEL_TYPE_TEXT,
   NOTIFY_WEBHOOK_TIMEOUT_DEFAULT_S,
 } from '@/constants';
 import {
@@ -38,16 +37,18 @@ import type {
 } from '@/services/notify/typings';
 import { usePermissions } from '@/services/system/permissions';
 import {
+  useEnumText,
+  useFormRules,
+  useSubmitter,
+  useT,
+  useValueEnum,
+} from '@/utils/i18n';
+import { parseBoolParam, toTableResult } from '@/utils/table';
+import {
   BizIdFormField,
   BizIdReadonlyField,
-  bizIdColumn,
+  useBizIdColumn,
 } from '../components/bizScope';
-
-/** 渠道状态枚举（表格筛选 + 展示）；查询参数经 request 归一化为布尔 */
-const CHANNEL_ENABLED_ENUM: NonNullable<ProColumns['valueEnum']> = {
-  true: { text: '启用', status: 'Success' },
-  false: { text: '停用', status: 'Error' },
-};
 
 /** 两列栅格：半行 / 整行 */
 const HALF = { span: 12 };
@@ -165,46 +166,49 @@ const ChannelConfigFields: React.FC<{
   type: NotifyChannelType;
   editing?: boolean;
 }> = ({ type, editing }) => {
+  const t = useT();
+  const rules = useFormRules();
   const meta = NOTIFY_CHANNEL_TYPE_META[type];
+  const secretLabel = t(meta.secretLabelId);
   return (
     <>
       {meta.kind === 'email' && (
         <>
           <ProFormText
             name="host"
-            label="SMTP 服务器"
+            label={t('pages.notify.channel.form.host')}
             colProps={HALF}
-            placeholder="如 smtp.example.com"
+            placeholder={t('pages.notify.channel.form.host.placeholder')}
             rules={[
-              { required: true, message: '请输入 SMTP 服务器' },
-              { max: 253, message: '最多 253 位' },
+              rules.required(t('pages.notify.channel.form.host')),
+              rules.max(253),
             ]}
           />
           <ProFormDigit
             name="port"
-            label="端口"
+            label={t('pages.notify.channel.form.port')}
             colProps={HALF}
             placeholder="25 / 465 / 587"
             min={1}
             max={65535}
             fieldProps={{ precision: 0 }}
-            rules={[{ required: true, message: '请输入端口' }]}
+            rules={[rules.required(t('pages.notify.channel.form.port'))]}
           />
           <ProFormText
             name="username"
-            label="认证用户名"
+            label={t('pages.notify.channel.form.username')}
             colProps={HALF}
-            placeholder="可选"
-            rules={[{ max: 64, message: '最多 64 位' }]}
+            placeholder={t('common.optional')}
+            rules={[rules.max(64)]}
           />
           <ProFormText
             name="fromAddr"
-            label="发件人地址"
+            label={t('pages.notify.channel.form.fromAddr')}
             colProps={HALF}
             placeholder="noreply@example.com"
             rules={[
-              { required: true, message: '请输入发件人地址' },
-              { type: 'email', message: '邮箱格式不正确' },
+              rules.required(t('pages.notify.channel.form.fromAddr')),
+              rules.email(),
             ]}
           />
           <ProFormSwitch name="starttls" label="STARTTLS" colProps={HALF} />
@@ -214,72 +218,86 @@ const ChannelConfigFields: React.FC<{
         <>
           <ProFormText
             name="url"
-            label="目标地址"
+            label={t('pages.notify.channel.form.url')}
             colProps={FULL}
             placeholder="https://…"
             rules={[
-              { required: true, message: '请输入目标地址' },
-              { pattern: /^https:\/\//, message: '必须以 https:// 开头' },
+              rules.required(t('pages.notify.channel.form.url')),
+              {
+                pattern: /^https:\/\//,
+                message: t('pages.notify.channel.form.url.https'),
+              },
             ]}
           />
           <ProFormList
             name="headers"
-            label="附加请求头"
+            label={t('pages.notify.channel.form.headers')}
             colProps={FULL}
-            tooltip="随出站请求携带的鉴权头等，最多 16 对"
+            tooltip={t('pages.notify.channel.form.headers.tooltip')}
             max={16}
-            creatorButtonProps={{ creatorButtonText: '添加请求头' }}
+            creatorButtonProps={{
+              creatorButtonText: t('pages.notify.channel.form.headers.add'),
+            }}
           >
             <ProForm.Group>
               <ProFormText
                 name="headerKey"
-                label="名称"
+                label={t('pages.notify.channel.form.headers.key')}
                 rules={[
-                  { required: true, message: '请输入名称' },
-                  { max: 128, message: '最多 128 位' },
+                  rules.required(t('pages.notify.channel.form.headers.key')),
+                  rules.max(128),
                 ]}
               />
               <ProFormText
                 name="headerValue"
-                label="值"
-                rules={[{ max: 512, message: '最多 512 位' }]}
+                label={t('pages.notify.channel.form.headers.value')}
+                rules={[rules.max(512)]}
               />
             </ProForm.Group>
           </ProFormList>
           <ProFormDigit
             name="timeoutS"
-            label="出站超时（秒）"
+            label={t('pages.notify.channel.form.timeout')}
             colProps={HALF}
-            tooltip="1-10 秒；后端缺省 5"
+            tooltip={t('pages.notify.channel.form.timeout.tooltip')}
             initialValue={NOTIFY_WEBHOOK_TIMEOUT_DEFAULT_S}
             min={1}
             max={10}
             fieldProps={{ precision: 0 }}
-            rules={[{ required: true, message: '请输入出站超时（1-10 秒）' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.notify.channel.form.timeout.required'),
+              },
+            ]}
           />
         </>
       )}
       {meta.kind === 'robot' && (
         <ProFormSelect
           name="atMobiles"
-          label="@ 提醒手机号"
+          label={t('pages.notify.channel.form.atMobiles')}
           colProps={FULL}
-          tooltip="可选，最多 20 个、每个 5-32 位"
+          tooltip={t('pages.notify.channel.form.atMobiles.tooltip')}
           fieldProps={{
             mode: 'tags',
             open: false,
             tokenSeparators: [',', ' '],
-            placeholder: '输入手机号后回车，可多个',
+            placeholder: t('pages.notify.channel.form.atMobiles.placeholder'),
           }}
           rules={[
             {
               validator: (_, value?: string[]) => {
                 const list = value ?? [];
                 if (list.length > 20) {
-                  return Promise.reject(new Error('最多 20 个'));
+                  return Promise.reject(
+                    new Error(t('pages.notify.channel.form.atMobiles.max')),
+                  );
                 }
                 if (list.some((item) => item.length < 5 || item.length > 32)) {
-                  return Promise.reject(new Error('每个手机号 5-32 位'));
+                  return Promise.reject(
+                    new Error(t('pages.notify.channel.form.atMobiles.length')),
+                  );
                 }
                 return Promise.resolve();
               },
@@ -289,17 +307,19 @@ const ChannelConfigFields: React.FC<{
       )}
       <ProFormText.Password
         name="secret"
-        label={meta.secretLabel}
+        label={secretLabel}
         colProps={HALF}
         placeholder={
-          editing ? '留空保留原凭据，填写即轮换' : meta.secretPlaceholder
+          editing
+            ? t('pages.notify.channel.form.secret.editPlaceholder')
+            : t(meta.secretPlaceholderId)
         }
         rules={[
           {
             required: !editing && meta.secretRequired,
-            message: `请输入${meta.secretLabel}`,
+            message: t('common.validation.required', { label: secretLabel }),
           },
-          { min: 1, max: 512, message: '1-512 位' },
+          rules.lengthRange(1, 512),
         ]}
       />
       {/* 机器人签名密钥（钉钉加签 / 飞书签名校验）：可选、只写不读 */}
@@ -307,20 +327,22 @@ const ChannelConfigFields: React.FC<{
         <>
           <ProFormText.Password
             name="signSecret"
-            label="签名密钥"
+            label={t('pages.notify.channel.form.signSecret')}
             colProps={HALF}
-            tooltip="钉钉「加签」/ 飞书「签名校验」密钥，可选；只写不读"
+            tooltip={t('pages.notify.channel.form.signSecret.tooltip')}
             placeholder={
-              editing ? '留空保留原密钥，填写即轮换' : '可选，1-512 位'
+              editing
+                ? t('pages.notify.channel.form.signSecret.editPlaceholder')
+                : t('pages.notify.channel.form.signSecret.placeholder')
             }
-            rules={[{ max: 512, message: '最多 512 位' }]}
+            rules={[rules.max(512)]}
           />
           {editing && (
             <ProFormSwitch
               name="clearSignSecret"
-              label="清除签名密钥"
+              label={t('pages.notify.channel.form.clearSignSecret')}
               colProps={HALF}
-              tooltip="开启后保存将停用加签（忽略上方输入）"
+              tooltip={t('pages.notify.channel.form.clearSignSecret.tooltip')}
             />
           )}
         </>
@@ -349,6 +371,13 @@ const ChannelList: React.FC = () => {
   const { message } = App.useApp();
   const has = usePermissions();
   const scope = useBizScope();
+  const t = useT();
+  const rules = useFormRules();
+  const submitter = useSubmitter();
+  const enabledEnum = useValueEnum(ENABLED_META);
+  const channelTypeEnum = useValueEnum(NOTIFY_CHANNEL_TYPE_META);
+  const channelTypeText = useEnumText(NOTIFY_CHANNEL_TYPE_META);
+  const bizIdColumn = useBizIdColumn<NotifyChannel>(scope);
   // 路由级权限：测试事件结果是否可下钻到「投递追踪 / 发送任务」
   const access = useAccess();
 
@@ -366,16 +395,21 @@ const ChannelList: React.FC = () => {
     has('notify.channel.delete') ||
     has('notify.channel.test');
 
+  const nameRules = [
+    rules.required(t('pages.notify.channel.column.name')),
+    rules.max(128),
+  ];
+
   const columns: ProColumns<NotifyChannel>[] = [
     {
-      title: '搜索项',
+      title: t('common.column.keyword'),
       dataIndex: 'keyword',
       hideInTable: true,
-      fieldProps: { placeholder: '渠道名称' },
+      fieldProps: { placeholder: t('pages.notify.channel.column.name') },
     },
-    bizIdColumn<NotifyChannel>(scope),
+    bizIdColumn,
     {
-      title: '渠道名称',
+      title: t('pages.notify.channel.column.name'),
       dataIndex: 'name',
       copyable: true,
       ellipsis: true,
@@ -383,18 +417,18 @@ const ChannelList: React.FC = () => {
       search: false,
     },
     {
-      title: '类型',
+      title: t('pages.notify.channel.column.type'),
       dataIndex: 'type',
-      valueEnum: NOTIFY_CHANNEL_TYPE_ENUM,
+      valueEnum: channelTypeEnum,
       width: 150,
       render: (_, record) => (
         <Tag color={NOTIFY_CHANNEL_TYPE_META[record.type].color}>
-          {NOTIFY_CHANNEL_TYPE_TEXT[record.type]}
+          {channelTypeText(record.type)}
         </Tag>
       ),
     },
     {
-      title: '配置摘要',
+      title: t('pages.notify.channel.column.config'),
       dataIndex: 'config',
       search: false,
       ellipsis: true,
@@ -403,33 +437,35 @@ const ChannelList: React.FC = () => {
         if (record.webhook) return record.webhook.url;
         if (record.robot) {
           const count = record.robot.atMobiles?.length ?? 0;
-          return count > 0 ? `@ ${count} 个手机号` : '—';
+          return count > 0
+            ? t('pages.notify.channel.config.atMobiles', { count })
+            : t('common.empty');
         }
-        return '—';
+        return t('common.empty');
       },
     },
     {
-      title: '状态',
+      title: t('common.column.status'),
       dataIndex: 'enabled',
-      valueEnum: CHANNEL_ENABLED_ENUM,
+      valueEnum: enabledEnum,
       width: 90,
     },
     {
-      title: '创建时间',
+      title: t('common.column.createTime'),
       dataIndex: 'createTime',
       valueType: 'dateTime',
       search: false,
       width: 160,
     },
     {
-      title: '更新时间',
+      title: t('common.column.updateTime'),
       dataIndex: 'updateTime',
       valueType: 'dateTime',
       search: false,
       width: 160,
     },
     {
-      title: '操作',
+      title: t('common.column.action'),
       valueType: 'option',
       width: 140,
       hideInTable: !hasAnyAction,
@@ -444,24 +480,22 @@ const ChannelList: React.FC = () => {
                 setEditRow(record);
               }}
             >
-              编辑
+              {t('common.action.edit')}
             </a>,
           );
         }
         if (has('notify.channel.delete')) {
           actions.push(
-            <Popconfirm
+            <DeleteConfirmLink
               key="delete"
-              title="删除渠道"
-              description="仍被路由引用的渠道需先从路由解绑；删除后名称可复用，历史投递记录不受影响，确定删除？"
+              title={t('pages.notify.channel.delete.title')}
+              description={t('pages.notify.channel.delete.description')}
               onConfirm={async () => {
                 await deleteChannel(record.id);
-                message.success('删除成功');
+                message.success(t('common.msg.deleted'));
                 reload();
               }}
-            >
-              <a style={{ color: '#ff4d4f' }}>删除</a>
-            </Popconfirm>,
+            />,
           );
         }
         // 测试事件：停用实例被路由跳过，测试无意义，仅启用渠道展示
@@ -473,7 +507,7 @@ const ChannelList: React.FC = () => {
                 setTestRow(record);
               }}
             >
-              测试
+              {t('pages.notify.channel.action.test')}
             </a>,
           );
         }
@@ -487,17 +521,17 @@ const ChannelList: React.FC = () => {
     <>
       <ProFormDigit
         name="qps"
-        label="限流 QPS"
+        label={t('pages.notify.channel.form.qps')}
         colProps={HALF}
-        placeholder="0 = 不限"
+        placeholder={t('pages.notify.common.zeroUnlimited')}
         min={0}
         fieldProps={{ precision: 0 }}
       />
       <ProFormDigit
         name="burst"
-        label="突发上限"
+        label={t('pages.notify.channel.form.burst')}
         colProps={HALF}
-        placeholder="0 = 不限"
+        placeholder={t('pages.notify.common.zeroUnlimited')}
         min={0}
         fieldProps={{ precision: 0 }}
       />
@@ -510,15 +544,13 @@ const ChannelList: React.FC = () => {
         <ProTable<NotifyChannel>
           headerTitle={
             has('notify.channel.create') && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
+              <CreateButton
                 onClick={() => {
                   setCreateOpen(true);
                 }}
               >
-                新建渠道
-              </Button>
+                {t('pages.notify.channel.create.title')}
+              </CreateButton>
             )
           }
           rowKey="id"
@@ -532,19 +564,9 @@ const ChannelList: React.FC = () => {
               keyword: params.keyword || undefined,
               bizId: params.bizId || undefined,
               type: params.type as NotifyChannelType | undefined,
-              // valueEnum 键经表单序列化为字符串，此处归一化回布尔
-              enabled:
-                params.enabled === 'true'
-                  ? true
-                  : params.enabled === 'false'
-                    ? false
-                    : undefined,
+              enabled: parseBoolParam(params.enabled),
             });
-            return {
-              data: result.items,
-              total: Number(result.total),
-              success: true,
-            };
+            return toTableResult(result);
           }}
         />
       </PageContainer>
@@ -553,7 +575,7 @@ const ChannelList: React.FC = () => {
           栅格：名称 + 业务 / 类型 + 启用 / 类型配置分支 / 凭据 + 签名密钥 / QPS + 突发 */}
       <DrawerForm<ChannelFormValues>
         key="create-channel"
-        title="新建渠道"
+        title={t('pages.notify.channel.create.title')}
         width={720}
         grid
         rowProps={{ gutter: 16 }}
@@ -564,9 +586,7 @@ const ChannelList: React.FC = () => {
           enabled: true,
           bizId: scope.restricted ? scope.defaultBizId : undefined,
         }}
-        submitter={{
-          searchConfig: { submitText: '创建', resetText: '取消' },
-        }}
+        submitter={submitter.create}
         onFinish={async (values) => {
           await createChannel({
             bizId: values.bizId || undefined,
@@ -578,32 +598,35 @@ const ChannelList: React.FC = () => {
             secret: values.secret || undefined,
             ...buildSignSecret(values, false),
           });
-          message.success('创建成功');
+          message.success(t('common.msg.created'));
           reload();
           return true;
         }}
       >
         <ProFormText
           name="name"
-          label="渠道名称"
+          label={t('pages.notify.channel.column.name')}
           colProps={HALF}
-          placeholder="1-128 位，同业务内唯一"
-          rules={[
-            { required: true, message: '请输入渠道名称' },
-            { max: 128, message: '最多 128 位' },
-          ]}
+          placeholder={t('pages.notify.channel.form.name.placeholder')}
+          rules={nameRules}
         />
         <BizIdFormField scope={scope} colProps={HALF} />
         <ProFormSelect
           name="type"
-          label="渠道类型"
+          label={t('pages.notify.channel.form.type')}
           colProps={HALF}
-          tooltip="决定配置结构与发送适配器，创建后不可修改"
-          valueEnum={NOTIFY_CHANNEL_TYPE_ENUM}
-          placeholder="请选择渠道类型"
-          rules={[{ required: true, message: '请选择渠道类型' }]}
+          tooltip={t('pages.notify.channel.form.type.tooltip')}
+          valueEnum={channelTypeEnum}
+          placeholder={t('common.validation.select', {
+            label: t('pages.notify.channel.form.type'),
+          })}
+          rules={[rules.select(t('pages.notify.channel.form.type'))]}
         />
-        <ProFormSwitch name="enabled" label="启用" colProps={HALF} />
+        <ProFormSwitch
+          name="enabled"
+          label={t('common.column.enabled')}
+          colProps={HALF}
+        />
         {/* 选择类型后渲染对应配置分支与凭据项 */}
         <ProFormDependency name={['type']}>
           {({ type }) => (type ? <ChannelConfigFields type={type} /> : null)}
@@ -615,7 +638,7 @@ const ChannelList: React.FC = () => {
       {editRow && (
         <DrawerForm<ChannelFormValues>
           key={`edit-channel-${editRow.id}`}
-          title={`编辑渠道：${editRow.name}`}
+          title={t('pages.notify.channel.edit.title', { name: editRow.name })}
           width={720}
           grid
           rowProps={{ gutter: 16 }}
@@ -656,9 +679,7 @@ const ChannelList: React.FC = () => {
             }
             return values;
           }}
-          submitter={{
-            searchConfig: { submitText: '保存', resetText: '取消' },
-          }}
+          submitter={submitter.save}
           onFinish={async (values) => {
             await updateChannel(editRow.id, {
               name: values.name,
@@ -669,30 +690,31 @@ const ChannelList: React.FC = () => {
               ...(values.secret ? { secret: values.secret } : {}),
               ...buildSignSecret(values, true),
             });
-            message.success('保存成功');
+            message.success(t('common.msg.saved'));
             reload();
             return true;
           }}
         >
           <ProFormText
             name="name"
-            label="渠道名称"
+            label={t('pages.notify.channel.column.name')}
             colProps={HALF}
-            rules={[
-              { required: true, message: '请输入渠道名称' },
-              { max: 128, message: '最多 128 位' },
-            ]}
+            rules={nameRules}
           />
           <BizIdReadonlyField bizId={editRow.bizId} colProps={HALF} />
           <ProFormSelect
             name="type"
-            label="渠道类型"
+            label={t('pages.notify.channel.form.type')}
             colProps={HALF}
             disabled
-            tooltip="创建后不可修改，更换类型请新建渠道"
-            valueEnum={NOTIFY_CHANNEL_TYPE_ENUM}
+            tooltip={t('pages.notify.channel.form.type.readonlyTooltip')}
+            valueEnum={channelTypeEnum}
           />
-          <ProFormSwitch name="enabled" label="启用" colProps={HALF} />
+          <ProFormSwitch
+            name="enabled"
+            label={t('common.column.enabled')}
+            colProps={HALF}
+          />
           <ProFormDependency name={['type']}>
             {({ type }) =>
               type ? <ChannelConfigFields type={type} editing /> : null
@@ -706,7 +728,7 @@ const ChannelList: React.FC = () => {
       {testRow && (
         <ModalForm<TestEventFormValues>
           key={`test-channel-${testRow.id}`}
-          title={`发送测试事件：${testRow.name}`}
+          title={t('pages.notify.channel.test.title', { name: testRow.name })}
           width={640}
           grid
           rowProps={{ gutter: 16 }}
@@ -717,10 +739,13 @@ const ChannelList: React.FC = () => {
           modalProps={{ destroyOnHidden: true }}
           initialValues={{
             eventType: 'notify.test',
-            title: '通知渠道连通性测试',
+            title: t('pages.notify.channel.test.defaultTitle'),
           }}
           submitter={{
-            searchConfig: { submitText: '发送', resetText: '取消' },
+            searchConfig: {
+              submitText: t('pages.notify.channel.test.submit'),
+              resetText: t('common.action.cancel'),
+            },
           }}
           onFinish={async (values) => {
             const { event } = await sendTestEvent(testRow.id, {
@@ -733,49 +758,55 @@ const ChannelList: React.FC = () => {
                 ? (JSON.parse(values.payloadText) as Record<string, unknown>)
                 : undefined,
             });
-            message.success('测试事件已创建');
+            message.success(t('pages.notify.channel.test.created'));
             setTestEventId(event.id);
             return true;
           }}
         >
           <ProFormText
             name="eventType"
-            label="事件类型"
+            label={t('pages.notify.channel.test.eventType')}
             colProps={HALF}
-            tooltip="需有路由 event_pattern 覆盖该类型且渠道集合含本实例，才会实际投递"
+            tooltip={t('pages.notify.channel.test.eventType.tooltip')}
             rules={[
               {
                 pattern: /^[a-z0-9][a-z0-9._-]{0,127}$/,
-                message: '小写字母/数字开头的点分串，最长 128 位',
+                message: t('pages.notify.channel.test.eventType.rule'),
               },
             ]}
           />
           <ProFormText
             name="title"
-            label="事件标题"
+            label={t('pages.notify.channel.test.eventTitle')}
             colProps={HALF}
-            rules={[{ max: 255, message: '最多 255 位' }]}
+            rules={[rules.max(255)]}
           />
           <ProFormSelect
             name="recipients"
-            label="指定收件人"
+            label={t('pages.notify.channel.test.recipients')}
             colProps={FULL}
-            tooltip="留空 = 交路由按收件策略解析（与生产事件同链路）"
+            tooltip={t('pages.notify.channel.test.recipients.tooltip')}
             fieldProps={{
               mode: 'tags',
               open: false,
               tokenSeparators: [',', ' '],
-              placeholder: '邮箱/群标识，回车确认，最多 20 个',
+              placeholder: t(
+                'pages.notify.channel.test.recipients.placeholder',
+              ),
             }}
             rules={[
               {
                 validator: (_, value?: string[]) => {
                   const list = value ?? [];
                   if (list.length > 20) {
-                    return Promise.reject(new Error('最多 20 个'));
+                    return Promise.reject(
+                      new Error(t('pages.notify.channel.test.recipients.max')),
+                    );
                   }
                   if (list.some((item) => !item || item.length > 255)) {
-                    return Promise.reject(new Error('每个收件人 1-255 位'));
+                    return Promise.reject(
+                      new Error(t('pages.notify.common.recipientLength')),
+                    );
                   }
                   return Promise.resolve();
                 },
@@ -784,9 +815,9 @@ const ChannelList: React.FC = () => {
           />
           <ProFormTextArea
             name="payloadText"
-            label="附加载荷（JSON）"
+            label={t('pages.notify.channel.test.payload')}
             colProps={FULL}
-            tooltip="可选，合并进事件 payload 的 test 上下文"
+            tooltip={t('pages.notify.channel.test.payload.tooltip')}
             fieldProps={{
               rows: 3,
               placeholder: '{"key": "value"}',
@@ -802,11 +833,17 @@ const ChannelList: React.FC = () => {
                       parsed === null ||
                       Array.isArray(parsed)
                     ) {
-                      return Promise.reject(new Error('须为 JSON 对象'));
+                      return Promise.reject(
+                        new Error(
+                          t('pages.notify.channel.test.payload.object'),
+                        ),
+                      );
                     }
                     return Promise.resolve();
                   } catch {
-                    return Promise.reject(new Error('JSON 格式不正确'));
+                    return Promise.reject(
+                      new Error(t('pages.notify.channel.test.payload.invalid')),
+                    );
                   }
                 },
               },
@@ -817,7 +854,7 @@ const ChannelList: React.FC = () => {
 
       {/* 测试事件创建结果：事件 ID 是异步链路的跟踪线索，可直接下钻到投递追踪 */}
       <Modal
-        title="测试事件已创建"
+        title={t('pages.notify.channel.test.created')}
         open={!!testEventId}
         onOk={() => {
           setTestEventId(null);
@@ -828,8 +865,7 @@ const ChannelList: React.FC = () => {
         cancelButtonProps={{ style: { display: 'none' } }}
       >
         <Typography.Paragraph type="secondary">
-          事件已进入异步投递链路（路由 → 模板 → 发送），可在「投递追踪」按事件
-          ID 查看发送任务与投递明细：
+          {t('pages.notify.channel.test.result.desc')}
         </Typography.Paragraph>
         <Typography.Paragraph copyable={{ text: testEventId ?? '' }}>
           {access.canNotifyDispatch ? (

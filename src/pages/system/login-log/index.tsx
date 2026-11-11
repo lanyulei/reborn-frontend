@@ -1,11 +1,12 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import { Typography } from 'antd';
-import dayjs from 'dayjs';
 import React from 'react';
-import { LOGIN_LOG_RESULT_ENUM } from '@/constants';
+import { LOGIN_LOG_RESULT_META } from '@/constants';
 import { listLoginLogs } from '@/services/system/loginLog';
 import type { LoginLog, LoginLogResult } from '@/services/system/typings';
+import { useT, useValueEnum } from '@/utils/i18n';
+import { timeRangeColumn, toTableResult } from '@/utils/table';
 
 /**
  * 登录日志：审计查询页（append-only 只读，无写操作）。
@@ -13,27 +14,30 @@ import type { LoginLog, LoginLogResult } from '@/services/system/typings';
  * 时间范围经 search.transform 转为后端要求的 RFC3339 时间戳。
  */
 const LoginLogList: React.FC = () => {
+  const t = useT();
+  const resultEnum = useValueEnum(LOGIN_LOG_RESULT_META);
+
   const columns: ProColumns<LoginLog>[] = [
     {
-      title: '用户名',
+      title: t('pages.system.user.column.username'),
       dataIndex: 'username',
       copyable: true,
       // 自动布局下按内容自适应，最窄 120px
       minWidth: 120,
-      fieldProps: { placeholder: '用户名' },
+      fieldProps: { placeholder: t('pages.system.user.column.username') },
     },
     {
-      title: '登录结果',
+      title: t('pages.system.loginLog.column.result'),
       dataIndex: 'result',
-      valueEnum: LOGIN_LOG_RESULT_ENUM,
+      valueEnum: resultEnum,
       minWidth: 120,
     },
     {
-      title: 'IP 地址',
+      title: t('pages.system.loginLog.column.ip'),
       dataIndex: 'ip',
       search: false,
       minWidth: 120,
-      render: (_, record) => record.ip || '-',
+      render: (_, record) => record.ip || t('common.dash'),
     },
     {
       title: 'User-Agent',
@@ -49,29 +53,17 @@ const LoginLogList: React.FC = () => {
             {record.userAgent}
           </Typography.Text>
         ) : (
-          '-'
+          t('common.dash')
         ),
     },
     {
-      title: '登录时间',
+      title: t('pages.system.loginLog.column.loginTime'),
       dataIndex: 'createTime',
       valueType: 'dateTime',
       search: false,
       minWidth: 180,
     },
-    {
-      title: '时间范围',
-      dataIndex: 'timeRange',
-      valueType: 'dateTimeRange',
-      hideInTable: true,
-      search: {
-        // 本地时间 → UTC ISO（RFC3339），映射为 startTime/endTime 查询参数
-        transform: (value: [string, string]) => ({
-          startTime: value?.[0] ? dayjs(value[0]).toISOString() : undefined,
-          endTime: value?.[1] ? dayjs(value[1]).toISOString() : undefined,
-        }),
-      },
-    },
+    timeRangeColumn<LoginLog>(t, { start: 'startTime', end: 'endTime' }),
   ];
 
   return (
@@ -91,11 +83,7 @@ const LoginLogList: React.FC = () => {
             startTime: params.startTime,
             endTime: params.endTime,
           });
-          return {
-            data: result.items,
-            total: Number(result.total),
-            success: true,
-          };
+          return toTableResult(result);
         }}
       />
     </PageContainer>

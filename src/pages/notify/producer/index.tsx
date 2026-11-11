@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   DrawerForm,
@@ -10,9 +9,11 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import { App, Button, Modal, Popconfirm, Tag, Typography } from 'antd';
+import { App, Modal, Popconfirm, Tag, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import React, { useRef, useState } from 'react';
+import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
+import { ENABLED_META, NOTIFY_EVENT_PATTERN_REGEX } from '@/constants';
 import { useBizScope } from '@/services/notify/hooks';
 import type { ProducerSpecPayload } from '@/services/notify/producer';
 import {
@@ -25,27 +26,17 @@ import {
 } from '@/services/notify/producer';
 import type { NotifyProducer } from '@/services/notify/typings';
 import { usePermissions } from '@/services/system/permissions';
+import { useFormRules, useSubmitter, useT, useValueEnum } from '@/utils/i18n';
+import { parseBoolParam, toTableResult } from '@/utils/table';
 import {
   BizIdFormField,
   BizIdReadonlyField,
-  bizIdColumn,
+  useBizIdColumn,
 } from '../components/bizScope';
-
-/** 来源状态枚举（表格筛选 + 展示）；查询参数经 request 归一化为布尔 */
-const PRODUCER_ENABLED_ENUM: NonNullable<ProColumns['valueEnum']> = {
-  true: { text: '启用', status: 'Success' },
-  false: { text: '停用', status: 'Error' },
-};
 
 /** 两列栅格：半行 / 整行 */
 const HALF = { span: 12 };
 const FULL = { span: 24 };
-
-/** 事件白名单条目规则（与事件匹配模式同式，'*' 或前缀通配） */
-const WHITELIST_ITEM_PATTERN = {
-  pattern: /^(\*|[a-z0-9][a-z0-9._-]{0,127}|[a-z0-9][a-z0-9._-]{0,125}\.\*)$/,
-  message: '精确 / 前缀通配（monitor.alert.*）/ 全匹配（*）',
-};
 
 /** 来源表单值（过期时间为 dayjs，提交转 RFC3339；不填 = 永不过期；biz 仅创建） */
 interface ProducerFormValues {
@@ -73,13 +64,6 @@ const buildProducerSpec = (
   dailyLimit: values.dailyLimit ?? 0,
 });
 
-/** 接入限速摘要（表格展示）：0 = 不限 */
-const limitText = (record: NotifyProducer) => {
-  const qps = record.qpsLimit > 0 ? `${record.qpsLimit}/秒` : '不限';
-  const daily = record.dailyLimit > 0 ? `${record.dailyLimit}/日` : '不限';
-  return `${qps} · ${daily}`;
-};
-
 /**
  * 事件来源：一行 = 一个事件来源（如监控引擎）的接入凭据。
  * token 明文仅在创建/轮换响应中出现一次（落库只存 SHA-256），丢失只能轮换重发；
@@ -91,6 +75,11 @@ const ProducerList: React.FC = () => {
   const { message } = App.useApp();
   const has = usePermissions();
   const scope = useBizScope();
+  const t = useT();
+  const rules = useFormRules();
+  const submitter = useSubmitter();
+  const enabledEnum = useValueEnum(ENABLED_META);
+  const bizIdColumn = useBizIdColumn<NotifyProducer>(scope);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editRow, setEditRow] = useState<NotifyProducer | null>(null);
@@ -107,16 +96,30 @@ const ProducerList: React.FC = () => {
     has('notify.producer.rotate') ||
     has('notify.producer.delete');
 
+  /** 接入限速摘要（表格展示）：0 = 不限 */
+  const limitText = (record: NotifyProducer) => {
+    const unlimited = t('pages.notify.common.unlimited');
+    const qps =
+      record.qpsLimit > 0
+        ? t('pages.notify.producer.limit.perSecond', { n: record.qpsLimit })
+        : unlimited;
+    const daily =
+      record.dailyLimit > 0
+        ? t('pages.notify.producer.limit.perDay', { n: record.dailyLimit })
+        : unlimited;
+    return t('pages.notify.producer.limit.summary', { qps, daily });
+  };
+
   const columns: ProColumns<NotifyProducer>[] = [
     {
-      title: '搜索项',
+      title: t('common.column.keyword'),
       dataIndex: 'keyword',
       hideInTable: true,
-      fieldProps: { placeholder: '名称' },
+      fieldProps: { placeholder: t('pages.notify.producer.column.name') },
     },
-    bizIdColumn<NotifyProducer>(scope),
+    bizIdColumn,
     {
-      title: '名称',
+      title: t('pages.notify.producer.column.name'),
       dataIndex: 'name',
       copyable: true,
       ellipsis: true,
@@ -124,7 +127,7 @@ const ProducerList: React.FC = () => {
       search: false,
     },
     {
-      title: '事件白名单',
+      title: t('pages.notify.producer.column.whitelist'),
       dataIndex: 'eventWhitelist',
       search: false,
       ellipsis: true,
@@ -137,41 +140,42 @@ const ProducerList: React.FC = () => {
             ))}
           </span>
         ) : (
-          '不限'
+          t('pages.notify.common.unlimited')
         );
       },
     },
     {
-      title: '接入限速',
+      title: t('pages.notify.producer.column.limit'),
       dataIndex: 'qpsLimit',
-      tooltip: '每秒 / 每日（UTC）接入事件上限，超限 429',
+      tooltip: t('pages.notify.producer.column.limit.tooltip'),
       search: false,
       width: 150,
       render: (_, record) => limitText(record),
     },
     {
-      title: '过期时间',
+      title: t('pages.notify.producer.column.expireTime'),
       dataIndex: 'expireTime',
       valueType: 'dateTime',
       search: false,
       width: 160,
-      render: (_, record) => record.expireTime || '永不过期',
+      render: (_, record) =>
+        record.expireTime || t('pages.notify.producer.neverExpire'),
     },
     {
-      title: '状态',
+      title: t('common.column.status'),
       dataIndex: 'enabled',
-      valueEnum: PRODUCER_ENABLED_ENUM,
+      valueEnum: enabledEnum,
       width: 90,
     },
     {
-      title: '更新时间',
+      title: t('common.column.updateTime'),
       dataIndex: 'updateTime',
       valueType: 'dateTime',
       search: false,
       width: 160,
     },
     {
-      title: '操作',
+      title: t('common.column.action'),
       valueType: 'option',
       width: 150,
       hideInTable: !hasAnyAction,
@@ -185,7 +189,7 @@ const ProducerList: React.FC = () => {
                 setEditRow(record);
               }}
             >
-              编辑
+              {t('common.action.edit')}
             </a>,
           );
         }
@@ -193,35 +197,33 @@ const ProducerList: React.FC = () => {
           actions.push(
             <Popconfirm
               key="rotate"
-              title="轮换令牌"
-              description="旧令牌立即失效（≤10s 生效），新令牌仅展示一次，确定轮换？"
+              title={t('pages.notify.producer.rotate.title')}
+              description={t('pages.notify.producer.rotate.description')}
               onConfirm={async () => {
                 const { producer, token } = await rotateProducerToken(
                   record.id,
                 );
-                message.success('轮换成功');
+                message.success(t('pages.notify.producer.rotate.success'));
                 reload();
                 setTokenInfo({ name: producer.name, token });
               }}
             >
-              <a>轮换令牌</a>
+              <a>{t('pages.notify.producer.rotate.title')}</a>
             </Popconfirm>,
           );
         }
         if (has('notify.producer.delete')) {
           actions.push(
-            <Popconfirm
+            <DeleteConfirmLink
               key="delete"
-              title="删除来源"
-              description="删除后令牌随之作废（名称可复用），确定删除？"
+              title={t('pages.notify.producer.delete.title')}
+              description={t('pages.notify.producer.delete.description')}
               onConfirm={async () => {
                 await deleteProducer(record.id);
-                message.success('删除成功');
+                message.success(t('common.msg.deleted'));
                 reload();
               }}
-            >
-              <a style={{ color: '#ff4d4f' }}>删除</a>
-            </Popconfirm>,
+            />,
           );
         }
         return actions;
@@ -237,41 +239,43 @@ const ProducerList: React.FC = () => {
     <>
       <ProFormText
         name="name"
-        label="名称"
+        label={t('pages.notify.producer.column.name')}
         colProps={HALF}
-        tooltip="同业务内未删除行唯一"
-        placeholder="1-64 位"
+        tooltip={t('pages.notify.producer.form.name.tooltip')}
+        placeholder={t('pages.notify.producer.form.name.placeholder')}
         rules={[
-          { required: true, message: '请输入名称' },
-          { max: 64, message: '最多 64 位' },
+          rules.required(t('pages.notify.producer.column.name')),
+          rules.max(64),
         ]}
       />
       <ProFormSelect
         name="eventWhitelist"
-        label="事件类型白名单"
+        label={t('pages.notify.producer.form.whitelist')}
         colProps={FULL}
-        tooltip="空 = 不限事件类型（令牌范围仍限定业务）；条目为事件模式"
+        tooltip={t('pages.notify.producer.form.whitelist.tooltip')}
         fieldProps={{
           mode: 'tags',
           open: false,
           tokenSeparators: [',', ' '],
-          placeholder: 'monitor.alert.*（回车确认，最多 32 项）',
+          placeholder: t('pages.notify.producer.form.whitelist.placeholder'),
         }}
         rules={[
           {
             validator: (_, value?: string[]) => {
               const list = value ?? [];
               if (list.length > 32) {
-                return Promise.reject(new Error('最多 32 项'));
+                return Promise.reject(
+                  new Error(t('pages.notify.producer.form.whitelist.max')),
+                );
               }
               if (new Set(list).size !== list.length) {
-                return Promise.reject(new Error('条目不可重复'));
-              }
-              if (
-                list.some((item) => !WHITELIST_ITEM_PATTERN.pattern.test(item))
-              ) {
                 return Promise.reject(
-                  new Error(WHITELIST_ITEM_PATTERN.message),
+                  new Error(t('pages.notify.common.noDuplicate')),
+                );
+              }
+              if (list.some((item) => !NOTIFY_EVENT_PATTERN_REGEX.test(item))) {
+                return Promise.reject(
+                  new Error(t('pages.notify.common.eventPattern.rule')),
                 );
               }
               return Promise.resolve();
@@ -281,32 +285,36 @@ const ProducerList: React.FC = () => {
       />
       <ProFormDigit
         name="qpsLimit"
-        label="每秒接入上限"
+        label={t('pages.notify.producer.form.qpsLimit')}
         colProps={HALF}
-        tooltip="管道 ingress 按来源计数，超限 429；0 = 不限"
-        placeholder="0 = 不限"
+        tooltip={t('pages.notify.producer.form.qpsLimit.tooltip')}
+        placeholder={t('pages.notify.common.zeroUnlimited')}
         min={0}
         max={1000000}
         fieldProps={{ precision: 0 }}
       />
       <ProFormDigit
         name="dailyLimit"
-        label="每日接入上限"
+        label={t('pages.notify.producer.form.dailyLimit')}
         colProps={HALF}
-        tooltip="按 UTC 日计数；0 = 不限"
-        placeholder="0 = 不限"
+        tooltip={t('pages.notify.producer.form.dailyLimit.tooltip')}
+        placeholder={t('pages.notify.common.zeroUnlimited')}
         min={0}
         max={1000000000}
         fieldProps={{ precision: 0 }}
       />
       <ProFormDateTimePicker
         name="expireTime"
-        label="过期时间"
+        label={t('pages.notify.producer.column.expireTime')}
         colProps={HALF}
-        tooltip="留空 = 永不过期；更新保存时留空即清除过期时间"
+        tooltip={t('pages.notify.producer.form.expireTime.tooltip')}
         fieldProps={{ showTime: true, style: { width: '100%' } }}
       />
-      <ProFormSwitch name="enabled" label="启用" colProps={HALF} />
+      <ProFormSwitch
+        name="enabled"
+        label={t('common.column.enabled')}
+        colProps={HALF}
+      />
     </>
   );
 
@@ -316,15 +324,13 @@ const ProducerList: React.FC = () => {
         <ProTable<NotifyProducer>
           headerTitle={
             has('notify.producer.create') && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
+              <CreateButton
                 onClick={() => {
                   setCreateOpen(true);
                 }}
               >
-                新建来源
-              </Button>
+                {t('pages.notify.producer.create.title')}
+              </CreateButton>
             )
           }
           rowKey="id"
@@ -337,18 +343,9 @@ const ProducerList: React.FC = () => {
               pageSize: params.pageSize,
               keyword: params.keyword || undefined,
               bizId: params.bizId || undefined,
-              enabled:
-                params.enabled === 'true'
-                  ? true
-                  : params.enabled === 'false'
-                    ? false
-                    : undefined,
+              enabled: parseBoolParam(params.enabled),
             });
-            return {
-              data: result.items,
-              total: Number(result.total),
-              success: true,
-            };
+            return toTableResult(result);
           }}
         />
       </PageContainer>
@@ -356,7 +353,7 @@ const ProducerList: React.FC = () => {
       {/* 新建来源（抽屉）：响应返回一次性接入令牌；biz（令牌范围）创建后不可改 */}
       <DrawerForm<ProducerFormValues>
         key="create-producer"
-        title="新建来源"
+        title={t('pages.notify.producer.create.title')}
         width={720}
         grid
         rowProps={{ gutter: 16 }}
@@ -367,16 +364,14 @@ const ProducerList: React.FC = () => {
           enabled: true,
           bizId: scope.restricted ? scope.defaultBizId : undefined,
         }}
-        submitter={{
-          searchConfig: { submitText: '创建', resetText: '取消' },
-        }}
+        submitter={submitter.create}
         onFinish={async (values) => {
           const { producer, token } = await createProducer({
             bizId: values.bizId || undefined,
             spec: buildProducerSpec(values),
             enabled: values.enabled ?? true,
           });
-          message.success('创建成功');
+          message.success(t('common.msg.created'));
           reload();
           setTokenInfo({ name: producer.name, token });
           return true;
@@ -390,7 +385,7 @@ const ProducerList: React.FC = () => {
       {editRow && (
         <DrawerForm<ProducerFormValues>
           key={`edit-producer-${editRow.id}`}
-          title={`编辑来源：${editRow.name}`}
+          title={t('pages.notify.producer.edit.title', { name: editRow.name })}
           width={720}
           grid
           rowProps={{ gutter: 16 }}
@@ -413,15 +408,13 @@ const ProducerList: React.FC = () => {
               enabled: producer.enabled,
             };
           }}
-          submitter={{
-            searchConfig: { submitText: '保存', resetText: '取消' },
-          }}
+          submitter={submitter.save}
           onFinish={async (values) => {
             await updateProducer(editRow.id, {
               spec: buildProducerSpec(values),
               enabled: values.enabled ?? true,
             });
-            message.success('保存成功');
+            message.success(t('common.msg.saved'));
             reload();
             return true;
           }}
@@ -433,9 +426,11 @@ const ProducerList: React.FC = () => {
 
       {/* 一次性令牌：仅此一次展示，关闭后任何接口不可再取 */}
       <Modal
-        title={`接入令牌：${tokenInfo?.name ?? ''}`}
+        title={t('pages.notify.producer.token.title', {
+          name: tokenInfo?.name ?? '',
+        })}
         open={!!tokenInfo}
-        okText="我已保存"
+        okText={t('pages.notify.producer.token.ok')}
         onOk={() => {
           setTokenInfo(null);
         }}
@@ -446,14 +441,17 @@ const ProducerList: React.FC = () => {
         mask={{ closable: false }}
       >
         <Typography.Paragraph type="warning" strong>
-          令牌仅此一次展示：落库只存哈希，任何接口不可再取，丢失只能轮换重发，请立即妥善保存。
+          {t('pages.notify.producer.token.warning')}
         </Typography.Paragraph>
         <Typography.Paragraph copyable={{ text: tokenInfo?.token ?? '' }}>
           {tokenInfo?.token}
         </Typography.Paragraph>
         <Typography.Paragraph type="secondary">
-          数据面接入：Authorization: HMAC &lt;id&gt;:&lt;sig&gt;:&lt;ts&gt;（±5
-          分钟防重放）
+          {t('pages.notify.producer.token.hint', {
+            id: '<id>',
+            sig: '<sig>',
+            ts: '<ts>',
+          })}
         </Typography.Paragraph>
       </Modal>
     </>

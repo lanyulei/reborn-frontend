@@ -31,6 +31,7 @@ import type {
   Operation,
   SystemRole,
 } from '@/services/system/typings';
+import { useT } from '@/utils/i18n';
 
 /**
  * 角色权限管理页：无标题块，面包屑 + 左右分栏（间隔 16px）。
@@ -48,6 +49,7 @@ const RolePermission: React.FC = () => {
   const roleId = useParams<{ id: string }>().id ?? '';
   const { message, modal } = App.useApp();
   const intl = useIntl();
+  const t = useT();
   const { token } = theme.useToken();
 
   const [role, setRole] = useState<SystemRole | null>(null);
@@ -236,11 +238,11 @@ const RolePermission: React.FC = () => {
   const elementApiTip = (elemCode: string): React.ReactNode => {
     const elem = currentMenu?.elements.find((item) => item.code === elemCode);
     if (!elem || elem.operations.length === 0) {
-      return '该标签暂无绑定接口';
+      return t('pages.system.permission.tip.noApis');
     }
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span>该标签关联接口：</span>
+        <span>{t('pages.system.permission.tip.apis')}</span>
         {elem.operations.map((op) => (
           <span key={op.code}>· {op.title}</span>
         ))}
@@ -254,8 +256,10 @@ const RolePermission: React.FC = () => {
     method: string;
   }): React.ReactNode => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <span>接口路径：{op.path}</span>
-      <span>接口方法：{op.method}</span>
+      <span>{t('pages.system.permission.tip.apiPath', { path: op.path })}</span>
+      <span>
+        {t('pages.system.permission.tip.apiMethod', { method: op.method })}
+      </span>
     </div>
   );
 
@@ -321,7 +325,7 @@ const RolePermission: React.FC = () => {
       elements: [...elements].sort(),
       apis,
     });
-    message.success('权限已保存');
+    message.success(t('pages.system.permission.saved'));
   };
 
   // 面包屑：系统管理 / 角色管理（可返回列表） / 角色权限
@@ -340,11 +344,11 @@ const RolePermission: React.FC = () => {
   const tabItems: TabsProps['items'] = [
     {
       key: 'elements',
-      label: '页面标签',
+      label: t('pages.system.permission.tab.elements'),
       children: (
         <>
           <Typography.Paragraph type="secondary">
-            勾选该页面内允许使用的操作；全部不勾选时为只读访问。
+            {t('pages.system.permission.desc.elements')}
           </Typography.Paragraph>
           <Checkbox.Group
             style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
@@ -389,11 +393,11 @@ const RolePermission: React.FC = () => {
     },
     {
       key: 'apis',
-      label: '接口权限',
+      label: t('pages.system.permission.tab.apis'),
       children: (
         <>
           <Typography.Paragraph type="secondary">
-            勾选即授权；随菜单/标签自动联动的接口锁定，取消对应勾选后解锁。
+            {t('pages.system.permission.desc.apis')}
           </Typography.Paragraph>
           <Checkbox.Group
             style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
@@ -421,8 +425,10 @@ const RolePermission: React.FC = () => {
                     >
                       {origin.type === 'menu'
                         ? origin.current
-                          ? '页面默认'
-                          : `页面默认·${origin.name}`
+                          ? t('pages.system.permission.origin.menuDefault')
+                          : t('pages.system.permission.origin.menuDefaultOf', {
+                              name: origin.name,
+                            })
                         : origin.name}
                     </Tag>
                   ))}
@@ -478,13 +484,13 @@ const RolePermission: React.FC = () => {
               onClick={() => {
                 // 二次确认，避免误触覆盖权限
                 modal.confirm({
-                  title: '保存权限',
-                  content: '将以当前勾选全量覆盖该角色的权限，确定保存？',
+                  title: t('pages.system.permission.save.title'),
+                  content: t('pages.system.permission.save.content'),
                   onOk: save,
                 });
               }}
             >
-              保存
+              {t('common.action.save')}
             </a>
           }
         >

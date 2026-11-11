@@ -6,20 +6,20 @@ import type {
 import { ProTable } from '@ant-design/pro-components';
 import { Link, useAccess } from '@umijs/max';
 import { App, Popconfirm } from 'antd';
-import dayjs from 'dayjs';
 import React, { useRef } from 'react';
-import { NOTIFY_REPLAY_STATE_ENUM } from '@/constants';
+import { NOTIFY_REPLAY_STATE_META } from '@/constants';
 import {
   listDeadLetters,
   replayDeadLetter,
 } from '@/services/notify/deadLetter';
-import { useBizScope, useChannelOptions } from '@/services/notify/hooks';
 import type {
   NotifyDeadLetter,
   NotifyReplayState,
 } from '@/services/notify/typings';
 import { usePermissions } from '@/services/system/permissions';
-import { useRequiredChannelFilter } from '../components/bizScope';
+import { useT, useValueEnum } from '@/utils/i18n';
+import { timeRangeColumn, toTableResult } from '@/utils/table';
+import { useChannelFilter } from '../components/bizScope';
 
 /**
  * 死信队列：发送任务重试超限后的落点。查询排障 + 控制台唯一的写动作
@@ -34,13 +34,13 @@ const DeadLetterList: React.FC = () => {
   const { message } = App.useApp();
   const has = usePermissions();
   const access = useAccess();
-  const { restricted } = useBizScope();
-  const {
-    channels,
-    options: channelOptions,
-    nameOf: channelNameOf,
-  } = useChannelOptions();
-  useRequiredChannelFilter(restricted, channels, formRef, actionRef);
+  const t = useT();
+  const replayStateEnum = useValueEnum(NOTIFY_REPLAY_STATE_META);
+  const channelFilter = useChannelFilter<NotifyDeadLetter>({
+    placeholderId: 'pages.notify.common.deliveryChannel',
+    formRef,
+    actionRef,
+  });
 
   const reload = () => actionRef.current?.reload();
   const canReplay = has('notify.dlq.replay');
@@ -50,86 +50,59 @@ const DeadLetterList: React.FC = () => {
 
   const columns: ProColumns<NotifyDeadLetter>[] = [
     {
-      title: '事件 ID',
+      title: t('pages.notify.common.eventId'),
       dataIndex: 'eventId',
       copyable: true,
       ellipsis: true,
-      fieldProps: { placeholder: '按事件下钻（精确）' },
+      fieldProps: { placeholder: t('pages.notify.common.eventId.placeholder') },
     },
+    channelFilter.column,
     {
-      title: '渠道',
-      dataIndex: 'channelId',
-      ellipsis: true,
-      render: (_, record) => channelNameOf(record.channelId),
-      valueType: 'select',
-      // options 经 state 驱动：渠道列表异步加载完成后搜索下拉随之更新
-      fieldProps: {
-        showSearch: true,
-        optionFilterProp: 'label',
-        options: channelOptions,
-        allowClear: !restricted,
-        placeholder: '投递渠道',
-      },
-      formItemProps: restricted
-        ? { rules: [{ required: true, message: '请选择渠道' }] }
-        : undefined,
-    },
-    {
-      title: '重放状态',
+      title: t('pages.notify.dlq.column.replayState'),
       dataIndex: 'replayState',
-      valueEnum: NOTIFY_REPLAY_STATE_ENUM,
+      valueEnum: replayStateEnum,
       width: 100,
     },
     {
-      title: '任务 ID',
+      title: t('pages.notify.common.dispatchId'),
       dataIndex: 'dispatchId',
       copyable: true,
       ellipsis: true,
       search: false,
     },
     {
-      title: '收件目标',
+      title: t('pages.notify.common.recipient'),
       dataIndex: 'recipient',
       copyable: true,
       ellipsis: true,
       search: false,
     },
     {
-      title: '尝试次数',
+      title: t('pages.notify.common.attempts'),
       dataIndex: 'attempts',
       width: 90,
       search: false,
     },
     {
-      title: '失败原因',
+      title: t('pages.notify.common.failReason'),
       dataIndex: 'lastError',
       ellipsis: true,
       search: false,
-      render: (_, record) => record.lastError || '—',
+      render: (_, record) => record.lastError || t('common.empty'),
     },
     {
-      title: '转入时间',
+      title: t('pages.notify.dlq.column.createTime'),
       dataIndex: 'createTime',
       valueType: 'dateTime',
       search: false,
       width: 170,
     },
+    timeRangeColumn<NotifyDeadLetter>(t, {
+      start: 'createTimeStart',
+      end: 'createTimeEnd',
+    }),
     {
-      title: '时间范围',
-      dataIndex: 'timeRange',
-      valueType: 'dateTimeRange',
-      hideInTable: true,
-      search: {
-        transform: (value: [string, string]) => ({
-          createTimeStart: value?.[0]
-            ? dayjs(value[0]).toISOString()
-            : undefined,
-          createTimeEnd: value?.[1] ? dayjs(value[1]).toISOString() : undefined,
-        }),
-      },
-    },
-    {
-      title: '操作',
+      title: t('common.column.action'),
       valueType: 'option',
       width: 200,
       hideInTable: !hasAnyAction,
@@ -140,15 +113,15 @@ const DeadLetterList: React.FC = () => {
           actions.push(
             <Popconfirm
               key="replay"
-              title="标记重放"
-              description="死信 worker 将重新生成发送任务，确定标记？"
+              title={t('pages.notify.dlq.replay.action')}
+              description={t('pages.notify.dlq.replay.description')}
               onConfirm={async () => {
                 await replayDeadLetter(record.id);
-                message.success('已标记待重放');
+                message.success(t('pages.notify.dlq.replay.success'));
                 reload();
               }}
             >
-              <a>标记重放</a>
+              <a>{t('pages.notify.dlq.replay.action')}</a>
             </Popconfirm>,
           );
         }
@@ -159,7 +132,7 @@ const DeadLetterList: React.FC = () => {
               key="dispatch"
               to={`/notify/trace/dispatch?eventId=${record.eventId}`}
             >
-              查看任务
+              {t('pages.notify.common.viewDispatch')}
             </Link>,
           );
         }
@@ -169,11 +142,11 @@ const DeadLetterList: React.FC = () => {
               key="delivery"
               to={`/notify/trace/delivery-log?dispatchId=${record.dispatchId}`}
             >
-              查看明细
+              {t('pages.notify.common.viewDeliveryLog')}
             </Link>,
           );
         }
-        return actions.length ? actions : '—';
+        return actions.length ? actions : t('common.empty');
       },
     },
   ];
@@ -186,8 +159,7 @@ const DeadLetterList: React.FC = () => {
       search={{ labelWidth: 'auto' }}
       columns={columns}
       request={async (params) => {
-        // 受限用户未选渠道时不发请求（后端要求 channel_id），等渠道选项加载后自动选中并重查
-        if (restricted && !params.channelId) {
+        if (channelFilter.guard(params)) {
           return { data: [], total: 0, success: true };
         }
         const result = await listDeadLetters({
@@ -199,11 +171,7 @@ const DeadLetterList: React.FC = () => {
           createTimeStart: params.createTimeStart,
           createTimeEnd: params.createTimeEnd,
         });
-        return {
-          data: result.items,
-          total: Number(result.total),
-          success: true,
-        };
+        return toTableResult(result);
       }}
     />
   );

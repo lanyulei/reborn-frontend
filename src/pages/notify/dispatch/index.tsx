@@ -6,16 +6,16 @@ import type {
 import { ProTable } from '@ant-design/pro-components';
 import { Link, useAccess, useSearchParams } from '@umijs/max';
 import { Descriptions, Tag, Typography } from 'antd';
-import dayjs from 'dayjs';
 import React, { useRef } from 'react';
-import { NOTIFY_DISPATCH_STATUS_ENUM } from '@/constants';
+import { NOTIFY_DISPATCH_STATUS_META } from '@/constants';
 import { listDispatches } from '@/services/notify/dispatch';
-import { useBizScope, useChannelOptions } from '@/services/notify/hooks';
 import type {
   NotifyDispatch,
   NotifyDispatchStatus,
 } from '@/services/notify/typings';
-import { useRequiredChannelFilter } from '../components/bizScope';
+import { useT, useValueEnum } from '@/utils/i18n';
+import { timeRangeColumn, toTableResult } from '@/utils/table';
+import { useChannelFilter } from '../components/bizScope';
 import { JsonView } from '../components/JsonView';
 
 /**
@@ -30,104 +30,77 @@ const DispatchList: React.FC = () => {
   const formRef = useRef<ProFormInstance | undefined>(undefined);
   const access = useAccess();
   const [searchParams] = useSearchParams();
-  const { restricted } = useBizScope();
-  const {
-    channels,
-    options: channelOptions,
-    nameOf: channelNameOf,
-  } = useChannelOptions();
-  useRequiredChannelFilter(restricted, channels, formRef, actionRef);
+  const t = useT();
+  const statusEnum = useValueEnum(NOTIFY_DISPATCH_STATUS_META);
+  const channelFilter = useChannelFilter<NotifyDispatch>({
+    placeholderId: 'pages.notify.dispatch.column.channel.placeholder',
+    formRef,
+    actionRef,
+  });
 
   const columns: ProColumns<NotifyDispatch>[] = [
     {
-      title: '事件 ID',
+      title: t('pages.notify.common.eventId'),
       dataIndex: 'eventId',
       copyable: true,
       ellipsis: true,
-      fieldProps: { placeholder: '按事件下钻（精确）' },
+      fieldProps: { placeholder: t('pages.notify.common.eventId.placeholder') },
     },
+    channelFilter.column,
     {
-      title: '渠道',
-      dataIndex: 'channelId',
-      ellipsis: true,
-      render: (_, record) => channelNameOf(record.channelId),
-      valueType: 'select',
-      // options 经 state 驱动：渠道列表异步加载完成后搜索下拉随之更新
-      fieldProps: {
-        showSearch: true,
-        optionFilterProp: 'label',
-        options: channelOptions,
-        allowClear: !restricted,
-        placeholder: '目标渠道',
-      },
-      formItemProps: restricted
-        ? { rules: [{ required: true, message: '请选择渠道' }] }
-        : undefined,
-    },
-    {
-      title: '收件目标',
+      title: t('pages.notify.common.recipient'),
       dataIndex: 'recipient',
       copyable: true,
       ellipsis: true,
       search: false,
     },
     {
-      title: '状态',
+      title: t('common.column.status'),
       dataIndex: 'status',
-      valueEnum: NOTIFY_DISPATCH_STATUS_ENUM,
+      valueEnum: statusEnum,
       width: 100,
     },
     {
-      title: '尝试次数',
+      title: t('pages.notify.common.attempts'),
       dataIndex: 'attempts',
       width: 90,
       search: false,
     },
     {
-      title: '下次重试',
+      title: t('pages.notify.dispatch.column.nextRetry'),
       dataIndex: 'nextRetryTime',
       valueType: 'dateTime',
       search: false,
       width: 170,
-      render: (_, record) => record.nextRetryTime || '—',
+      render: (_, record) => record.nextRetryTime || t('common.empty'),
     },
     {
-      title: '最近失败原因',
+      title: t('pages.notify.dispatch.column.lastError'),
       dataIndex: 'lastError',
       ellipsis: true,
       search: false,
-      render: (_, record) => record.lastError || '—',
+      render: (_, record) => record.lastError || t('common.empty'),
     },
     {
-      title: '生成时间',
+      title: t('pages.notify.dispatch.column.createTime'),
       dataIndex: 'createTime',
       valueType: 'dateTime',
       search: false,
       width: 170,
     },
+    timeRangeColumn<NotifyDispatch>(t, {
+      start: 'createTimeStart',
+      end: 'createTimeEnd',
+    }),
     {
-      title: '时间范围',
-      dataIndex: 'timeRange',
-      valueType: 'dateTimeRange',
-      hideInTable: true,
-      search: {
-        transform: (value: [string, string]) => ({
-          createTimeStart: value?.[0]
-            ? dayjs(value[0]).toISOString()
-            : undefined,
-          createTimeEnd: value?.[1] ? dayjs(value[1]).toISOString() : undefined,
-        }),
-      },
-    },
-    {
-      title: '操作',
+      title: t('common.column.action'),
       valueType: 'option',
       width: 100,
       // 下钻：任务 → 逐次投递尝试明细（需投递明细页权限）
       hideInTable: !access.canNotifyDeliveryLog,
       render: (_, record) => (
         <Link to={`/notify/trace/delivery-log?dispatchId=${record.id}`}>
-          查看明细
+          {t('pages.notify.common.viewDeliveryLog')}
         </Link>
       ),
     },
@@ -145,8 +118,7 @@ const DispatchList: React.FC = () => {
       }}
       columns={columns}
       request={async (params) => {
-        // 受限用户未选渠道时不发请求（后端要求 channel_id），等渠道选项加载后自动选中并重查
-        if (restricted && !params.channelId) {
+        if (channelFilter.guard(params)) {
           return { data: [], total: 0, success: true };
         }
         const result = await listDispatches({
@@ -158,11 +130,7 @@ const DispatchList: React.FC = () => {
           createTimeStart: params.createTimeStart,
           createTimeEnd: params.createTimeEnd,
         });
-        return {
-          data: result.items,
-          total: Number(result.total),
-          success: true,
-        };
+        return toTableResult(result);
       }}
       // 展开行：渲染快照按人读字段拆开（模板 / 聚合 / 标题 / 正文），原始 JSON 块收尾备查
       expandable={{
@@ -171,7 +139,9 @@ const DispatchList: React.FC = () => {
           const rendered = Boolean(snapshot?.subject || snapshot?.body);
           const templateId = snapshot?.template_id || record.templateId;
           const pending = (
-            <Typography.Text type="secondary">—（发送时渲染）</Typography.Text>
+            <Typography.Text type="secondary">
+              {t('pages.notify.dispatch.detail.pending')}
+            </Typography.Text>
           );
           return (
             <Descriptions
@@ -182,21 +152,21 @@ const DispatchList: React.FC = () => {
               items={[
                 {
                   key: 'id',
-                  label: '任务 ID',
+                  label: t('pages.notify.common.dispatchId'),
                   children: (
                     <Typography.Text copyable>{record.id}</Typography.Text>
                   ),
                 },
                 {
                   key: 'sendKey',
-                  label: '幂等键',
+                  label: t('pages.notify.dispatch.detail.sendKey'),
                   children: (
                     <Typography.Text copyable>{record.sendKey}</Typography.Text>
                   ),
                 },
                 {
                   key: 'template',
-                  label: '渲染模板',
+                  label: t('pages.notify.dispatch.detail.template'),
                   children: templateId ? (
                     <>
                       <Typography.Text copyable>{templateId}</Typography.Text>
@@ -208,43 +178,55 @@ const DispatchList: React.FC = () => {
                     </>
                   ) : (
                     <Typography.Text type="secondary">
-                      内置默认模板
+                      {t('pages.notify.dispatch.detail.template.default')}
                     </Typography.Text>
                   ),
                 },
                 {
                   key: 'agg',
-                  label: '聚合汇总',
+                  label: t('pages.notify.dispatch.detail.agg'),
                   children: snapshot?.agg ? (
                     <>
-                      <Tag color="blue">{snapshot.agg.count} 条事件</Tag>
+                      <Tag color="blue">
+                        {t('pages.notify.dispatch.detail.agg.count', {
+                          count: snapshot.agg.count,
+                        })}
+                      </Tag>
                       {snapshot.agg.digest ? (
-                        <Tag color="orange">摘要模式（超阈值，不列明细）</Tag>
+                        <Tag color="orange">
+                          {t('pages.notify.dispatch.detail.agg.digest')}
+                        </Tag>
                       ) : (
-                        <Tag>样本 {snapshot.agg.samples?.length ?? 0} 条</Tag>
+                        <Tag>
+                          {t('pages.notify.dispatch.detail.agg.samples', {
+                            count: snapshot.agg.samples?.length ?? 0,
+                          })}
+                        </Tag>
                       )}
                     </>
                   ) : (
                     <Typography.Text type="secondary">
-                      —（单事件）
+                      {t('pages.notify.dispatch.detail.agg.single')}
                     </Typography.Text>
                   ),
                 },
                 {
                   key: 'subject',
-                  label: '渲染标题',
+                  label: t('pages.notify.dispatch.detail.subject'),
                   span: 2,
-                  children: rendered ? snapshot?.subject || '—' : pending,
+                  children: rendered
+                    ? snapshot?.subject || t('common.empty')
+                    : pending,
                 },
                 {
                   key: 'body',
-                  label: '渲染正文',
+                  label: t('pages.notify.dispatch.detail.body'),
                   span: 2,
                   children: rendered ? (
                     <Typography.Paragraph
                       style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}
                     >
-                      {snapshot?.body || '—'}
+                      {snapshot?.body || t('common.empty')}
                     </Typography.Paragraph>
                   ) : (
                     pending
@@ -252,10 +234,13 @@ const DispatchList: React.FC = () => {
                 },
                 {
                   key: 'raw',
-                  label: '原始快照',
+                  label: t('pages.notify.dispatch.detail.raw'),
                   span: 2,
                   children: (
-                    <JsonView value={snapshot} emptyText="—（无快照）" />
+                    <JsonView
+                      value={snapshot}
+                      emptyText={t('pages.notify.dispatch.detail.raw.empty')}
+                    />
                   ),
                 },
               ]}

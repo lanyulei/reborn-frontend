@@ -9,6 +9,7 @@ import { useCallback } from 'react';
 
 /** 菜单权限码：与后端目录常量一一对应 */
 export type MenuPermissionCode =
+  | 'assistant'
   | 'system.user'
   | 'system.role'
   | 'system.login_log'
@@ -80,6 +81,7 @@ export interface ElementPermissionDef {
 
 /** 全量菜单权限目录 */
 export const MENU_PERMISSIONS: MenuPermissionDef[] = [
+  { code: 'assistant', labelKey: 'menu.assistant', parentKey: 'menu.assistant' },
   { code: 'system.user', labelKey: 'menu.system.user', parentKey: 'menu.system' },
   { code: 'system.role', labelKey: 'menu.system.role', parentKey: 'menu.system' },
   { code: 'system.login_log', labelKey: 'menu.system.login-log', parentKey: 'menu.system' },

@@ -5,25 +5,12 @@ import { App, Spin } from 'antd';
 import React, { startTransition } from 'react';
 import { logout } from '@/services/system/auth';
 import { clearTokens } from '@/utils/auth';
+import { useT } from '@/utils/i18n';
 import HeaderDropdown from '../HeaderDropdown';
 
 type GlobalHeaderRightProps = {
   children?: React.ReactNode;
 };
-
-const menuItems: MenuProps['items'] = [
-  {
-    key: 'settings',
-    icon: <UserOutlined />,
-    label: '个人设置',
-  },
-  { type: 'divider' },
-  {
-    key: 'logout',
-    icon: <LogoutOutlined />,
-    label: '退出登录',
-  },
-];
 
 const loginOut = async () => {
   try {
@@ -52,6 +39,21 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
 }) => {
   const { initialState, setInitialState } = useModel('@@initialState');
   const { modal } = App.useApp();
+  const t = useT();
+
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'settings',
+      icon: <UserOutlined />,
+      label: t('component.avatar.settings'),
+    },
+    { type: 'divider' },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: t('component.avatar.logout'),
+    },
+  ];
 
   const onMenuClick: MenuProps['onClick'] = (event) => {
     const { key } = event;
@@ -62,8 +64,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
     if (key === 'logout') {
       // 二次确认后再退出，避免误触
       modal.confirm({
-        title: '退出登录',
-        content: '确定要退出当前登录吗？',
+        title: t('component.avatar.logout'),
+        content: t('component.avatar.logout.confirm'),
         onOk: async () => {
           startTransition(() => {
             setInitialState((s) => ({ ...s, currentUser: undefined }));

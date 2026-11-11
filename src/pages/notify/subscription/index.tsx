@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   DrawerForm,
@@ -10,11 +9,14 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import { App, Button, Popconfirm, Tag } from 'antd';
+import { App, Tag } from 'antd';
 import React, { useRef, useState } from 'react';
+import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
 import {
+  ENABLED_META,
+  NOTIFY_EVENT_PATTERN_REGEX,
   NOTIFY_SUBSCRIBABLE_CHANNEL_TYPES,
-  NOTIFY_TEMPLATE_CHANNEL_TEXT,
+  NOTIFY_TEMPLATE_CHANNEL_META,
 } from '@/constants';
 import {
   deleteSubscription,
@@ -23,37 +25,29 @@ import {
 } from '@/services/notify/subscription';
 import type {
   NotifySubscription,
+  NotifyTemplateChannelType,
   SubscriptionPref,
 } from '@/services/notify/typings';
 import { usePermissions } from '@/services/system/permissions';
-import { BIZ_ID_RULE } from '../components/bizScope';
-
-/** 订阅状态枚举（表格筛选 + 展示）；查询参数经 request 归一化为布尔 */
-const SUBSCRIPTION_ENABLED_ENUM: NonNullable<ProColumns['valueEnum']> = {
-  true: { text: '启用', status: 'Success' },
-  false: { text: '停用', status: 'Error' },
-};
+import {
+  useEnumText,
+  useFormRules,
+  useSubmitter,
+  useT,
+  useValueEnum,
+} from '@/utils/i18n';
+import { parseBoolParam, toTableResult } from '@/utils/table';
+import { BIZ_ID_PATTERN } from '../components/bizScope';
 
 /** 两列栅格：半行 / 整行 */
 const HALF = { span: 12 };
 const FULL = { span: 24 };
 
-/** 机器人渠道偏好选项（email 仅订阅开关，地址取用户资料） */
-const ROBOT_PREF_OPTIONS = [
-  { label: '订阅（默认绑定）', value: 'subscribed' },
-  { label: '指定目标群', value: 'target' },
-];
-
-/** 机器人渠道定义：偏好字段 / 目标群字段 / 渠道键 */
+/** 机器人渠道定义：偏好字段 / 目标群字段 / 渠道键（文案取模板渠道枚举） */
 const ROBOT_FIELDS = [
-  {
-    pref: 'prefDingtalk',
-    target: 'targetDingtalk',
-    key: 'dingtalk',
-    label: '钉钉',
-  },
-  { pref: 'prefWecom', target: 'targetWecom', key: 'wecom', label: '企业微信' },
-  { pref: 'prefFeishu', target: 'targetFeishu', key: 'feishu', label: '飞书' },
+  { pref: 'prefDingtalk', target: 'targetDingtalk', key: 'dingtalk' },
+  { pref: 'prefWecom', target: 'targetWecom', key: 'wecom' },
+  { pref: 'prefFeishu', target: 'targetFeishu', key: 'feishu' },
 ] as const;
 
 /** 订阅表单值（渠道偏好扁平化，提交时组装 channel_prefs） */
@@ -124,6 +118,11 @@ const SubscriptionList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
   const { message } = App.useApp();
   const has = usePermissions();
+  const t = useT();
+  const rules = useFormRules();
+  const submitter = useSubmitter();
+  const enabledEnum = useValueEnum(ENABLED_META);
+  const channelText = useEnumText(NOTIFY_TEMPLATE_CHANNEL_META);
 
   const [saveOpen, setSaveOpen] = useState(false);
   // 编辑行（null = 新建）；行数据已含全部字段，直接回显
@@ -134,37 +133,48 @@ const SubscriptionList: React.FC = () => {
   const hasAnyAction =
     has('notify.subscription.upsert') || has('notify.subscription.delete');
 
+  /** 机器人渠道偏好选项（email 仅订阅开关，地址取用户资料） */
+  const robotPrefOptions = [
+    {
+      label: t('pages.notify.subscription.form.pref.subscribedDefault'),
+      value: 'subscribed',
+    },
+    { label: t('pages.notify.subscription.form.pref.target'), value: 'target' },
+  ];
+
   const columns: ProColumns<NotifySubscription>[] = [
     {
-      title: '搜索项',
+      title: t('common.column.keyword'),
       dataIndex: 'keyword',
       hideInTable: true,
-      fieldProps: { placeholder: '事件匹配模式' },
+      fieldProps: { placeholder: t('pages.notify.common.eventPattern') },
     },
     {
-      title: '订阅人',
+      title: t('pages.notify.subscription.column.userId'),
       dataIndex: 'userId',
       copyable: true,
       ellipsis: true,
-      tooltip: '用户 ID（本人或管理员代管）',
-      fieldProps: { placeholder: '用户 ID（缺省查本人）' },
+      tooltip: t('pages.notify.subscription.column.userId.tooltip'),
+      fieldProps: {
+        placeholder: t('pages.notify.subscription.column.userId.placeholder'),
+      },
     },
     {
-      title: '业务',
+      title: t('pages.notify.common.biz'),
       dataIndex: 'bizId',
       width: 110,
       ellipsis: true,
       search: false,
     },
     {
-      title: '事件匹配模式',
+      title: t('pages.notify.common.eventPattern'),
       dataIndex: 'eventPattern',
       copyable: true,
       ellipsis: true,
       search: false,
     },
     {
-      title: '渠道偏好',
+      title: t('pages.notify.subscription.column.channelPrefs'),
       dataIndex: 'channelPrefs',
       search: false,
       render: (_, record) => {
@@ -176,37 +186,40 @@ const SubscriptionList: React.FC = () => {
         );
         return entries.length ? (
           <span>
-            {entries.map(([key, pref]) => (
-              <Tag key={key}>
-                {
-                  NOTIFY_TEMPLATE_CHANNEL_TEXT[
-                    key as keyof typeof NOTIFY_TEMPLATE_CHANNEL_TEXT
-                  ]
-                }
-                {pref?.target ? `：${pref.target}` : ''}
-              </Tag>
-            ))}
+            {entries.map(([key, pref]) => {
+              const channel = channelText(key as NotifyTemplateChannelType);
+              return (
+                <Tag key={key}>
+                  {pref?.target
+                    ? t('pages.notify.subscription.prefWithTarget', {
+                        channel,
+                        target: pref.target,
+                      })
+                    : channel}
+                </Tag>
+              );
+            })}
           </span>
         ) : (
-          '—'
+          t('common.empty')
         );
       },
     },
     {
-      title: '状态',
+      title: t('common.column.status'),
       dataIndex: 'enabled',
-      valueEnum: SUBSCRIPTION_ENABLED_ENUM,
+      valueEnum: enabledEnum,
       width: 90,
     },
     {
-      title: '更新时间',
+      title: t('common.column.updateTime'),
       dataIndex: 'updateTime',
       valueType: 'dateTime',
       search: false,
       width: 160,
     },
     {
-      title: '操作',
+      title: t('common.column.action'),
       valueType: 'option',
       width: 100,
       hideInTable: !hasAnyAction,
@@ -220,24 +233,22 @@ const SubscriptionList: React.FC = () => {
                 setEditRow(record);
               }}
             >
-              编辑
+              {t('common.action.edit')}
             </a>,
           );
         }
         if (has('notify.subscription.delete')) {
           actions.push(
-            <Popconfirm
+            <DeleteConfirmLink
               key="delete"
-              title="删除订阅"
-              description="删除后同键可重建，确定删除？"
+              title={t('pages.notify.subscription.delete.title')}
+              description={t('pages.notify.subscription.delete.description')}
               onConfirm={async () => {
                 await deleteSubscription(record.id);
-                message.success('删除成功');
+                message.success(t('common.msg.deleted'));
                 reload();
               }}
-            >
-              <a style={{ color: '#ff4d4f' }}>删除</a>
-            </Popconfirm>,
+            />,
           );
         }
         return actions;
@@ -254,98 +265,120 @@ const SubscriptionList: React.FC = () => {
     <>
       <ProFormText
         name="userId"
-        label="订阅人"
+        label={t('pages.notify.subscription.column.userId')}
         colProps={HALF}
         disabled={editing}
-        tooltip="留空 = 本人；指定他人须管理员（代管）"
-        placeholder="留空 = 本人"
+        tooltip={t('pages.notify.subscription.form.userId.tooltip')}
+        placeholder={t('pages.notify.subscription.form.userId.placeholder')}
         rules={[
           {
             pattern:
               /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-            message: '用户 ID 为 UUID 格式',
+            message: t('pages.notify.subscription.form.userId.rule'),
           },
         ]}
       />
       <ProFormText
         name="bizId"
-        label="业务"
+        label={t('pages.notify.common.biz')}
         colProps={HALF}
         disabled={editing}
-        tooltip="订阅按业务隔离匹配；留空 = default"
-        placeholder="留空 = default"
-        rules={[BIZ_ID_RULE]}
+        tooltip={t('pages.notify.subscription.form.biz.tooltip')}
+        placeholder={t('pages.notify.common.biz.placeholder')}
+        rules={[
+          {
+            pattern: BIZ_ID_PATTERN,
+            message: t('pages.notify.common.bizIdRule'),
+          },
+        ]}
       />
       <ProFormText
         name="eventPattern"
-        label="事件匹配模式"
+        label={t('pages.notify.common.eventPattern')}
         colProps={FULL}
         disabled={editing}
-        tooltip="精确 / 前缀通配（monitor.alert.*）/ 全匹配（*），与路由同式"
+        tooltip={t('pages.notify.subscription.form.eventPattern.tooltip')}
         placeholder="monitor.alert.*"
         rules={[
-          { required: true, message: '请输入事件匹配模式' },
+          rules.required(t('pages.notify.common.eventPattern')),
           {
-            pattern:
-              /^(\*|[a-z0-9][a-z0-9._-]{0,127}|[a-z0-9][a-z0-9._-]{0,125}\.\*)$/,
-            message: '精确 / 前缀通配（monitor.alert.*）/ 全匹配（*）',
+            pattern: NOTIFY_EVENT_PATTERN_REGEX,
+            message: t('pages.notify.common.eventPattern.rule'),
           },
         ]}
       />
       <ProForm.Group
-        title="渠道偏好（至少一项）"
+        title={t('pages.notify.subscription.form.prefs.title')}
         colProps={FULL}
         rowProps={{ gutter: 16 }}
       >
         <ProFormSelect
           name="prefEmail"
-          label="邮件"
+          label={channelText('email')}
           colProps={HALF}
-          tooltip="订阅后收件地址取用户资料邮箱"
+          tooltip={t('pages.notify.subscription.form.email.tooltip')}
           allowClear
-          placeholder="不订阅"
-          options={[{ label: '订阅', value: 'subscribed' }]}
+          placeholder={t('pages.notify.subscription.form.pref.none')}
+          options={[
+            {
+              label: t('pages.notify.subscription.form.pref.subscribed'),
+              value: 'subscribed',
+            },
+          ]}
         />
-        {ROBOT_FIELDS.map(({ pref, target, key, label }) => (
-          <React.Fragment key={key}>
-            <ProFormSelect
-              name={pref}
-              label={label}
-              colProps={HALF}
-              allowClear
-              placeholder="不订阅"
-              options={[...ROBOT_PREF_OPTIONS]}
-            />
-            {/* 目标群常驻同行（布局稳定），仅在选「指定目标群」时可填且必填 */}
-            <ProFormDependency name={[pref]}>
-              {({ [pref]: prefValue }) => {
-                const active = prefValue === 'target';
-                return (
-                  <ProFormText
-                    name={target}
-                    label={`${label}目标群`}
-                    colProps={HALF}
-                    disabled={!active}
-                    tooltip="机器人目标群标识，如 $group:ops"
-                    placeholder={
-                      active ? '$group:ops' : '选择「指定目标群」后填写'
-                    }
-                    rules={
-                      active
-                        ? [
-                            { required: true, message: `请输入${label}目标群` },
-                            { max: 64, message: '最多 64 位' },
-                          ]
-                        : []
-                    }
-                  />
-                );
-              }}
-            </ProFormDependency>
-          </React.Fragment>
-        ))}
+        {ROBOT_FIELDS.map(({ pref, target, key }) => {
+          const label = channelText(key);
+          const targetLabel = t('pages.notify.subscription.form.target.label', {
+            channel: label,
+          });
+          return (
+            <React.Fragment key={key}>
+              <ProFormSelect
+                name={pref}
+                label={label}
+                colProps={HALF}
+                allowClear
+                placeholder={t('pages.notify.subscription.form.pref.none')}
+                options={robotPrefOptions}
+              />
+              {/* 目标群常驻同行（布局稳定），仅在选「指定目标群」时可填且必填 */}
+              <ProFormDependency name={[pref]}>
+                {({ [pref]: prefValue }) => {
+                  const active = prefValue === 'target';
+                  return (
+                    <ProFormText
+                      name={target}
+                      label={targetLabel}
+                      colProps={HALF}
+                      disabled={!active}
+                      tooltip={t(
+                        'pages.notify.subscription.form.target.tooltip',
+                      )}
+                      placeholder={
+                        active
+                          ? '$group:ops'
+                          : t(
+                              'pages.notify.subscription.form.target.placeholder',
+                            )
+                      }
+                      rules={
+                        active
+                          ? [rules.required(targetLabel), rules.max(64)]
+                          : []
+                      }
+                    />
+                  );
+                }}
+              </ProFormDependency>
+            </React.Fragment>
+          );
+        })}
         {/* 启用置于分组末尾，与飞书目标群同行补齐栅格 */}
-        <ProFormSwitch name="enabled" label="启用" colProps={HALF} />
+        <ProFormSwitch
+          name="enabled"
+          label={t('common.column.enabled')}
+          colProps={HALF}
+        />
       </ProForm.Group>
     </>
   );
@@ -354,7 +387,7 @@ const SubscriptionList: React.FC = () => {
   const handleUpsert = async (values: SubscriptionFormValues) => {
     const channelPrefs = buildChannelPrefs(values);
     if (!Object.keys(channelPrefs).length) {
-      message.error('请至少为一个渠道配置订阅偏好');
+      message.error(t('pages.notify.subscription.msg.atLeastOne'));
       return false;
     }
     await upsertSubscription({
@@ -364,7 +397,7 @@ const SubscriptionList: React.FC = () => {
       channelPrefs,
       enabled: values.enabled ?? true,
     });
-    message.success('保存成功');
+    message.success(t('common.msg.saved'));
     reload();
     return true;
   };
@@ -375,15 +408,13 @@ const SubscriptionList: React.FC = () => {
         <ProTable<NotifySubscription>
           headerTitle={
             has('notify.subscription.upsert') && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
+              <CreateButton
                 onClick={() => {
                   setSaveOpen(true);
                 }}
               >
-                新建订阅
-              </Button>
+                {t('pages.notify.subscription.create.title')}
+              </CreateButton>
             )
           }
           rowKey="id"
@@ -396,18 +427,9 @@ const SubscriptionList: React.FC = () => {
               pageSize: params.pageSize,
               keyword: params.keyword || undefined,
               userId: params.userId || undefined,
-              enabled:
-                params.enabled === 'true'
-                  ? true
-                  : params.enabled === 'false'
-                    ? false
-                    : undefined,
+              enabled: parseBoolParam(params.enabled),
             });
-            return {
-              data: result.items,
-              total: Number(result.total),
-              success: true,
-            };
+            return toTableResult(result);
           }}
         />
       </PageContainer>
@@ -415,7 +437,7 @@ const SubscriptionList: React.FC = () => {
       {/* 新建订阅（抽屉）：同 (用户, 业务, 事件模式) 已存在即整组替换 */}
       <DrawerForm<SubscriptionFormValues>
         key="create-subscription"
-        title="新建订阅"
+        title={t('pages.notify.subscription.create.title')}
         width={720}
         grid
         rowProps={{ gutter: 16 }}
@@ -423,9 +445,7 @@ const SubscriptionList: React.FC = () => {
         onOpenChange={setSaveOpen}
         drawerProps={{ destroyOnHidden: true }}
         initialValues={{ enabled: true }}
-        submitter={{
-          searchConfig: { submitText: '保存', resetText: '取消' },
-        }}
+        submitter={submitter.save}
         onFinish={handleUpsert}
       >
         {subscriptionFields(false)}
@@ -435,7 +455,9 @@ const SubscriptionList: React.FC = () => {
       {editRow && (
         <DrawerForm<SubscriptionFormValues>
           key={`edit-subscription-${editRow.id}`}
-          title={`编辑订阅：${editRow.eventPattern}`}
+          title={t('pages.notify.subscription.edit.title', {
+            name: editRow.eventPattern,
+          })}
           width={720}
           grid
           rowProps={{ gutter: 16 }}
@@ -445,9 +467,7 @@ const SubscriptionList: React.FC = () => {
           }}
           drawerProps={{ destroyOnHidden: true }}
           initialValues={subscriptionToValues(editRow)}
-          submitter={{
-            searchConfig: { submitText: '保存', resetText: '取消' },
-          }}
+          submitter={submitter.save}
           onFinish={handleUpsert}
         >
           {subscriptionFields(true)}

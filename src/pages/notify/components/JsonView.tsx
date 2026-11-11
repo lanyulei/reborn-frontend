@@ -5,6 +5,7 @@
 import { Typography } from 'antd';
 import { createStyles } from 'antd-style';
 import type React from 'react';
+import { useT } from '@/utils/i18n';
 
 const useStyles = createStyles(({ token }) => ({
   root: { position: 'relative' },
@@ -35,12 +36,17 @@ export const JsonView: React.FC<{
   value?: unknown;
   /** 超出后内部滚动，默认 240px */
   maxHeight?: number;
-  /** 值为空时的占位文案 */
+  /** 值为空时的占位文案（缺省 common.empty） */
   emptyText?: string;
-}> = ({ value, maxHeight = 240, emptyText = '—' }) => {
+}> = ({ value, maxHeight = 240, emptyText }) => {
   const { styles } = useStyles();
+  const t = useT();
   if (value == null) {
-    return <Typography.Text type="secondary">{emptyText}</Typography.Text>;
+    return (
+      <Typography.Text type="secondary">
+        {emptyText ?? t('common.empty')}
+      </Typography.Text>
+    );
   }
   const text = JSON.stringify(value, null, 2);
   return (
@@ -50,7 +56,10 @@ export const JsonView: React.FC<{
       </pre>
       <Typography.Text
         className={styles.copy}
-        copyable={{ text, tooltips: ['复制 JSON', '已复制'] }}
+        copyable={{
+          text,
+          tooltips: [t('common.action.copyJson'), t('common.action.copied')],
+        }}
       />
     </div>
   );

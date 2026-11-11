@@ -17,6 +17,7 @@ import {
 } from '@/services/system/config';
 import { usePermissions } from '@/services/system/permissions';
 import type { SystemConfig } from '@/services/system/typings';
+import { useFormRules, useT } from '@/utils/i18n';
 import defaultSettings from '../../../../config/defaultSettings';
 
 /** 表单字段宽度：基础 md(328px) ×1.5 再 ×1.2 */
@@ -36,6 +37,8 @@ type LogoMode = 'url' | 'upload';
  */
 const SystemConfigPage: React.FC = () => {
   const intl = useIntl();
+  const t = useT();
+  const rules = useFormRules();
   const { message } = App.useApp();
   const { token } = theme.useToken();
   const { setInitialState } = useModel('@@initialState');
@@ -51,12 +54,14 @@ const SystemConfigPage: React.FC = () => {
     if (!file) return;
     if (!LOGO_MIME_WHITELIST.includes(file.type)) {
       message.error(
-        `不支持的图片格式 ${file.type || '(未知)'}，仅支持 PNG/JPEG/SVG/WebP/ICO`,
+        t('pages.system.config.logo.unsupported', {
+          type: file.type || t('pages.system.config.logo.unknownType'),
+        }),
       );
       return;
     }
     if (file.size > LOGO_MAX_SIZE) {
-      message.error('图片大小不能超过 2MB');
+      message.error(t('pages.system.config.logo.tooLarge'));
       return;
     }
     setUploading(true);
@@ -65,10 +70,12 @@ const SystemConfigPage: React.FC = () => {
       // 上传成功：URL 自动填入表单字段并同步预览，随保存落库
       formRef.current?.setFieldsValue({ logo: url });
       setLogoUrl(url);
-      message.success('Logo 已上传，保存配置后生效');
+      message.success(t('pages.system.config.logo.uploaded'));
     } catch (error) {
       message.error(
-        error instanceof Error ? error.message : '上传失败，请重试',
+        error instanceof Error
+          ? error.message
+          : t('pages.system.config.logo.uploadFailed'),
       );
     } finally {
       setUploading(false);
@@ -79,7 +86,7 @@ const SystemConfigPage: React.FC = () => {
 
   const handleFinish = async (values: SystemConfig) => {
     await updateSystemConfig(values);
-    message.success('系统配置已保存');
+    message.success(t('pages.system.config.saved'));
     // 同步全局状态：顶栏标题/logo、标签页、页脚即时生效
     // （标签页标题由 ProLayout 的 useDocumentTitle 随 settings.title 更新）
     setInitialState((s) => ({
@@ -112,7 +119,7 @@ const SystemConfigPage: React.FC = () => {
     >
       {!canEdit && (
         <Typography.Paragraph type="secondary">
-          当前角色未授权「编辑系统配置」，以下内容仅可查看。
+          {t('pages.system.config.readonly')}
         </Typography.Paragraph>
       )}
       <ProForm<SystemConfig>
@@ -139,7 +146,7 @@ const SystemConfigPage: React.FC = () => {
         submitter={
           canEdit
             ? {
-                searchConfig: { submitText: '保存配置' },
+                searchConfig: { submitText: t('pages.system.config.submit') },
                 render: (_, dom) => dom[1],
                 resetButtonProps: { style: { display: 'none' } },
               }
@@ -149,21 +156,21 @@ const SystemConfigPage: React.FC = () => {
         <ProFormText
           width={FIELD_WIDTH}
           name="title"
-          label="系统标题"
-          placeholder="显示在顶栏、浏览器标签页与登录页；留空使用默认标题"
+          label={t('pages.system.config.title.label')}
+          placeholder={t('pages.system.config.title.placeholder')}
           disabled={!canEdit}
-          rules={[{ max: 50, message: '最多 50 个字符' }]}
+          rules={[rules.maxChars(50)]}
         />
         <ProFormText
           width={FIELD_WIDTH}
           name="subTitle"
-          label="系统子标题"
-          placeholder="标题旁的补充小字；留空不显示"
+          label={t('pages.system.config.subTitle.label')}
+          placeholder={t('pages.system.config.subTitle.placeholder')}
           disabled={!canEdit}
-          rules={[{ max: 100, message: '最多 100 个字符' }]}
+          rules={[rules.maxChars(100)]}
         />
         {/* logo 配置二选一：默认本地上传，可切图片 URL；预览在输入控件上方 */}
-        <Form.Item label="系统 Logo">
+        <Form.Item label={t('pages.system.config.logo.label')}>
           <div
             style={{
               display: 'flex',
@@ -177,15 +184,18 @@ const SystemConfigPage: React.FC = () => {
               onChange={(e) => setLogoMode(e.target.value as LogoMode)}
               disabled={!canEdit}
               options={[
-                { label: '图片 URL', value: 'url' },
-                { label: '本地上传', value: 'upload' },
+                { label: t('pages.system.config.logo.mode.url'), value: 'url' },
+                {
+                  label: t('pages.system.config.logo.mode.upload'),
+                  value: 'upload',
+                },
               ]}
             />
             {/* 预览图：有图才渲染，空状态不占位；边框用主题色随明暗主题 */}
             {logoUrl && (
               <Image
                 src={logoUrl}
-                alt="logo 预览"
+                alt={t('pages.system.config.logo.preview')}
                 width={96}
                 height={96}
                 style={{
@@ -200,9 +210,9 @@ const SystemConfigPage: React.FC = () => {
               <ProFormText
                 name="logo"
                 label={false}
-                placeholder="https://example.com/logo.svg；留空使用默认 logo"
+                placeholder={t('pages.system.config.logo.urlPlaceholder')}
                 disabled={!canEdit}
-                rules={[{ max: 500, message: '最多 500 个字符' }]}
+                rules={[rules.maxChars(500)]}
               />
             </div>
             {logoMode === 'upload' && (
@@ -222,13 +232,13 @@ const SystemConfigPage: React.FC = () => {
                   disabled={!canEdit}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  上传本地图片
+                  {t('pages.system.config.logo.uploadButton')}
                 </Button>
                 <Typography.Text
                   type="secondary"
                   style={{ marginLeft: 12, fontSize: token.fontSizeSM }}
                 >
-                  支持 PNG/JPEG/SVG/WebP/ICO，≤2MB；上传后随保存配置生效
+                  {t('pages.system.config.logo.hint')}
                 </Typography.Text>
               </div>
             )}
@@ -237,10 +247,10 @@ const SystemConfigPage: React.FC = () => {
         <ProFormText
           width={FIELD_WIDTH}
           name="footer"
-          label="页脚文案"
-          placeholder="页面底部展示的版权/描述文字；留空使用默认"
+          label={t('pages.system.config.footer.label')}
+          placeholder={t('pages.system.config.footer.placeholder')}
           disabled={!canEdit}
-          rules={[{ max: 200, message: '最多 200 个字符' }]}
+          rules={[rules.maxChars(200)]}
         />
       </ProForm>
     </PageContainer>

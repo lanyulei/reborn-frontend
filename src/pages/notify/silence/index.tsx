@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   DrawerForm,
@@ -9,10 +8,15 @@ import {
   ProFormTimePicker,
   ProTable,
 } from '@ant-design/pro-components';
-import { App, Button, Popconfirm } from 'antd';
+import { App } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import React, { useRef, useState } from 'react';
-import { NOTIFY_SEVERITY_ENUM } from '@/constants';
+import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
+import {
+  ENABLED_META,
+  NOTIFY_EVENT_PATTERN_REGEX,
+  NOTIFY_SEVERITY_META,
+} from '@/constants';
 import { useBizScope } from '@/services/notify/hooks';
 import type { SilenceSpecPayload } from '@/services/notify/silence';
 import {
@@ -24,17 +28,13 @@ import {
 } from '@/services/notify/silence';
 import type { NotifySilence } from '@/services/notify/typings';
 import { usePermissions } from '@/services/system/permissions';
+import { useFormRules, useSubmitter, useT, useValueEnum } from '@/utils/i18n';
+import { parseBoolParam, toTableResult } from '@/utils/table';
 import {
   BizIdFormField,
   BizIdReadonlyField,
-  bizIdColumn,
+  useBizIdColumn,
 } from '../components/bizScope';
-
-/** 静默规则状态枚举（表格筛选 + 展示）；查询参数经 request 归一化为布尔 */
-const SILENCE_ENABLED_ENUM: NonNullable<ProColumns['valueEnum']> = {
-  true: { text: '启用', status: 'Success' },
-  false: { text: '停用', status: 'Error' },
-};
 
 /** 两列栅格：半行 */
 const HALF = { span: 12 };
@@ -65,10 +65,6 @@ const buildSilenceSpec = (values: SilenceFormValues): SilenceSpecPayload => ({
   }),
 });
 
-/** 时间窗摘要（表格展示）：支持跨午夜（22:00-08:00），未设置 = 全程 */
-const windowText = (window?: NotifySilence['timeWindow']) =>
-  window ? `${window.start}-${window.end}（${window.tz || 'UTC'}）` : '全程';
-
 /**
  * 通知静默（免打扰）：事件命中任一启用规则（模式匹配 + 严重级 ≤ 上限 +
  * 当前时间落时间窗）即抑制，不再生成通知任务；多条规则重叠，任一命中即抑制。
@@ -79,6 +75,12 @@ const SilenceList: React.FC = () => {
   const { message } = App.useApp();
   const has = usePermissions();
   const scope = useBizScope();
+  const t = useT();
+  const rules = useFormRules();
+  const submitter = useSubmitter();
+  const enabledEnum = useValueEnum(ENABLED_META);
+  const severityEnum = useValueEnum(NOTIFY_SEVERITY_META);
+  const bizIdColumn = useBizIdColumn<NotifySilence>(scope);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editRow, setEditRow] = useState<NotifySilence | null>(null);
@@ -88,16 +90,26 @@ const SilenceList: React.FC = () => {
   const hasAnyAction =
     has('notify.silence.edit') || has('notify.silence.delete');
 
+  /** 时间窗摘要（表格展示）：支持跨午夜（22:00-08:00），未设置 = 全程 */
+  const windowText = (window?: NotifySilence['timeWindow']) =>
+    window
+      ? t('pages.notify.silence.window.summary', {
+          start: window.start,
+          end: window.end,
+          tz: window.tz || 'UTC',
+        })
+      : t('pages.notify.silence.window.always');
+
   const columns: ProColumns<NotifySilence>[] = [
     {
-      title: '搜索项',
+      title: t('common.column.keyword'),
       dataIndex: 'keyword',
       hideInTable: true,
-      fieldProps: { placeholder: '事件匹配模式' },
+      fieldProps: { placeholder: t('pages.notify.common.eventPattern') },
     },
-    bizIdColumn<NotifySilence>(scope),
+    bizIdColumn,
     {
-      title: '事件匹配模式',
+      title: t('pages.notify.common.eventPattern'),
       dataIndex: 'eventPattern',
       copyable: true,
       ellipsis: true,
@@ -105,34 +117,34 @@ const SilenceList: React.FC = () => {
       search: false,
     },
     {
-      title: '严重级上限',
+      title: t('pages.notify.silence.column.severityMax'),
       dataIndex: 'severityMax',
-      valueEnum: NOTIFY_SEVERITY_ENUM,
+      valueEnum: severityEnum,
       width: 110,
       search: false,
     },
     {
-      title: '时间窗',
+      title: t('pages.notify.silence.column.timeWindow'),
       dataIndex: 'timeWindow',
       search: false,
       ellipsis: true,
       render: (_, record) => windowText(record.timeWindow),
     },
     {
-      title: '状态',
+      title: t('common.column.status'),
       dataIndex: 'enabled',
-      valueEnum: SILENCE_ENABLED_ENUM,
+      valueEnum: enabledEnum,
       width: 90,
     },
     {
-      title: '更新时间',
+      title: t('common.column.updateTime'),
       dataIndex: 'updateTime',
       valueType: 'dateTime',
       search: false,
       width: 160,
     },
     {
-      title: '操作',
+      title: t('common.column.action'),
       valueType: 'option',
       width: 100,
       hideInTable: !hasAnyAction,
@@ -146,24 +158,22 @@ const SilenceList: React.FC = () => {
                 setEditRow(record);
               }}
             >
-              编辑
+              {t('common.action.edit')}
             </a>,
           );
         }
         if (has('notify.silence.delete')) {
           actions.push(
-            <Popconfirm
+            <DeleteConfirmLink
               key="delete"
-              title="删除静默规则"
-              description="删除后该规则不再参与匹配，确定删除？"
+              title={t('pages.notify.silence.delete.title')}
+              description={t('pages.notify.silence.delete.description')}
               onConfirm={async () => {
                 await deleteSilence(record.id);
-                message.success('删除成功');
+                message.success(t('common.msg.deleted'));
                 reload();
               }}
-            >
-              <a style={{ color: '#ff4d4f' }}>删除</a>
-            </Popconfirm>,
+            />,
           );
         }
         return actions;
@@ -179,33 +189,32 @@ const SilenceList: React.FC = () => {
     <>
       <ProFormText
         name="eventPattern"
-        label="事件匹配模式"
+        label={t('pages.notify.common.eventPattern')}
         colProps={HALF}
-        tooltip="精确 / 前缀通配（monitor.alert.*）/ 全匹配（*）"
+        tooltip={t('pages.notify.common.eventPattern.rule')}
         placeholder="monitor.alert.*"
         rules={[
-          { required: true, message: '请输入事件匹配模式' },
+          rules.required(t('pages.notify.common.eventPattern')),
           {
-            pattern:
-              /^(\*|[a-z0-9][a-z0-9._-]{0,127}|[a-z0-9][a-z0-9._-]{0,125}\.\*)$/,
-            message: '精确 / 前缀通配（monitor.alert.*）/ 全匹配（*）',
+            pattern: NOTIFY_EVENT_PATTERN_REGEX,
+            message: t('pages.notify.common.eventPattern.rule'),
           },
         ]}
       />
       <ProFormSelect
         name="severityMax"
-        label="严重级上限"
+        label={t('pages.notify.silence.column.severityMax')}
         colProps={HALF}
-        tooltip="该级及以下的事件才可被静默；缺省 2（警告）"
-        valueEnum={NOTIFY_SEVERITY_ENUM}
+        tooltip={t('pages.notify.silence.form.severityMax.tooltip')}
+        valueEnum={severityEnum}
         allowClear
-        placeholder="缺省 2（警告）"
+        placeholder={t('pages.notify.silence.form.severityMax.placeholder')}
       />
       <ProFormSwitch
         name="windowEnabled"
-        label="限制时间窗"
+        label={t('pages.notify.silence.form.windowEnabled')}
         colProps={HALF}
-        tooltip="关闭 = 全程静默；更新保存时关闭即清除时间窗"
+        tooltip={t('pages.notify.silence.form.windowEnabled.tooltip')}
       />
       <ProFormDependency name={['windowEnabled']}>
         {({ windowEnabled }) =>
@@ -213,22 +222,24 @@ const SilenceList: React.FC = () => {
             <>
               <ProFormTimePicker
                 name="windowStart"
-                label="窗口起点"
+                label={t('pages.notify.silence.form.windowStart')}
                 colProps={HALF}
-                tooltip="24 小时制 HH:MM，支持跨午夜（如 22:00→08:00 覆盖夜间）"
+                tooltip={t('pages.notify.silence.form.windowStart.tooltip')}
                 fieldProps={{
                   format: 'HH:mm',
                   minuteStep: 5,
                   style: { width: '100%' },
                 }}
-                rules={[{ required: true, message: '请选择窗口起点' }]}
+                rules={[
+                  rules.select(t('pages.notify.silence.form.windowStart')),
+                ]}
               />
               {/* 终点校验依赖起点：经 ProFormDependency 闭包取值（与起点相同 = 零长窗口非法） */}
               <ProFormDependency name={['windowStart']}>
                 {({ windowStart }) => (
                   <ProFormTimePicker
                     name="windowEnd"
-                    label="窗口终点"
+                    label={t('pages.notify.silence.form.windowEnd')}
                     colProps={HALF}
                     fieldProps={{
                       format: 'HH:mm',
@@ -236,12 +247,18 @@ const SilenceList: React.FC = () => {
                       style: { width: '100%' },
                     }}
                     rules={[
-                      { required: true, message: '请选择窗口终点' },
+                      rules.select(t('pages.notify.silence.form.windowEnd')),
                       {
                         validator: (_: unknown, value?: Dayjs) =>
                           value &&
                           windowStart?.format('HH:mm') === value.format('HH:mm')
-                            ? Promise.reject(new Error('终点不能与起点相同'))
+                            ? Promise.reject(
+                                new Error(
+                                  t(
+                                    'pages.notify.silence.form.windowEnd.sameAsStart',
+                                  ),
+                                ),
+                              )
                             : Promise.resolve(),
                       },
                     ]}
@@ -250,15 +267,15 @@ const SilenceList: React.FC = () => {
               </ProFormDependency>
               <ProFormText
                 name="tz"
-                label="时区"
+                label={t('pages.notify.silence.form.tz')}
                 colProps={HALF}
-                tooltip="IANA 时区名，缺省 UTC"
+                tooltip={t('pages.notify.silence.form.tz.tooltip')}
                 placeholder="Asia/Shanghai"
                 rules={[
-                  { max: 64, message: '最多 64 位' },
+                  rules.max(64),
                   {
                     pattern: /^[A-Za-z_]+\/[A-Za-z_+\-0-9]+$/,
-                    message: 'IANA 时区名，如 Asia/Shanghai',
+                    message: t('pages.notify.silence.form.tz.rule'),
                   },
                 ]}
               />
@@ -266,7 +283,11 @@ const SilenceList: React.FC = () => {
           ) : null
         }
       </ProFormDependency>
-      <ProFormSwitch name="enabled" label="启用" colProps={HALF} />
+      <ProFormSwitch
+        name="enabled"
+        label={t('common.column.enabled')}
+        colProps={HALF}
+      />
     </>
   );
 
@@ -275,15 +296,13 @@ const SilenceList: React.FC = () => {
       <ProTable<NotifySilence>
         headerTitle={
           has('notify.silence.create') && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
+            <CreateButton
               onClick={() => {
                 setCreateOpen(true);
               }}
             >
-              新建静默规则
-            </Button>
+              {t('pages.notify.silence.create.title')}
+            </CreateButton>
           )
         }
         rowKey="id"
@@ -296,25 +315,16 @@ const SilenceList: React.FC = () => {
             pageSize: params.pageSize,
             keyword: params.keyword || undefined,
             bizId: params.bizId || undefined,
-            enabled:
-              params.enabled === 'true'
-                ? true
-                : params.enabled === 'false'
-                  ? false
-                  : undefined,
+            enabled: parseBoolParam(params.enabled),
           });
-          return {
-            data: result.items,
-            total: Number(result.total),
-            success: true,
-          };
+          return toTableResult(result);
         }}
       />
 
       {/* 新建静默规则（抽屉）：spec 一次成型；biz 创建后不可改 */}
       <DrawerForm<SilenceFormValues>
         key="create-silence"
-        title="新建静默规则"
+        title={t('pages.notify.silence.create.title')}
         width={720}
         grid
         rowProps={{ gutter: 16 }}
@@ -326,16 +336,14 @@ const SilenceList: React.FC = () => {
           severityMax: 2,
           bizId: scope.restricted ? scope.defaultBizId : undefined,
         }}
-        submitter={{
-          searchConfig: { submitText: '创建', resetText: '取消' },
-        }}
+        submitter={submitter.create}
         onFinish={async (values) => {
           await createSilence({
             bizId: values.bizId || undefined,
             spec: buildSilenceSpec(values),
             enabled: values.enabled ?? true,
           });
-          message.success('创建成功');
+          message.success(t('common.msg.created'));
           reload();
           return true;
         }}
@@ -348,7 +356,9 @@ const SilenceList: React.FC = () => {
       {editRow && (
         <DrawerForm<SilenceFormValues>
           key={`edit-silence-${editRow.id}`}
-          title={`编辑静默规则：${editRow.eventPattern}`}
+          title={t('pages.notify.silence.edit.title', {
+            name: editRow.eventPattern,
+          })}
           width={720}
           grid
           rowProps={{ gutter: 16 }}
@@ -374,15 +384,13 @@ const SilenceList: React.FC = () => {
               enabled: silence.enabled,
             };
           }}
-          submitter={{
-            searchConfig: { submitText: '保存', resetText: '取消' },
-          }}
+          submitter={submitter.save}
           onFinish={async (values) => {
             await updateSilence(editRow.id, {
               spec: buildSilenceSpec(values),
               enabled: values.enabled ?? true,
             });
-            message.success('保存成功');
+            message.success(t('common.msg.saved'));
             reload();
             return true;
           }}

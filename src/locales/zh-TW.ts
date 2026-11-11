@@ -1,10 +1,14 @@
+import common from './zh-TW/common';
 import component from './zh-TW/component';
+import enumMessages from './zh-TW/enum';
 import globalHeader from './zh-TW/globalHeader';
 import menu from './zh-TW/menu';
 import network from './zh-TW/network';
+import notify from './zh-TW/notify';
 import pages from './zh-TW/pages';
 import settingDrawer from './zh-TW/settingDrawer';
 import settings from './zh-TW/settings';
+import system from './zh-TW/system';
 
 export default {
   'navBar.lang': '語言',
@@ -19,4 +23,8 @@ export default {
   ...settings,
   ...network,
   ...component,
+  ...common,
+  ...enumMessages,
+  ...system,
+  ...notify,
 };

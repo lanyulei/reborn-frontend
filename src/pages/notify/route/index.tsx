@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   DrawerForm,
@@ -11,9 +10,14 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import { App, Button, Popconfirm, Tag } from 'antd';
+import { App, Tag } from 'antd';
 import React, { useRef, useState } from 'react';
-import { NOTIFY_SEVERITY_ENUM } from '@/constants';
+import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
+import {
+  ENABLED_META,
+  NOTIFY_EVENT_PATTERN_REGEX,
+  NOTIFY_SEVERITY_META,
+} from '@/constants';
 import {
   DEFAULT_BIZ_ID,
   useBizScope,
@@ -29,30 +33,17 @@ import {
 } from '@/services/notify/route';
 import type { NotifyRoute } from '@/services/notify/typings';
 import { usePermissions } from '@/services/system/permissions';
+import { useFormRules, useSubmitter, useT, useValueEnum } from '@/utils/i18n';
+import { parseBoolParam, toTableResult } from '@/utils/table';
 import {
   BizIdFormField,
   BizIdReadonlyField,
-  bizIdColumn,
+  useBizIdColumn,
 } from '../components/bizScope';
-
-/** 路由状态枚举（表格筛选 + 展示）；查询参数经 request 归一化为布尔 */
-const ROUTE_ENABLED_ENUM: NonNullable<ProColumns['valueEnum']> = {
-  true: { text: '启用', status: 'Success' },
-  false: { text: '停用', status: 'Error' },
-};
 
 /** 两列栅格：半行 / 整行 */
 const HALF = { span: 12 };
 const FULL = { span: 24 };
-
-/** 事件匹配模式规则（路由/静默/订阅/生产者白名单同式） */
-const EVENT_PATTERN_RULES = [
-  { required: true, message: '请输入事件匹配模式' },
-  {
-    pattern: /^(\*|[a-z0-9][a-z0-9._-]{0,127}|[a-z0-9][a-z0-9._-]{0,125}\.\*)$/,
-    message: '精确 / 前缀通配（monitor.alert.*）/ 全匹配（*）',
-  },
-];
 
 /** 路由表单值（扁平结构；提交时组装为 spec 整组替换语义；biz 仅创建） */
 interface RouteFormValues {
@@ -126,6 +117,12 @@ const RouteList: React.FC = () => {
   const { message } = App.useApp();
   const has = usePermissions();
   const scope = useBizScope();
+  const t = useT();
+  const rules = useFormRules();
+  const submitter = useSubmitter();
+  const enabledEnum = useValueEnum(ENABLED_META);
+  const severityEnum = useValueEnum(NOTIFY_SEVERITY_META);
+  const bizIdColumn = useBizIdColumn<NotifyRoute>(scope);
   const {
     channels,
     optionsOf: channelOptionsOf,
@@ -141,14 +138,14 @@ const RouteList: React.FC = () => {
 
   const columns: ProColumns<NotifyRoute>[] = [
     {
-      title: '搜索项',
+      title: t('common.column.keyword'),
       dataIndex: 'keyword',
       hideInTable: true,
-      fieldProps: { placeholder: '事件匹配模式' },
+      fieldProps: { placeholder: t('pages.notify.common.eventPattern') },
     },
-    bizIdColumn<NotifyRoute>(scope),
+    bizIdColumn,
     {
-      title: '事件匹配模式',
+      title: t('pages.notify.common.eventPattern'),
       dataIndex: 'eventPattern',
       copyable: true,
       ellipsis: true,
@@ -156,20 +153,20 @@ const RouteList: React.FC = () => {
       search: false,
     },
     {
-      title: '严重级下限',
+      title: t('pages.notify.route.column.severityMin'),
       dataIndex: 'severityMin',
-      valueEnum: NOTIFY_SEVERITY_ENUM,
+      valueEnum: severityEnum,
       width: 110,
       search: false,
     },
     {
-      title: '优先级',
+      title: t('pages.notify.route.column.priority'),
       dataIndex: 'priority',
       width: 80,
       search: false,
     },
     {
-      title: '渠道',
+      title: t('pages.notify.common.channel'),
       dataIndex: 'channelIds',
       search: false,
       ellipsis: true,
@@ -179,33 +176,40 @@ const RouteList: React.FC = () => {
         )),
     },
     {
-      title: '收件策略',
+      title: t('pages.notify.route.column.recipient'),
       dataIndex: 'recipient',
       search: false,
       width: 150,
       render: (_, record) => {
         const parts: string[] = [];
-        if (record.recipient?.fixed?.length)
-          parts.push(`固定 ${record.recipient.fixed.length}`);
-        if (record.recipient?.subscription) parts.push('订阅者');
-        return parts.join(' + ') || '—';
+        if (record.recipient?.fixed?.length) {
+          parts.push(
+            t('pages.notify.route.recipient.fixed', {
+              count: record.recipient.fixed.length,
+            }),
+          );
+        }
+        if (record.recipient?.subscription) {
+          parts.push(t('pages.notify.route.recipient.subscription'));
+        }
+        return parts.join(' + ') || t('common.empty');
       },
     },
     {
-      title: '状态',
+      title: t('common.column.status'),
       dataIndex: 'enabled',
-      valueEnum: ROUTE_ENABLED_ENUM,
+      valueEnum: enabledEnum,
       width: 90,
     },
     {
-      title: '更新时间',
+      title: t('common.column.updateTime'),
       dataIndex: 'updateTime',
       valueType: 'dateTime',
       search: false,
       width: 160,
     },
     {
-      title: '操作',
+      title: t('common.column.action'),
       valueType: 'option',
       width: 100,
       hideInTable: !hasAnyAction,
@@ -219,24 +223,22 @@ const RouteList: React.FC = () => {
                 setEditRow(record);
               }}
             >
-              编辑
+              {t('common.action.edit')}
             </a>,
           );
         }
         if (has('notify.route.delete')) {
           actions.push(
-            <Popconfirm
+            <DeleteConfirmLink
               key="delete"
-              title="删除路由"
-              description="删除后在途发送任务照常完成，确定删除？"
+              title={t('pages.notify.route.delete.title')}
+              description={t('pages.notify.route.delete.description')}
               onConfirm={async () => {
                 await deleteRoute(record.id);
-                message.success('删除成功');
+                message.success(t('common.msg.deleted'));
                 reload();
               }}
-            >
-              <a style={{ color: '#ff4d4f' }}>删除</a>
-            </Popconfirm>,
+            />,
           );
         }
         return actions;
@@ -255,54 +257,62 @@ const RouteList: React.FC = () => {
     <>
       <ProFormText
         name="eventPattern"
-        label="事件匹配模式"
+        label={t('pages.notify.common.eventPattern')}
         colProps={HALF}
-        tooltip="精确 / 前缀通配（monitor.alert.*）/ 全匹配（*）"
+        tooltip={t('pages.notify.common.eventPattern.rule')}
         placeholder="monitor.alert.*"
-        rules={EVENT_PATTERN_RULES}
+        rules={[
+          rules.required(t('pages.notify.common.eventPattern')),
+          {
+            pattern: NOTIFY_EVENT_PATTERN_REGEX,
+            message: t('pages.notify.common.eventPattern.rule'),
+          },
+        ]}
       />
       <ProFormSelect
         name="severityMin"
-        label="严重级下限"
+        label={t('pages.notify.route.column.severityMin')}
         colProps={HALF}
-        tooltip="事件严重级 ≥ 下限才命中；缺省 1（提示）"
-        valueEnum={NOTIFY_SEVERITY_ENUM}
+        tooltip={t('pages.notify.route.form.severityMin.tooltip')}
+        valueEnum={severityEnum}
         allowClear
-        placeholder="缺省 1（提示）"
+        placeholder={t('pages.notify.route.form.severityMin.placeholder')}
       />
       <ProFormDigit
         name="priority"
-        label="优先级"
+        label={t('pages.notify.route.column.priority')}
         colProps={HALF}
-        tooltip="1-9，1 最高；多条路由命中时取最高优先级，缺省 5"
+        tooltip={t('pages.notify.route.form.priority.tooltip')}
         min={1}
         max={9}
         fieldProps={{ precision: 0 }}
-        placeholder="缺省 5"
+        placeholder={t('pages.notify.route.form.priority.placeholder')}
       />
       <ProFormList
         name="tags"
-        label="标签匹配"
+        label={t('pages.notify.route.form.tags')}
         colProps={FULL}
-        tooltip="payload 标签全部相等才命中（AND），最多 16 对；不填 = 无条件"
+        tooltip={t('pages.notify.route.form.tags.tooltip')}
         max={16}
-        creatorButtonProps={{ creatorButtonText: '添加标签条件' }}
+        creatorButtonProps={{
+          creatorButtonText: t('pages.notify.route.form.tags.add'),
+        }}
       >
         <ProForm.Group>
           <ProFormText
             name="tagKey"
-            label="键"
+            label={t('pages.notify.route.form.tags.key')}
             rules={[
-              { required: true, message: '请输入键' },
-              { max: 64, message: '最多 64 位' },
+              rules.required(t('pages.notify.route.form.tags.key')),
+              rules.max(64),
             ]}
           />
           <ProFormText
             name="tagValue"
-            label="值"
+            label={t('pages.notify.route.form.tags.value')}
             rules={[
-              { required: true, message: '请输入值' },
-              { max: 255, message: '最多 255 位' },
+              rules.required(t('pages.notify.route.form.tags.value')),
+              rules.max(255),
             ]}
           />
         </ProForm.Group>
@@ -311,17 +321,17 @@ const RouteList: React.FC = () => {
         {({ bizId }) => (
           <ProFormSelect
             name="channelIds"
-            label="目标渠道"
+            label={t('pages.notify.route.form.channels')}
             colProps={FULL}
-            tooltip="命中的渠道实例集合（须与路由同业务），每个启用渠道并发生成任务"
+            tooltip={t('pages.notify.route.form.channels.tooltip')}
             options={channelOptionsOf(fixedBizId ?? bizId ?? DEFAULT_BIZ_ID)}
             fieldProps={{
               mode: 'multiple',
               showSearch: true,
               optionFilterProp: 'label',
-              placeholder: '选择渠道，1-50 个',
+              placeholder: t('pages.notify.route.form.channels.placeholder'),
             }}
-            rules={[{ required: true, message: '请选择目标渠道' }]}
+            rules={[rules.select(t('pages.notify.route.form.channels'))]}
           />
         )}
       </ProFormDependency>
@@ -339,16 +349,18 @@ const RouteList: React.FC = () => {
           return (
             <ProFormSelect
               name="recipientFixed"
-              label="固定收件人"
+              label={t('pages.notify.route.form.recipientFixed')}
               colProps={FULL}
-              tooltip="邮件地址/群标识；邮件渠道必须由固定收件人或订阅者提供地址，Webhook 与群机器人以实例自身为收件可留空"
+              tooltip={t('pages.notify.route.form.recipientFixed.tooltip')}
               fieldProps={{
                 mode: 'tags',
                 open: false,
                 tokenSeparators: [',', ' '],
                 placeholder: needsRecipient
-                  ? '邮件渠道需要收件地址：输入后回车确认，最多 100 个'
-                  : '可选：输入后回车确认，最多 100 个',
+                  ? t(
+                      'pages.notify.route.form.recipientFixed.placeholder.email',
+                    )
+                  : t('pages.notify.route.form.recipientFixed.placeholder'),
               }}
               rules={[
                 {
@@ -361,15 +373,21 @@ const RouteList: React.FC = () => {
                     ) {
                       return Promise.reject(
                         new Error(
-                          '含邮件渠道：请配置固定收件人，或开启「追加订阅者」',
+                          t('pages.notify.route.form.recipientFixed.required'),
                         ),
                       );
                     }
                     if (list.length > 100) {
-                      return Promise.reject(new Error('最多 100 个'));
+                      return Promise.reject(
+                        new Error(
+                          t('pages.notify.route.form.recipientFixed.max'),
+                        ),
+                      );
                     }
                     if (list.some((item) => !item || item.length > 255)) {
-                      return Promise.reject(new Error('每个收件人 1-255 位'));
+                      return Promise.reject(
+                        new Error(t('pages.notify.common.recipientLength')),
+                      );
                     }
                     return Promise.resolve();
                   },
@@ -381,49 +399,57 @@ const RouteList: React.FC = () => {
       </ProFormDependency>
       <ProFormSwitch
         name="recipientSubscription"
-        label="追加订阅者"
+        label={t('pages.notify.route.form.recipientSubscription')}
         colProps={HALF}
-        tooltip="按用户订阅偏好与路由渠道类型的交集解析订阅者，与固定收件人去重"
+        tooltip={t('pages.notify.route.form.recipientSubscription.tooltip')}
       />
       <ProFormDigit
         name="aggregateWindowS"
-        label="聚合窗口（秒）"
+        label={t('pages.notify.route.form.aggregateWindow')}
         colProps={HALF}
-        tooltip="0 = 不聚合（缺省）；>0 须 30-300，事件带分组键时聚合微批"
+        tooltip={t('pages.notify.route.form.aggregateWindow.tooltip')}
         min={0}
         max={300}
         fieldProps={{ precision: 0 }}
-        placeholder="缺省 0"
+        placeholder={t('pages.notify.route.form.aggregateWindow.placeholder')}
         rules={[
           {
             validator: (_: unknown, value?: number) =>
               value != null && value !== 0 && (value < 30 || value > 300)
-                ? Promise.reject(new Error('0 或 30-300'))
+                ? Promise.reject(
+                    new Error(
+                      t('pages.notify.route.form.aggregateWindow.rule'),
+                    ),
+                  )
                 : Promise.resolve(),
           },
         ]}
       />
       <ProFormDigit
         name="suppressThreshold"
-        label="聚合抑制阈值"
+        label={t('pages.notify.route.form.suppressThreshold')}
         colProps={HALF}
-        tooltip="分组计数超过后汇总转摘要模式，缺省 500"
+        tooltip={t('pages.notify.route.form.suppressThreshold.tooltip')}
         min={1}
         max={100000}
         fieldProps={{ precision: 0 }}
-        placeholder="缺省 500"
+        placeholder={t('pages.notify.route.form.suppressThreshold.placeholder')}
       />
       <ProFormDigit
         name="suppressDurationM"
-        label="抑制时长（分钟）"
+        label={t('pages.notify.route.form.suppressDuration')}
         colProps={HALF}
-        tooltip="超阈值后同分组键的静默窗口，缺省 30"
+        tooltip={t('pages.notify.route.form.suppressDuration.tooltip')}
         min={1}
         max={1440}
         fieldProps={{ precision: 0 }}
-        placeholder="缺省 30"
+        placeholder={t('pages.notify.route.form.suppressDuration.placeholder')}
       />
-      <ProFormSwitch name="enabled" label="启用" colProps={HALF} />
+      <ProFormSwitch
+        name="enabled"
+        label={t('common.column.enabled')}
+        colProps={HALF}
+      />
     </>
   );
 
@@ -432,15 +458,13 @@ const RouteList: React.FC = () => {
       <ProTable<NotifyRoute>
         headerTitle={
           has('notify.route.create') && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
+            <CreateButton
               onClick={() => {
                 setCreateOpen(true);
               }}
             >
-              新建路由
-            </Button>
+              {t('pages.notify.route.create.title')}
+            </CreateButton>
           )
         }
         rowKey="id"
@@ -453,25 +477,16 @@ const RouteList: React.FC = () => {
             pageSize: params.pageSize,
             keyword: params.keyword || undefined,
             bizId: params.bizId || undefined,
-            enabled:
-              params.enabled === 'true'
-                ? true
-                : params.enabled === 'false'
-                  ? false
-                  : undefined,
+            enabled: parseBoolParam(params.enabled),
           });
-          return {
-            data: result.items,
-            total: Number(result.total),
-            success: true,
-          };
+          return toTableResult(result);
         }}
       />
 
       {/* 新建路由（抽屉）：spec 一次成型（整组替换语义，无部分更新）；biz 创建后不可改 */}
       <DrawerForm<RouteFormValues>
         key="create-route"
-        title="新建路由"
+        title={t('pages.notify.route.create.title')}
         width={720}
         grid
         rowProps={{ gutter: 16 }}
@@ -482,16 +497,14 @@ const RouteList: React.FC = () => {
           enabled: true,
           bizId: scope.restricted ? scope.defaultBizId : undefined,
         }}
-        submitter={{
-          searchConfig: { submitText: '创建', resetText: '取消' },
-        }}
+        submitter={submitter.create}
         onFinish={async (values) => {
           await createRoute({
             bizId: values.bizId || undefined,
             spec: buildRouteSpec(values),
             enabled: values.enabled ?? true,
           });
-          message.success('创建成功');
+          message.success(t('common.msg.created'));
           reload();
           return true;
         }}
@@ -504,7 +517,9 @@ const RouteList: React.FC = () => {
       {editRow && (
         <DrawerForm<RouteFormValues>
           key={`edit-route-${editRow.id}`}
-          title={`编辑路由：${editRow.eventPattern}`}
+          title={t('pages.notify.route.edit.title', {
+            name: editRow.eventPattern,
+          })}
           width={720}
           grid
           rowProps={{ gutter: 16 }}
@@ -530,15 +545,13 @@ const RouteList: React.FC = () => {
               enabled: route.enabled,
             };
           }}
-          submitter={{
-            searchConfig: { submitText: '保存', resetText: '取消' },
-          }}
+          submitter={submitter.save}
           onFinish={async (values) => {
             await updateRoute(editRow.id, {
               spec: buildRouteSpec(values),
               enabled: values.enabled ?? true,
             });
-            message.success('保存成功');
+            message.success(t('common.msg.saved'));
             reload();
             return true;
           }}

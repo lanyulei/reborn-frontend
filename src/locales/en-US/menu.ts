@@ -1,6 +1,7 @@
 export default {
   'menu.more-blocks': 'More Blocks',
   'menu.home': 'Home',
+  'menu.assistant': 'Assistant',
   'menu.system': 'System',
   'menu.system.user': 'Users',
   'menu.system.role': 'Roles',

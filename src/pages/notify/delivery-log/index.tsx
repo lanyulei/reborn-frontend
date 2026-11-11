@@ -5,18 +5,13 @@ import type {
 } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { useSearchParams } from '@umijs/max';
-import dayjs from 'dayjs';
 import React, { useRef } from 'react';
+import { DELIVERY_OK_META } from '@/constants';
 import { listDeliveryLogs } from '@/services/notify/deliveryLog';
-import { useBizScope, useChannelOptions } from '@/services/notify/hooks';
 import type { NotifyDeliveryLog } from '@/services/notify/typings';
-import { useRequiredChannelFilter } from '../components/bizScope';
-
-/** 投递结果枚举（表格筛选 + 展示）；查询参数经 request 归一化为布尔 */
-const DELIVERY_OK_ENUM: NonNullable<ProColumns['valueEnum']> = {
-  true: { text: '成功', status: 'Success' },
-  false: { text: '失败', status: 'Error' },
-};
+import { useT, useValueEnum } from '@/utils/i18n';
+import { parseBoolParam, timeRangeColumn, toTableResult } from '@/utils/table';
+import { useChannelFilter } from '../components/bizScope';
 
 /**
  * 投递明细：发送任务每次投递尝试的结果（append-only，含成功/失败、耗时与
@@ -29,95 +24,71 @@ const DeliveryLogList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
   const formRef = useRef<ProFormInstance | undefined>(undefined);
   const [searchParams] = useSearchParams();
-  const { restricted } = useBizScope();
-  const {
-    channels,
-    options: channelOptions,
-    nameOf: channelNameOf,
-  } = useChannelOptions();
-  useRequiredChannelFilter(restricted, channels, formRef, actionRef);
+  const t = useT();
+  const okEnum = useValueEnum(DELIVERY_OK_META);
+  const channelFilter = useChannelFilter<NotifyDeliveryLog>({
+    placeholderId: 'pages.notify.common.deliveryChannel',
+    formRef,
+    actionRef,
+  });
 
   const columns: ProColumns<NotifyDeliveryLog>[] = [
     {
-      title: '任务 ID',
+      title: t('pages.notify.common.dispatchId'),
       dataIndex: 'dispatchId',
       copyable: true,
       ellipsis: true,
-      fieldProps: { placeholder: '按任务下钻（精确）' },
-    },
-    {
-      title: '渠道',
-      dataIndex: 'channelId',
-      ellipsis: true,
-      render: (_, record) => channelNameOf(record.channelId),
-      valueType: 'select',
-      // options 经 state 驱动：渠道列表异步加载完成后搜索下拉随之更新
       fieldProps: {
-        showSearch: true,
-        optionFilterProp: 'label',
-        options: channelOptions,
-        allowClear: !restricted,
-        placeholder: '投递渠道',
+        placeholder: t('pages.notify.common.dispatchId.placeholder'),
       },
-      formItemProps: restricted
-        ? { rules: [{ required: true, message: '请选择渠道' }] }
-        : undefined,
     },
+    channelFilter.column,
     {
-      title: '结果',
+      title: t('pages.notify.deliveryLog.column.ok'),
       dataIndex: 'ok',
-      valueEnum: DELIVERY_OK_ENUM,
+      valueEnum: okEnum,
       width: 90,
     },
     {
-      title: '第几次尝试',
+      title: t('pages.notify.deliveryLog.column.attempt'),
       dataIndex: 'attempt',
       width: 110,
       search: false,
     },
     {
-      title: '耗时',
+      title: t('pages.notify.deliveryLog.column.latency'),
       dataIndex: 'latencyMs',
       width: 100,
       search: false,
-      render: (_, record) => `${record.latencyMs} ms`,
+      render: (_, record) =>
+        t('pages.notify.deliveryLog.latency.ms', { ms: record.latencyMs }),
     },
     {
-      title: '渠道消息标识',
+      title: t('pages.notify.deliveryLog.column.providerMsgId'),
       dataIndex: 'providerMsgId',
       copyable: true,
       ellipsis: true,
       search: false,
-      render: (_, record) => record.providerMsgId || '—',
+      render: (_, record) => record.providerMsgId || t('common.empty'),
     },
     {
-      title: '失败原因',
+      title: t('pages.notify.common.failReason'),
       dataIndex: 'error',
       ellipsis: true,
       search: false,
-      render: (_, record) => record.error || '—',
+      render: (_, record) => record.error || t('common.empty'),
     },
     {
-      title: '落库时间',
+      title: t('pages.notify.deliveryLog.column.createTime'),
       dataIndex: 'createTime',
       valueType: 'dateTime',
       search: false,
       width: 170,
     },
-    {
-      title: '时间范围',
-      dataIndex: 'timeRange',
-      valueType: 'dateTimeRange',
-      hideInTable: true,
-      search: {
-        transform: (value: [string, string]) => ({
-          createTimeStart: value?.[0]
-            ? dayjs(value[0]).toISOString()
-            : undefined,
-          createTimeEnd: value?.[1] ? dayjs(value[1]).toISOString() : undefined,
-        }),
-      },
-    },
+    timeRangeColumn<NotifyDeliveryLog>(t, {
+      start: 'createTimeStart',
+      end: 'createTimeEnd',
+    }),
   ];
 
   return (
@@ -134,8 +105,7 @@ const DeliveryLogList: React.FC = () => {
       }}
       columns={columns}
       request={async (params) => {
-        // 受限用户未选渠道时不发请求（后端要求 channel_id），等渠道选项加载后自动选中并重查
-        if (restricted && !params.channelId) {
+        if (channelFilter.guard(params)) {
           return { data: [], total: 0, success: true };
         }
         const result = await listDeliveryLogs({
@@ -143,21 +113,11 @@ const DeliveryLogList: React.FC = () => {
           pageSize: params.pageSize,
           dispatchId: params.dispatchId || undefined,
           channelId: params.channelId || undefined,
-          // valueEnum 键经表单序列化为字符串，此处归一化回布尔
-          ok:
-            params.ok === 'true'
-              ? true
-              : params.ok === 'false'
-                ? false
-                : undefined,
+          ok: parseBoolParam(params.ok),
           createTimeStart: params.createTimeStart,
           createTimeEnd: params.createTimeEnd,
         });
-        return {
-          data: result.items,
-          total: Number(result.total),
-          success: true,
-        };
+        return toTableResult(result);
       }}
     />
   );

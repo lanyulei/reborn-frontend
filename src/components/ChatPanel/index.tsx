@@ -1,35 +1,48 @@
-import { UserOutlined } from '@ant-design/icons';
-import { Bubble, Conversations, Sender, Think, XProvider } from '@ant-design/x';
+import { ExclamationCircleFilled, UserOutlined } from '@ant-design/icons';
+import {
+  Bubble,
+  Conversations,
+  Sender,
+  Think,
+  ThoughtChain,
+  XProvider,
+} from '@ant-design/x';
 import type {
   BubbleItemType,
   BubbleListProps,
 } from '@ant-design/x/es/bubble/interface';
+import type { ThoughtChainItemType } from '@ant-design/x/es/thought-chain/interface';
 import XMarkdown from '@ant-design/x-markdown';
-import { useXChat } from '@ant-design/x-sdk';
-import { Avatar } from 'antd';
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-
-import type { ConversationItem, ParsedMessage } from './data';
-import { createChatProvider } from './service';
+import {
+  Alert,
+  App,
+  Avatar,
+  Button,
+  Card,
+  Space,
+  Spin,
+  Typography,
+} from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import { JsonView } from '@/pages/notify/components/JsonView';
+import type { AssistantToolStatus } from '@/services/assistant/typings';
+import { type Translate, useT } from '@/utils/i18n';
+import type { AssistantChatMessage, ChatStep, ConversationGroup } from './data';
 import { useStyles } from './style';
-
-const WELCOME_TEXT = '🤖 你好，有什么可以帮你？';
+import { useAssistantChat } from './useAssistantChat';
 
 const TypewriterTitle: React.FC = () => {
   const { styles } = useStyles();
+  const t = useT();
+  const text = t('component.chat.welcome');
   const [index, setIndex] = useState(0);
-  const done = index >= WELCOME_TEXT.length;
+  const done = index >= text.length;
 
   useEffect(() => {
+    setIndex(0);
     const timer = setInterval(() => {
       setIndex((i) => {
-        if (i >= WELCOME_TEXT.length) {
+        if (i >= text.length) {
           clearInterval(timer);
           return i;
         }
@@ -37,41 +50,33 @@ const TypewriterTitle: React.FC = () => {
       });
     }, 80);
     return () => clearInterval(timer);
-  }, []);
+  }, [text]);
 
   return (
     <>
-      {WELCOME_TEXT.slice(0, index)}
+      {text.slice(0, index)}
       {!done && <span className={styles.cursor}>|</span>}
     </>
   );
 };
 
-const parser = (message: { content: string; role: string }): ParsedMessage => {
-  const { content, role } = message;
-  if (role !== 'assistant') return { role: 'user', content };
-
-  const trimmed = content.trimStart();
-
-  const fullMatch = trimmed.match(/^<think>([\s\S]*?)<\/think>([\s\S]*)$/);
-  if (fullMatch) {
-    return {
-      role: 'assistant',
-      thinkContent: fullMatch[1],
-      content: fullMatch[2].trimStart(),
-    };
-  }
-
-  const partialMatch = trimmed.match(/^<think>([\s\S]*)$/);
-  if (partialMatch) {
-    return { role: 'assistant', thinkContent: partialMatch[1], content: '' };
-  }
-
-  return { role: 'assistant', content };
-};
-
 const STREAMING_ACTIVE = { hasNextChunk: true, enableAnimation: true };
 const STREAMING_IDLE = { hasNextChunk: false, enableAnimation: true };
+
+/** 助手消息正文：Markdown 渲染 + 主题化排版（标题/列表/表格/代码/引用分层） */
+const MarkdownBody: React.FC<{ content: string; updating: boolean }> = ({
+  content,
+  updating,
+}) => {
+  const { styles } = useStyles();
+  return (
+    <div className={styles.markdown}>
+      <XMarkdown streaming={updating ? STREAMING_ACTIVE : STREAMING_IDLE}>
+        {content}
+      </XMarkdown>
+    </div>
+  );
+};
 
 const roleConfig: BubbleListProps['role'] = {
   user: {
@@ -95,202 +100,292 @@ const roleConfig: BubbleListProps['role'] = {
     ),
     typing: { effect: 'typing', step: 2, interval: 20 },
     contentRender: (
-      content: string,
+      content: React.ReactNode,
       info: { status?: string; loading?: boolean },
     ) => {
       if (info?.loading || !content) return undefined;
+      // 正文为空时确认卡直接作为 content 传入（ReactNode），原样渲染
+      if (typeof content !== 'string') return content;
       return (
-        <XMarkdown
-          streaming={
-            info?.status === 'updating' ? STREAMING_ACTIVE : STREAMING_IDLE
-          }
-        >
-          {content}
-        </XMarkdown>
+        <MarkdownBody
+          content={content}
+          updating={info?.status === 'updating'}
+        />
       );
     },
   },
 };
 
+/** 工具步骤状态 → 思维链节点状态（pending 等待用户，不展示进度图标） */
+const stepStatus = (
+  status: AssistantToolStatus,
+): ThoughtChainItemType['status'] => {
+  switch (status) {
+    case 'approved':
+      return 'loading';
+    case 'succeeded':
+      return 'success';
+    case 'failed':
+    case 'denied':
+      return 'error';
+    case 'rejected':
+    case 'cancelled':
+      return 'abort';
+    default:
+      return undefined;
+  }
+};
+
+const StepContent: React.FC<{ step: ChatStep; t: Translate }> = ({
+  step,
+  t,
+}) => (
+  <Space vertical size="small" style={{ width: '100%' }}>
+    <Typography.Text type="secondary">
+      {t('component.chat.step.input')}
+    </Typography.Text>
+    <JsonView value={step.input} maxHeight={160} />
+    {step.error ? (
+      <Typography.Text type="danger">{step.error}</Typography.Text>
+    ) : (
+      step.output !== undefined && (
+        <>
+          <Typography.Text type="secondary">
+            {t('component.chat.step.output')}
+          </Typography.Text>
+          <JsonView value={step.output} maxHeight={240} />
+        </>
+      )
+    )}
+  </Space>
+);
+
+const AssistantHeader: React.FC<{
+  msg: AssistantChatMessage;
+  t: Translate;
+}> = ({ msg, t }) => {
+  const { styles } = useStyles();
+  const items = useMemo<ThoughtChainItemType[]>(
+    () =>
+      msg.steps.map((step) => ({
+        key: step.id,
+        title: step.title || step.tool,
+        description: `${t(`component.chat.step.${step.status}`)}${
+          step.durationMs ? ` · ${step.durationMs} ms` : ''
+        }`,
+        status: stepStatus(step.status),
+        collapsible: true,
+        content: <StepContent step={step} t={t} />,
+      })),
+    [msg.steps, t],
+  );
+  // 思考过程：回复进行中展开，回答结束后自动收起；用户仍可手动展开/收起。
+  const [thinkExpanded, setThinkExpanded] = useState(msg.streaming);
+  useEffect(() => {
+    setThinkExpanded(msg.streaming);
+  }, [msg.streaming]);
+  if (!msg.reasoning && items.length === 0) return null;
+  return (
+    <Space vertical size="small" style={{ width: '100%' }}>
+      {msg.reasoning && (
+        <Think
+          title={t('component.chat.thinking')}
+          loading={msg.streaming && !msg.content && items.length === 0}
+          expanded={thinkExpanded}
+          onExpand={setThinkExpanded}
+        >
+          {msg.reasoning}
+        </Think>
+      )}
+      {items.length > 0 && (
+        <div className={styles.steps}>
+          <ThoughtChain items={items} />
+        </div>
+      )}
+    </Space>
+  );
+};
+
 /**
  * 聊天主体（会话侧栏 + 气泡流 + 输入框）。
  * 智能助手整页与全局弹窗共用；自身 flex 填满父级容器，父级需为定高 flex 列。
+ * 助手以当前登录用户身份经后端工具调用操作系统；写操作先在此确认。
  */
 const ChatPanel: React.FC = () => {
   const { styles } = useStyles();
-  const idCounter = useRef(0);
-  const generateId = useCallback(() => `conv-${++idCounter.current}`, []);
-
-  const [conversations, setConversations] = useState<ConversationItem[]>([
-    { key: 'default', label: '💬 新对话', group: '今天', isDraft: true },
-    {
-      key: 'preset-1',
-      label: '🧩 LanYuLei 的 Form 表单如何做联动校验？',
-      group: '今天',
-    },
-    {
-      key: 'preset-2',
-      label: '📋 ProTable 如何自定义工具栏按钮？',
-      group: '今天',
-    },
-    {
-      key: 'preset-3',
-      label: '🎨 如何用 antd-style 实现暗色主题切换？',
-      group: '昨天',
-    },
-    {
-      key: 'preset-4',
-      label: '🗂️ ProLayout 侧边菜单如何动态生成？',
-      group: '昨天',
-    },
-    {
-      key: 'preset-5',
-      label: '📊 LanYuLei Charts 折线图数据格式',
-      group: '昨天',
-    },
-    {
-      key: 'preset-6',
-      label: '🚀 LanYuLei 如何接入后端权限系统？',
-      group: '更早',
-    },
-    {
-      key: 'preset-7',
-      label: '🔍 ProForm 中 Select 远程搜索怎么实现？',
-      group: '更早',
-    },
-    {
-      key: 'preset-8',
-      label: '⚙️ LanYuLei Token 定制主题最佳实践',
-      group: '更早',
-    },
-  ]);
-  const [activeKey, setActiveKey] = useState<string>('default');
+  const t = useT();
+  const { modal } = App.useApp();
   const [inputValue, setInputValue] = useState('');
-
-  const provider = useMemo(() => createChatProvider() as any, []);
-  const { onRequest, abort, isRequesting, parsedMessages } = useXChat<
-    any,
-    ParsedMessage
-  >({
-    provider,
-    conversationKey: activeKey,
-    parser,
-    requestPlaceholder: { role: 'assistant', content: '' },
-  });
+  const chat = useAssistantChat();
 
   const sendMessage = (content: string) => {
     setInputValue('');
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.key === activeKey && c.isDraft
-          ? { ...c, label: content.slice(0, 20), isDraft: false }
-          : c,
-      ),
-    );
-    onRequest({ messages: [{ role: 'user', content }] });
-  };
-
-  const newChat = () => {
-    const key = generateId();
-    setConversations((prev) => [
-      { key, label: '新对话', group: '今天', isDraft: true },
-      ...prev,
-    ]);
-    setActiveKey(key);
+    chat.send(content);
   };
 
   const bubbleItems = useMemo<BubbleItemType[]>(
     () =>
-      parsedMessages.map((msg) => {
-        const parsed = msg.message as ParsedMessage;
-        const isAI = parsed.role === 'assistant';
-        const thinkContent =
-          parsed.role === 'assistant' ? parsed.thinkContent : undefined;
-
+      chat.messages.map((msg) => {
+        if (msg.role === 'user') {
+          return { key: msg.id, role: 'user', content: msg.content };
+        }
+        const pendingStep = msg.pendingConfirm
+          ? msg.steps.find((s) => s.id === msg.pendingConfirm)
+          : undefined;
+        const content = msg.error && !msg.content ? msg.error : msg.content;
+        const loading =
+          msg.streaming &&
+          !msg.content &&
+          msg.steps.length === 0 &&
+          !msg.reasoning;
+        const confirmCard =
+          pendingStep && !msg.streaming ? (
+            <Card
+              key={`${msg.id}-confirm`}
+              size="small"
+              className={styles.confirmCard}
+            >
+              <Space vertical size="small" style={{ width: '100%' }}>
+                <div className={styles.confirmTitle}>
+                  <ExclamationCircleFilled />
+                  <span>{pendingStep.title || pendingStep.tool}</span>
+                </div>
+                <Typography.Text type="secondary">
+                  {t('component.chat.confirm.title')}
+                </Typography.Text>
+                <JsonView value={pendingStep.input} maxHeight={160} />
+                <Space>
+                  <Button
+                    type="primary"
+                    disabled={chat.isRequesting}
+                    onClick={() => chat.confirm(msg.id, pendingStep.id, true)}
+                  >
+                    {t('component.chat.confirm.approve')}
+                  </Button>
+                  <Button
+                    danger
+                    disabled={chat.isRequesting}
+                    onClick={() => chat.confirm(msg.id, pendingStep.id, false)}
+                  >
+                    {t('component.chat.confirm.reject')}
+                  </Button>
+                </Space>
+              </Space>
+            </Card>
+          ) : undefined;
         const item: BubbleItemType = {
           key: msg.id,
-          role: isAI ? 'ai' : 'user',
-          content: parsed.content,
-          loading: isAI && msg.status === 'loading',
-          status: msg.status,
+          role: 'ai',
+          content,
+          loading,
+          status: msg.streaming ? 'updating' : 'success',
+          header: <AssistantHeader msg={msg} t={t} />,
         };
-
-        if (isAI && thinkContent) {
-          item.header = <Think>{thinkContent}</Think>;
+        if (!content && !loading) {
+          // 正文为空（仅有思考/工具步骤或待确认操作）：去掉气泡壳与内边距；
+          // 确认卡直接占据正文位置，避免空正文 + footer 外边距造成的大段留白
+          item.variant = 'borderless';
+          item.styles = { content: { padding: 0, minHeight: 0 } };
+          if (confirmCard) item.content = confirmCard;
+        } else if (confirmCard) {
+          item.footer = confirmCard;
         }
-
         return item;
       }),
-    [parsedMessages],
+    [chat.confirm, chat.isRequesting, chat.messages, styles, t],
   );
 
-  const hasMessages = parsedMessages.length > 0;
+  const hasMessages = chat.messages.length > 0;
 
   return (
     <XProvider>
       <div className={styles.layout}>
         <div className={styles.sidebar}>
           <Conversations
-            items={conversations}
-            activeKey={activeKey}
-            onActiveChange={setActiveKey}
-            groupable
+            items={chat.conversations}
+            activeKey={chat.activeKey}
+            onActiveChange={(key) => void chat.select(key)}
+            groupable={{
+              label: (group) =>
+                t(`component.chat.group.${group as ConversationGroup}`),
+            }}
             menu={(conversation) => ({
-              items: [{ key: 'delete', label: '删除', danger: true }],
+              items: [
+                {
+                  key: 'delete',
+                  label: t('common.action.delete'),
+                  danger: true,
+                },
+              ],
               onClick: ({ key }) => {
-                if (key === 'delete') {
-                  setConversations((prev) => {
-                    const next = prev.filter((c) => c.key !== conversation.key);
-                    if (next.length === 0) {
-                      const key = generateId();
-                      next.push({
-                        key,
-                        label: '💬 新对话',
-                        group: '今天',
-                        isDraft: true,
-                      });
-                      setActiveKey(key);
-                    } else if (activeKey === conversation.key) {
-                      setActiveKey(next[0]?.key ?? '');
-                    }
-                    return next;
-                  });
+                if (key !== 'delete') return;
+                if (conversation.key === 'draft') {
+                  void chat.remove(conversation.key);
+                  return;
                 }
+                modal.confirm({
+                  title: t('component.chat.deleteConfirm'),
+                  okButtonProps: { danger: true },
+                  onOk: () => chat.remove(conversation.key),
+                });
               },
             })}
-            creation={{ onClick: newChat, label: '新建对话' }}
+            creation={{
+              onClick: chat.newChat,
+              label: t('component.chat.create'),
+            }}
           />
         </div>
 
         <div className={styles.main}>
-          {hasMessages && (
+          {chat.historyLoading && (
+            <div className={styles.messages}>
+              <Spin />
+            </div>
+          )}
+          {!chat.historyLoading && hasMessages && (
             <div className={styles.messages}>
               <Bubble.List
                 items={bubbleItems}
                 role={roleConfig}
                 autoScroll
-                styles={{ root: { maxWidth: 940 } }}
+                styles={{
+                  root: { maxWidth: 940, containerType: 'inline-size' },
+                }}
               />
             </div>
           )}
 
           <div className={hasMessages ? styles.footer : styles.footerCenter}>
-            {!hasMessages && (
+            {!hasMessages && !chat.historyLoading && (
               <div className={styles.welcomeTitle}>
                 <TypewriterTitle />
               </div>
             )}
-            <Sender
-              value={inputValue}
-              onChange={setInputValue}
-              loading={isRequesting}
-              onSubmit={sendMessage}
-              onCancel={abort}
-              placeholder="输入消息，按 Enter 发送..."
-              autoSize={{ minRows: 4, maxRows: 8 }}
+            <Space
+              vertical
+              size="small"
               style={{ maxWidth: 940, width: '100%' }}
-              styles={{ input: { paddingBlock: 0 } }}
-            />
+            >
+              {chat.pending && !chat.isRequesting && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  title={t('component.chat.pendingNotice')}
+                />
+              )}
+              <Sender
+                value={inputValue}
+                onChange={setInputValue}
+                loading={chat.isRequesting}
+                onSubmit={sendMessage}
+                onCancel={chat.stop}
+                placeholder={t('component.chat.placeholder')}
+                autoSize={{ minRows: 4, maxRows: 8 }}
+                style={{ width: '100%' }}
+                styles={{ input: { paddingBlock: 0 } }}
+              />
+            </Space>
           </div>
         </div>
       </div>

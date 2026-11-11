@@ -5,8 +5,9 @@
  *   名称映射共用），按 biz 范围取数——受限用户逐 biz 拉取后合并，不限用户一次拉取。
  */
 import { useModel } from '@umijs/max';
-import { useEffect, useMemo, useState } from 'react';
-import { NOTIFY_CHANNEL_TYPE_TEXT } from '@/constants';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { NOTIFY_CHANNEL_TYPE_META } from '@/constants';
+import { useEnumText, useT } from '@/utils/i18n';
 import { listChannels } from './channel';
 import type { NotifyChannel } from './typings';
 
@@ -42,21 +43,29 @@ export const useBizScope = (): BizScope => {
   }, [unrestricted, scope]);
 };
 
-/** 渠道下拉选项（名称 + 类型，便于同名多渠道区分） */
-const toOption = (channel: NotifyChannel) => ({
-  label: `${channel.name}（${NOTIFY_CHANNEL_TYPE_TEXT[channel.type]}）`,
-  value: channel.id,
-});
-
 /**
  * 渠道选项：按操作者 biz 范围加载（每 biz 首页 ≤100 条）；无 notify.channel
  * 权限或失败时静默降级为空，调用方回退展示原始 ID。
  */
 export const useChannelOptions = () => {
   const { restricted, bizIds } = useBizScope();
+  const t = useT();
+  const channelTypeText = useEnumText(NOTIFY_CHANNEL_TYPE_META);
   const [channels, setChannels] = useState<NotifyChannel[]>([]);
   // 依赖以稳定字符串表达，避免数组引用变化重复拉取
   const bizKey = bizIds.join(',');
+
+  /** 渠道下拉选项（名称 + 类型，便于同名多渠道区分） */
+  const toOption = useCallback(
+    (channel: NotifyChannel) => ({
+      label: t('pages.notify.common.channelOption', {
+        name: channel.name,
+        type: channelTypeText(channel.type),
+      }),
+      value: channel.id,
+    }),
+    [t, channelTypeText],
+  );
 
   useEffect(() => {
     let disposed = false;
@@ -87,6 +96,6 @@ export const useChannelOptions = () => {
       nameOf: (id: string) =>
         channels.find((channel) => channel.id === id)?.name ?? id,
     }),
-    [channels],
+    [channels, toOption],
   );
 };

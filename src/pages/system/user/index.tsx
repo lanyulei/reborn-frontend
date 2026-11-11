@@ -1,4 +1,4 @@
-import { DownOutlined, PlusOutlined } from '@ant-design/icons';
+import { DownOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   ModalForm,
@@ -10,14 +10,14 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import type { MenuProps } from 'antd';
-import { App, Button, Dropdown, Tag } from 'antd';
+import { App, Dropdown, Tag } from 'antd';
 import React, { useRef, useState } from 'react';
+import { CreateButton } from '@/components/TableActions';
 import {
-  GENDER_OPTIONS,
-  GENDER_TEXT,
-  PASSWORD_LENGTH_RULE,
-  USER_STATUS_ENUM,
-  USER_STATUS_OPTIONS,
+  GENDER_META,
+  GENDER_ORDER,
+  USER_STATUS_META,
+  USER_STATUS_ORDER,
 } from '@/constants';
 import { usePermissions } from '@/services/system/permissions';
 import { listRoles } from '@/services/system/role';
@@ -34,11 +34,27 @@ import {
   updateUserStatus,
 } from '@/services/system/user';
 import { encodeSensitive } from '@/utils/encoding';
+import {
+  useEnumText,
+  useFormRules,
+  useOptions,
+  useSubmitter,
+  useT,
+  useValueEnum,
+} from '@/utils/i18n';
+import { toTableResult } from '@/utils/table';
 
 const UserList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
   const { message, modal } = App.useApp();
   const has = usePermissions();
+  const t = useT();
+  const rules = useFormRules();
+  const submitter = useSubmitter();
+  const userStatusEnum = useValueEnum(USER_STATUS_META);
+  const userStatusOptions = useOptions(USER_STATUS_META, USER_STATUS_ORDER);
+  const genderOptions = useOptions(GENDER_META, GENDER_ORDER);
+  const genderText = useEnumText(GENDER_META);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editRow, setEditRow] = useState<SystemUser | null>(null);
@@ -57,13 +73,16 @@ const UserList: React.FC = () => {
 
   const handleStatusChange = (row: SystemUser, status: UserStatus) => {
     if (row.status === status) return;
-    const target = USER_STATUS_OPTIONS.find((opt) => opt.value === status);
+    const target = userStatusOptions.find((opt) => opt.value === status);
     modal.confirm({
-      title: '变更用户状态',
-      content: `确定将「${row.nickname || row.username}」状态变更为「${target?.text ?? status}」？`,
+      title: t('pages.system.user.statusChange.title'),
+      content: t('pages.system.user.statusChange.content', {
+        name: row.nickname || row.username,
+        status: target?.label ?? status,
+      }),
       onOk: async () => {
         await updateUserStatus(row.id, status);
-        message.success('状态已变更');
+        message.success(t('pages.system.user.statusChange.success'));
         reload();
       },
     });
@@ -71,12 +90,12 @@ const UserList: React.FC = () => {
 
   const handleDelete = (row: SystemUser) => {
     modal.confirm({
-      title: '删除用户',
-      content: '删除后将同时解除其全部角色绑定，确定删除？',
+      title: t('pages.system.user.delete.title'),
+      content: t('pages.system.user.delete.content'),
       okButtonProps: { danger: true },
       onOk: async () => {
         await deleteUser(row.id);
-        message.success('删除成功');
+        message.success(t('common.msg.deleted'));
         reload();
       },
     });
@@ -84,13 +103,13 @@ const UserList: React.FC = () => {
 
   const columns: ProColumns<SystemUser>[] = [
     {
-      title: '搜索项',
+      title: t('common.column.keyword'),
       dataIndex: 'keyword',
       hideInTable: true,
-      fieldProps: { placeholder: '用户名 / 昵称 / 邮箱 / 手机号' },
+      fieldProps: { placeholder: t('pages.system.user.search.placeholder') },
     },
     {
-      title: '用户名',
+      title: t('pages.system.user.column.username'),
       dataIndex: 'username',
       copyable: true,
       ellipsis: true,
@@ -98,57 +117,61 @@ const UserList: React.FC = () => {
       search: false,
     },
     {
-      title: '昵称',
+      title: t('pages.system.user.column.nickname'),
       dataIndex: 'nickname',
       ellipsis: true,
       search: false,
     },
     {
-      title: '邮箱',
+      title: t('pages.system.user.column.email'),
       dataIndex: 'email',
       ellipsis: true,
       search: false,
     },
     {
-      title: '手机号',
+      title: t('pages.system.user.column.phone'),
       dataIndex: 'phone',
       // 手机号搜索由「关键字」字段覆盖（后端 keyword 模糊匹配用户名/昵称/邮箱/手机号）
       search: false,
     },
     {
-      title: '性别',
+      title: t('pages.system.user.column.gender'),
       dataIndex: 'gender',
       search: false,
       render: (_, record) => (
-        <Tag>{GENDER_TEXT[record.gender as Gender] ?? record.gender}</Tag>
+        <Tag>
+          {record.gender in GENDER_META
+            ? genderText(record.gender as Gender)
+            : record.gender}
+        </Tag>
       ),
     },
     {
-      title: '管理员',
+      title: t('pages.system.user.column.isAdmin'),
       dataIndex: 'isAdmin',
       search: false,
       render: (_, record) =>
         record.isAdmin ? (
-          <Tag color="gold">超级管理员</Tag>
+          <Tag color="gold">{t('pages.system.user.tag.superAdmin')}</Tag>
         ) : (
-          <Tag>普通用户</Tag>
+          <Tag>{t('pages.system.user.tag.normal')}</Tag>
         ),
     },
     {
-      title: '状态',
+      title: t('common.column.status'),
       dataIndex: 'status',
-      valueEnum: USER_STATUS_ENUM,
+      valueEnum: userStatusEnum,
       width: 90,
     },
     {
-      title: '创建时间',
+      title: t('common.column.createTime'),
       dataIndex: 'createTime',
       valueType: 'dateTime',
       search: false,
       width: 160,
     },
     {
-      title: '操作',
+      title: t('common.column.action'),
       valueType: 'option',
       width: 100,
       hideInTable: !hasAnyAction,
@@ -156,18 +179,24 @@ const UserList: React.FC = () => {
         // 元素权限显隐：无对应权限码的操作不渲染
         const items: MenuProps['items'] = [];
         if (has('system.user.reset_password')) {
-          items.push({ key: 'resetPassword', label: '重置密码' });
+          items.push({
+            key: 'resetPassword',
+            label: t('pages.system.user.action.resetPassword'),
+          });
         }
         if (has('system.user.bind_role')) {
-          items.push({ key: 'roles', label: '角色绑定' });
+          items.push({
+            key: 'roles',
+            label: t('pages.system.user.action.bindRoles'),
+          });
         }
         if (has('system.user.status')) {
           items.push({
             key: 'status',
-            label: '变更状态',
-            children: USER_STATUS_OPTIONS.map((opt) => ({
+            label: t('pages.system.user.action.changeStatus'),
+            children: userStatusOptions.map((opt) => ({
               key: `status-${opt.value}`,
-              label: opt.text,
+              label: opt.label,
               disabled: record.status === opt.value,
             })),
           });
@@ -176,7 +205,11 @@ const UserList: React.FC = () => {
           if (items.length > 0) {
             items.push({ type: 'divider' });
           }
-          items.push({ key: 'delete', label: '删除', danger: true });
+          items.push({
+            key: 'delete',
+            label: t('common.action.delete'),
+            danger: true,
+          });
         }
         const actions: React.ReactNode[] = [];
         if (has('system.user.edit')) {
@@ -187,7 +220,7 @@ const UserList: React.FC = () => {
                 setEditRow(record);
               }}
             >
-              编辑
+              {t('common.action.edit')}
             </a>,
           );
         }
@@ -220,7 +253,7 @@ const UserList: React.FC = () => {
               }}
             >
               <a>
-                更多 <DownOutlined />
+                {t('pages.system.user.action.more')} <DownOutlined />
               </a>
             </Dropdown>,
           );
@@ -236,15 +269,13 @@ const UserList: React.FC = () => {
         <ProTable<SystemUser>
           headerTitle={
             has('system.user.create') && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
+              <CreateButton
                 onClick={() => {
                   setCreateOpen(true);
                 }}
               >
-                新建用户
-              </Button>
+                {t('pages.system.user.create.title')}
+              </CreateButton>
             )
           }
           rowKey="id"
@@ -258,11 +289,7 @@ const UserList: React.FC = () => {
               keyword: params.keyword || undefined,
               status: params.status as UserStatus | undefined,
             });
-            return {
-              data: result.items,
-              total: Number(result.total),
-              success: true,
-            };
+            return toTableResult(result);
           }}
         />
       </PageContainer>
@@ -270,7 +297,7 @@ const UserList: React.FC = () => {
       {/* 新建用户：两列栅格布局（凭据 / 基本信息 / 联系方式 / 权限开关） */}
       <ModalForm
         key="create-user"
-        title="新建用户"
+        title={t('pages.system.user.create.title')}
         width={720}
         grid
         rowProps={{ gutter: 16 }}
@@ -278,9 +305,7 @@ const UserList: React.FC = () => {
         onOpenChange={setCreateOpen}
         modalProps={{ destroyOnHidden: true }}
         initialValues={{ gender: 'unknown', isAdmin: false }}
-        submitter={{
-          searchConfig: { submitText: '创建', resetText: '取消' },
-        }}
+        submitter={submitter.create}
         onFinish={async (values) => {
           await createUser({
             username: values.username,
@@ -291,7 +316,7 @@ const UserList: React.FC = () => {
             gender: values.gender,
             isAdmin: values.isAdmin ?? false,
           });
-          message.success('创建成功');
+          message.success(t('common.msg.created'));
           reload();
           return true;
         }}
@@ -299,49 +324,56 @@ const UserList: React.FC = () => {
         <ProFormText
           colProps={{ span: 12 }}
           name="username"
-          label="用户名"
-          placeholder="3-64 位字母/数字/下划线/中划线"
+          label={t('pages.system.user.column.username')}
+          placeholder={t('pages.system.user.form.username.rule')}
           rules={[
-            { required: true, message: '请输入用户名' },
+            rules.required(t('pages.system.user.column.username')),
             {
               pattern: /^[a-zA-Z0-9_-]{3,64}$/,
-              message: '3-64 位字母/数字/下划线/中划线',
+              message: t('pages.system.user.form.username.rule'),
             },
           ]}
         />
         <ProFormText.Password
           colProps={{ span: 12 }}
           name="password"
-          label="密码"
-          placeholder="8-64 位"
+          label={t('pages.system.user.form.password')}
+          placeholder={t('pages.system.user.form.password.placeholder')}
           rules={[
-            { required: true, message: '请输入密码' },
-            PASSWORD_LENGTH_RULE,
+            rules.required(t('pages.system.user.form.password')),
+            rules.passwordLength(),
           ]}
         />
         <ProFormText
           colProps={{ span: 12 }}
           name="nickname"
-          label="昵称"
+          label={t('pages.system.user.column.nickname')}
           rules={[
-            { required: true, message: '请输入昵称' },
-            { max: 64, message: '最多 64 位' },
+            rules.required(t('pages.system.user.column.nickname')),
+            rules.max(64),
           ]}
         />
         <ProFormText.Password
           colProps={{ span: 12 }}
           name="confirmPassword"
-          label="确认密码"
-          placeholder="再次输入密码"
+          label={t('pages.system.user.form.confirmPassword')}
+          placeholder={t('pages.system.user.form.confirmPassword.placeholder')}
           dependencies={['password']}
           rules={[
-            { required: true, message: '请再次输入密码' },
+            {
+              required: true,
+              message: t('pages.system.user.form.confirmPassword.required'),
+            },
             ({ getFieldValue }) => ({
               validator(_, value) {
                 if (!value || getFieldValue('password') === value) {
                   return Promise.resolve();
                 }
-                return Promise.reject(new Error('两次输入的密码不一致'));
+                return Promise.reject(
+                  new Error(
+                    t('pages.system.user.form.confirmPassword.mismatch'),
+                  ),
+                );
               },
             }),
           ]}
@@ -349,21 +381,25 @@ const UserList: React.FC = () => {
         <ProFormRadio.Group
           colProps={{ span: 12 }}
           name="gender"
-          label="性别"
-          rules={[{ required: true, message: '请选择性别' }]}
-          options={GENDER_OPTIONS}
+          label={t('pages.system.user.column.gender')}
+          rules={[rules.select(t('pages.system.user.column.gender'))]}
+          options={genderOptions}
         />
         <ProFormText
           colProps={{ span: 12 }}
           name="email"
-          label="邮箱"
-          rules={[{ type: 'email', message: '邮箱格式不正确' }]}
+          label={t('pages.system.user.column.email')}
+          rules={[rules.email()]}
         />
-        <ProFormText colProps={{ span: 12 }} name="phone" label="手机号" />
+        <ProFormText
+          colProps={{ span: 12 }}
+          name="phone"
+          label={t('pages.system.user.column.phone')}
+        />
         <ProFormSwitch
           colProps={{ span: 12 }}
           name="isAdmin"
-          label="超级管理员"
+          label={t('pages.system.user.tag.superAdmin')}
         />
       </ModalForm>
 
@@ -371,7 +407,7 @@ const UserList: React.FC = () => {
       {editRow && (
         <ModalForm
           key={`edit-user-${editRow.id}`}
-          title={`编辑用户：${editRow.username}`}
+          title={t('pages.system.user.edit.title', { name: editRow.username })}
           width={560}
           open={!!editRow}
           onOpenChange={(open) => {
@@ -389,9 +425,7 @@ const UserList: React.FC = () => {
               isAdmin: user.isAdmin,
             };
           }}
-          submitter={{
-            searchConfig: { submitText: '保存', resetText: '取消' },
-          }}
+          submitter={submitter.save}
           onFinish={async (values) => {
             const body: Record<string, unknown> = {
               nickname: values.nickname,
@@ -401,31 +435,37 @@ const UserList: React.FC = () => {
             if (values.email) body.email = values.email;
             if (values.phone) body.phone = values.phone;
             await updateUser(editRow.id, body);
-            message.success('保存成功');
+            message.success(t('common.msg.saved'));
             reload();
             return true;
           }}
         >
           <ProFormText
             name="nickname"
-            label="昵称"
+            label={t('pages.system.user.column.nickname')}
             rules={[
-              { required: true, message: '请输入昵称' },
-              { max: 64, message: '最多 64 位' },
+              rules.required(t('pages.system.user.column.nickname')),
+              rules.max(64),
             ]}
           />
           <ProFormText
             name="email"
-            label="邮箱"
-            rules={[{ type: 'email', message: '邮箱格式不正确' }]}
+            label={t('pages.system.user.column.email')}
+            rules={[rules.email()]}
           />
-          <ProFormText name="phone" label="手机号" />
+          <ProFormText
+            name="phone"
+            label={t('pages.system.user.column.phone')}
+          />
           <ProFormRadio.Group
             name="gender"
-            label="性别"
-            options={GENDER_OPTIONS}
+            label={t('pages.system.user.column.gender')}
+            options={genderOptions}
           />
-          <ProFormSwitch name="isAdmin" label="超级管理员" />
+          <ProFormSwitch
+            name="isAdmin"
+            label={t('pages.system.user.tag.superAdmin')}
+          />
         </ModalForm>
       )}
 
@@ -433,7 +473,9 @@ const UserList: React.FC = () => {
       {resetRow && (
         <ModalForm
           key={`reset-password-${resetRow.id}`}
-          title={`重置密码：${resetRow.username}`}
+          title={t('pages.system.user.reset.title', {
+            name: resetRow.username,
+          })}
           width={480}
           open={!!resetRow}
           onOpenChange={(open) => {
@@ -441,24 +483,27 @@ const UserList: React.FC = () => {
           }}
           modalProps={{ destroyOnHidden: true }}
           submitter={{
-            searchConfig: { submitText: '重置', resetText: '取消' },
+            searchConfig: {
+              submitText: t('pages.system.user.reset.submit'),
+              resetText: t('common.action.cancel'),
+            },
           }}
           onFinish={async (values) => {
             await resetUserPassword(
               resetRow.id,
               encodeSensitive(values.password),
             );
-            message.success('密码已重置');
+            message.success(t('pages.system.user.reset.success'));
             return true;
           }}
         >
           <ProFormText.Password
             name="password"
-            label="新密码"
-            placeholder="8-64 位"
+            label={t('pages.system.user.form.newPassword')}
+            placeholder={t('pages.system.user.form.password.placeholder')}
             rules={[
-              { required: true, message: '请输入新密码' },
-              PASSWORD_LENGTH_RULE,
+              rules.required(t('pages.system.user.form.newPassword')),
+              rules.passwordLength(),
             ]}
           />
         </ModalForm>
@@ -468,7 +513,7 @@ const UserList: React.FC = () => {
       {roleRow && (
         <ModalForm
           key={`bind-roles-${roleRow.id}`}
-          title={`角色绑定：${roleRow.username}`}
+          title={t('pages.system.user.roles.title', { name: roleRow.username })}
           width={560}
           open={!!roleRow}
           onOpenChange={(open) => {
@@ -476,9 +521,7 @@ const UserList: React.FC = () => {
           }}
           modalProps={{ destroyOnHidden: true }}
           initialValues={{ roleIds: [] }}
-          submitter={{
-            searchConfig: { submitText: '保存', resetText: '取消' },
-          }}
+          submitter={submitter.save}
           params={{ userId: roleRow.id }}
           request={async ({ userId }) => {
             const bound = await listUserRoles(userId);
@@ -486,22 +529,25 @@ const UserList: React.FC = () => {
           }}
           onFinish={async (values) => {
             await bindUserRoles(roleRow.id, values.roleIds ?? []);
-            message.success('角色绑定已保存');
+            message.success(t('pages.system.user.roles.success'));
             reload();
             return true;
           }}
         >
           <ProFormSelect
             name="roleIds"
-            label="已绑定角色"
+            label={t('pages.system.user.roles.label')}
             fieldProps={{
               mode: 'multiple',
-              placeholder: '请选择角色（最多 100 个）',
+              placeholder: t('pages.system.user.roles.placeholder'),
             }}
             request={async () => {
               const all = await listRoles({ page: 1, pageSize: 100 });
               return all.items.map((role) => ({
-                label: `${role.name}（${role.code}）`,
+                label: t('pages.system.user.roles.option', {
+                  name: role.name,
+                  code: role.code,
+                }),
                 value: role.id,
               }));
             }}

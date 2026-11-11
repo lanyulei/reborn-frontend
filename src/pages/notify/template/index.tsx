@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   ModalForm,
@@ -8,12 +7,10 @@ import {
   ProFormTextArea,
   ProTable,
 } from '@ant-design/pro-components';
-import { App, Button, Popconfirm, Tag } from 'antd';
+import { App, Tag } from 'antd';
 import React, { useRef, useState } from 'react';
-import {
-  NOTIFY_TEMPLATE_CHANNEL_ENUM,
-  NOTIFY_TEMPLATE_CHANNEL_TEXT,
-} from '@/constants';
+import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
+import { ENABLED_META, NOTIFY_TEMPLATE_CHANNEL_META } from '@/constants';
 import { useBizScope } from '@/services/notify/hooks';
 import {
   createTemplate,
@@ -28,16 +25,18 @@ import type {
 } from '@/services/notify/typings';
 import { usePermissions } from '@/services/system/permissions';
 import {
+  useEnumText,
+  useFormRules,
+  useSubmitter,
+  useT,
+  useValueEnum,
+} from '@/utils/i18n';
+import { parseBoolParam, toTableResult } from '@/utils/table';
+import {
   BizIdFormField,
   BizIdReadonlyField,
-  bizIdColumn,
+  useBizIdColumn,
 } from '../components/bizScope';
-
-/** 模板状态枚举（表格筛选 + 展示）；查询参数经 request 归一化为布尔 */
-const TEMPLATE_ENABLED_ENUM: NonNullable<ProColumns['valueEnum']> = {
-  true: { text: '启用', status: 'Success' },
-  false: { text: '停用', status: 'Error' },
-};
 
 /** 两列栅格：半行 / 整行 */
 const HALF = { span: 12 };
@@ -64,6 +63,13 @@ const TemplateList: React.FC = () => {
   const { message } = App.useApp();
   const has = usePermissions();
   const scope = useBizScope();
+  const t = useT();
+  const rules = useFormRules();
+  const submitter = useSubmitter();
+  const enabledEnum = useValueEnum(ENABLED_META);
+  const channelEnum = useValueEnum(NOTIFY_TEMPLATE_CHANNEL_META);
+  const channelText = useEnumText(NOTIFY_TEMPLATE_CHANNEL_META);
+  const bizIdColumn = useBizIdColumn<NotifyTemplate>(scope);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editRow, setEditRow] = useState<NotifyTemplate | null>(null);
@@ -75,14 +81,16 @@ const TemplateList: React.FC = () => {
 
   const columns: ProColumns<NotifyTemplate>[] = [
     {
-      title: '搜索项',
+      title: t('common.column.keyword'),
       dataIndex: 'keyword',
       hideInTable: true,
-      fieldProps: { placeholder: '事件类型 / 渠道 / 标题' },
+      fieldProps: {
+        placeholder: t('pages.notify.template.search.placeholder'),
+      },
     },
-    bizIdColumn<NotifyTemplate>(scope),
+    bizIdColumn,
     {
-      title: '事件类型',
+      title: t('pages.notify.template.column.eventType'),
       dataIndex: 'eventType',
       copyable: true,
       ellipsis: true,
@@ -96,44 +104,44 @@ const TemplateList: React.FC = () => {
         ),
     },
     {
-      title: '渠道类型',
+      title: t('pages.notify.template.column.channelType'),
       dataIndex: 'channelType',
-      valueEnum: NOTIFY_TEMPLATE_CHANNEL_ENUM,
+      valueEnum: channelEnum,
       width: 120,
       render: (_, record) =>
         record.channelType === '*' ? (
           <Tag>{record.channelType}</Tag>
         ) : (
-          NOTIFY_TEMPLATE_CHANNEL_TEXT[record.channelType]
+          channelText(record.channelType)
         ),
     },
     {
-      title: '标题模板',
+      title: t('pages.notify.template.column.subject'),
       dataIndex: 'subject',
       ellipsis: true,
       search: false,
     },
     {
-      title: '版本',
+      title: t('pages.notify.template.column.version'),
       dataIndex: 'version',
       width: 80,
       search: false,
     },
     {
-      title: '状态',
+      title: t('common.column.status'),
       dataIndex: 'enabled',
-      valueEnum: TEMPLATE_ENABLED_ENUM,
+      valueEnum: enabledEnum,
       width: 90,
     },
     {
-      title: '更新时间',
+      title: t('common.column.updateTime'),
       dataIndex: 'updateTime',
       valueType: 'dateTime',
       search: false,
       width: 160,
     },
     {
-      title: '操作',
+      title: t('common.column.action'),
       valueType: 'option',
       width: 100,
       hideInTable: !hasAnyAction,
@@ -147,24 +155,22 @@ const TemplateList: React.FC = () => {
                 setEditRow(record);
               }}
             >
-              编辑
+              {t('common.action.edit')}
             </a>,
           );
         }
         if (has('notify.template.delete')) {
           actions.push(
-            <Popconfirm
+            <DeleteConfirmLink
               key="delete"
-              title="删除模板"
-              description="删除后三维组合可复用，历史投递记录不受影响，确定删除？"
+              title={t('pages.notify.template.delete.title')}
+              description={t('pages.notify.template.delete.description')}
               onConfirm={async () => {
                 await deleteTemplate(record.id);
-                message.success('删除成功');
+                message.success(t('common.msg.deleted'));
                 reload();
               }}
-            >
-              <a style={{ color: '#ff4d4f' }}>删除</a>
-            </Popconfirm>,
+            />,
           );
         }
         return actions;
@@ -175,61 +181,70 @@ const TemplateList: React.FC = () => {
   /**
    * 新建/编辑共用字段组（业务字段由调用方置于最前）：
    * 事件类型 + 渠道类型 / 标题 / 正文独占一行 / 启用。
+   * Go template 示例经 ICU 占位传入（{{ }} 是 ICU 语法字符，不能直接写进语言包）。
    */
   const templateFields = (
     <>
       <ProFormText
         name="eventType"
-        label="事件类型"
+        label={t('pages.notify.template.column.eventType')}
         colProps={HALF}
-        tooltip="精确匹配或 '*' 通配；'*' 之外的值为小写字母/数字开头的点分串"
-        placeholder="monitor.alert.firing 或 *"
+        tooltip={t('pages.notify.template.form.eventType.tooltip')}
+        placeholder={t('pages.notify.template.form.eventType.placeholder')}
         rules={[
-          { required: true, message: '请输入事件类型' },
+          rules.required(t('pages.notify.template.column.eventType')),
           {
             pattern: /^(\*|[a-z0-9][a-z0-9._-]{0,127})$/,
-            message: "'*' 或小写字母/数字开头的点分串，最长 128 位",
+            message: t('pages.notify.template.form.eventType.rule'),
           },
         ]}
       />
       <ProFormSelect
         name="channelType"
-        label="渠道类型"
+        label={t('pages.notify.template.column.channelType')}
         colProps={HALF}
-        tooltip="三维覆盖的渠道维度，可选 '*' 通配"
-        valueEnum={NOTIFY_TEMPLATE_CHANNEL_ENUM}
-        rules={[{ required: true, message: '请选择渠道类型' }]}
+        tooltip={t('pages.notify.template.form.channelType.tooltip')}
+        valueEnum={channelEnum}
+        rules={[rules.select(t('pages.notify.template.column.channelType'))]}
       />
       <ProFormText
         name="subject"
-        label="标题模板"
+        label={t('pages.notify.template.column.subject')}
         colProps={HALF}
-        tooltip="邮件主题/机器人标题，Go template 语法"
-        placeholder="告警：{{ .Title }}"
+        tooltip={t('pages.notify.template.form.subject.tooltip')}
+        placeholder={t('pages.notify.template.form.subject.placeholder', {
+          title: '{{ .Title }}',
+        })}
         rules={[
-          { required: true, message: '请输入标题模板' },
-          { max: 255, message: '最多 255 位' },
+          rules.required(t('pages.notify.template.column.subject')),
+          rules.max(255),
         ]}
       />
       <ProFormTextArea
         name="body"
-        label="正文模板"
+        label={t('pages.notify.template.form.body')}
         colProps={FULL}
         tooltip={{
-          title: 'Go template 语法',
-          content:
-            '可用变量：Title / Payload / Severity / Count / Samples / BizID / EventTime',
+          title: t('pages.notify.template.form.body.tooltip.title'),
+          content: t('pages.notify.template.form.body.tooltip.content'),
         }}
         fieldProps={{
           rows: 8,
-          placeholder: '事件：{{ .Title }}\n业务：{{ .BizID }}',
+          placeholder: t('pages.notify.template.form.body.placeholder', {
+            title: '{{ .Title }}',
+            biz: '{{ .BizID }}',
+          }),
         }}
         rules={[
-          { required: true, message: '请输入正文模板' },
-          { max: 32768, message: '最多 32768 位' },
+          rules.required(t('pages.notify.template.form.body')),
+          rules.max(32768),
         ]}
       />
-      <ProFormSwitch name="enabled" label="启用" colProps={HALF} />
+      <ProFormSwitch
+        name="enabled"
+        label={t('common.column.enabled')}
+        colProps={HALF}
+      />
     </>
   );
 
@@ -238,15 +253,13 @@ const TemplateList: React.FC = () => {
       <ProTable<NotifyTemplate>
         headerTitle={
           has('notify.template.create') && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
+            <CreateButton
               onClick={() => {
                 setCreateOpen(true);
               }}
             >
-              新建模板
-            </Button>
+              {t('pages.notify.template.create.title')}
+            </CreateButton>
           )
         }
         rowKey="id"
@@ -262,18 +275,9 @@ const TemplateList: React.FC = () => {
             channelType: params.channelType as
               | NotifyTemplateChannelType
               | undefined,
-            enabled:
-              params.enabled === 'true'
-                ? true
-                : params.enabled === 'false'
-                  ? false
-                  : undefined,
+            enabled: parseBoolParam(params.enabled),
           });
-          return {
-            data: result.items,
-            total: Number(result.total),
-            success: true,
-          };
+          return toTableResult(result);
         }}
       />
 
@@ -281,7 +285,7 @@ const TemplateList: React.FC = () => {
           栅格：业务 + 事件类型 / 渠道类型 + 标题 / 正文 / 启用 */}
       <ModalForm<TemplateFormValues>
         key="create-template"
-        title="新建模板"
+        title={t('pages.notify.template.create.title')}
         width={640}
         grid
         rowProps={{ gutter: 16 }}
@@ -292,9 +296,7 @@ const TemplateList: React.FC = () => {
           enabled: true,
           bizId: scope.restricted ? scope.defaultBizId : undefined,
         }}
-        submitter={{
-          searchConfig: { submitText: '创建', resetText: '取消' },
-        }}
+        submitter={submitter.create}
         onFinish={async (values) => {
           await createTemplate({
             bizId: values.bizId || undefined,
@@ -304,7 +306,7 @@ const TemplateList: React.FC = () => {
             body: values.body,
             enabled: values.enabled ?? true,
           });
-          message.success('创建成功');
+          message.success(t('common.msg.created'));
           reload();
           return true;
         }}
@@ -317,7 +319,9 @@ const TemplateList: React.FC = () => {
       {editRow && (
         <ModalForm<TemplateFormValues>
           key={`edit-template-${editRow.id}`}
-          title={`编辑模板：${editRow.eventType}`}
+          title={t('pages.notify.template.edit.title', {
+            name: editRow.eventType,
+          })}
           width={640}
           grid
           rowProps={{ gutter: 16 }}
@@ -337,9 +341,7 @@ const TemplateList: React.FC = () => {
               enabled: template.enabled,
             };
           }}
-          submitter={{
-            searchConfig: { submitText: '保存', resetText: '取消' },
-          }}
+          submitter={submitter.save}
           onFinish={async (values) => {
             await updateTemplate(editRow.id, {
               eventType: values.eventType,
@@ -348,7 +350,7 @@ const TemplateList: React.FC = () => {
               body: values.body,
               enabled: values.enabled ?? true,
             });
-            message.success('保存成功');
+            message.success(t('common.msg.saved'));
             reload();
             return true;
           }}

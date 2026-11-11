@@ -6,7 +6,14 @@
 import type { RequestOptions } from '@@/plugin-request/request';
 import { request } from '@umijs/max';
 import { message } from 'antd';
-import { clearTokens, getRefreshToken, setTokens } from '@/utils/auth';
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  getTokenExpiresAt,
+  setTokens,
+} from '@/utils/auth';
+import { t } from '@/utils/i18n';
 
 interface AuthRequestOptions extends RequestOptions {
   /** 内部标记：已重试过，避免循环 */
@@ -18,7 +25,7 @@ interface AuthRequestOptions extends RequestOptions {
  * umi request 基于 axios：非 2xx 错误体挂在 error.response.data
  * （error.data 不存在，error.message 是 axios 通用文案，仅作网络错误兜底）。
  */
-export function getErrorMessage(error: unknown, fallback = '请求失败，请重试'): string {
+export function getErrorMessage(error: unknown, fallback = t('app.request.retry')): string {
   const err = error as
     | {
         response?: { data?: { message?: string } };
@@ -54,13 +61,32 @@ async function doRefresh(): Promise<boolean> {
   }
 }
 
-function redirectToLogin(): void {
+export function redirectToLogin(): void {
   clearTokens();
   const { pathname, search, hash } = window.location;
   if (pathname !== '/user/login') {
     const redirect = encodeURIComponent(pathname + search + hash);
     window.location.href = `/user/login?redirect=${redirect}`;
   }
+}
+
+/** 距过期小于该阈值即预刷新（流式长连接无法在中途换令牌） */
+const REFRESH_AHEAD_MS = 60_000;
+
+/**
+ * 保证 access token 在近期内有效：临近过期则用 refresh token 单飞换发。
+ * 返回是否持有可用令牌；流式请求（SSE）在发起前调用，普通请求仍走 authRequest 的 401 重试。
+ */
+export async function ensureFreshToken(): Promise<boolean> {
+  const expiresAt = getTokenExpiresAt();
+  const fresh =
+    getAccessToken() !== null &&
+    (expiresAt === null || expiresAt - Date.now() > REFRESH_AHEAD_MS);
+  if (fresh) return true;
+  refreshPromise ??= doRefresh().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
 }
 
 export async function authRequest<T>(

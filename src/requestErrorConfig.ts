@@ -28,7 +28,16 @@ export const errorConfig: RequestConfig = {
           // 未携带/失效的令牌：交给 authRequest 或登录流程处理，这里静默
           return;
         }
-        message.error(body?.message || `请求失败（HTTP ${status}）`);
+        message.error(
+          body?.message ||
+            getIntl().formatMessage(
+              {
+                id: 'app.request.httpFailed',
+                defaultMessage: '请求失败（HTTP {status}）',
+              },
+              { status },
+            ),
+        );
         return;
       }
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -40,9 +49,19 @@ export const errorConfig: RequestConfig = {
           }),
         );
       } else if (error.request) {
-        message.error('None response! Please retry.');
+        message.error(
+          getIntl().formatMessage({
+            id: 'app.request.noResponse',
+            defaultMessage: 'None response! Please retry.',
+          }),
+        );
       } else {
-        message.error('Request error, please retry.');
+        message.error(
+          getIntl().formatMessage({
+            id: 'app.request.error',
+            defaultMessage: 'Request error, please retry.',
+          }),
+        );
       }
     },
   },

@@ -127,6 +127,14 @@ export default [
     ],
   },
   {
+    // 智能助手整页：与右下角悬浮弹窗同一 ChatPanel；置于系统管理之上
+    path: '/assistant',
+    name: 'assistant',
+    icon: 'robot',
+    component: './assistant',
+    access: 'canAssistant',
+  },
+  {
     path: '/system',
     name: 'system',
     icon: 'setting',

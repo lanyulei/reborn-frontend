@@ -1,0 +1,182 @@
+/** 系統域頁面文案（使用者 / 角色 / 權限 / 設定 / 登入日誌 / 個人設定 / 頂欄元件） */
+export default {
+  // 使用者管理
+  'pages.system.user.create.title': '新建使用者',
+  'pages.system.user.edit.title': '編輯使用者：{name}',
+  'pages.system.user.search.placeholder':
+    '使用者名稱 / 暱稱 / 電子郵件 / 手機號',
+  'pages.system.user.column.username': '使用者名稱',
+  'pages.system.user.column.nickname': '暱稱',
+  'pages.system.user.column.email': '電子郵件',
+  'pages.system.user.column.phone': '手機號',
+  'pages.system.user.column.gender': '性別',
+  'pages.system.user.column.isAdmin': '管理員',
+  'pages.system.user.tag.superAdmin': '超級管理員',
+  'pages.system.user.tag.normal': '一般使用者',
+  'pages.system.user.action.resetPassword': '重設密碼',
+  'pages.system.user.action.bindRoles': '角色綁定',
+  'pages.system.user.action.changeStatus': '變更狀態',
+  'pages.system.user.action.more': '更多',
+  'pages.system.user.statusChange.title': '變更使用者狀態',
+  'pages.system.user.statusChange.content':
+    '確定將「{name}」狀態變更為「{status}」？',
+  'pages.system.user.statusChange.success': '狀態已變更',
+  'pages.system.user.delete.title': '刪除使用者',
+  'pages.system.user.delete.content':
+    '刪除後將同時解除其全部角色綁定，確定刪除？',
+  'pages.system.user.form.username.rule': '3-64 位字母/數字/底線/連字號',
+  'pages.system.user.form.password': '密碼',
+  'pages.system.user.form.password.placeholder': '8-64 位',
+  'pages.system.user.form.newPassword': '新密碼',
+  'pages.system.user.form.confirmPassword': '確認密碼',
+  'pages.system.user.form.confirmPassword.placeholder': '再次輸入密碼',
+  'pages.system.user.form.confirmPassword.required': '請再次輸入密碼',
+  'pages.system.user.form.confirmPassword.mismatch': '兩次輸入的密碼不一致',
+  'pages.system.user.reset.title': '重設密碼：{name}',
+  'pages.system.user.reset.submit': '重設',
+  'pages.system.user.reset.success': '密碼已重設',
+  'pages.system.user.roles.title': '角色綁定：{name}',
+  'pages.system.user.roles.label': '已綁定角色',
+  'pages.system.user.roles.placeholder': '請選擇角色（最多 100 個）',
+  'pages.system.user.roles.option': '{name}（{code}）',
+  'pages.system.user.roles.success': '角色綁定已儲存',
+
+  // 角色管理
+  'pages.system.role.create.title': '新建角色',
+  'pages.system.role.edit.title': '編輯角色：{name}',
+  'pages.system.role.search.placeholder': '角色名稱 / 代碼',
+  'pages.system.role.column.name': '角色名稱',
+  'pages.system.role.column.code': '角色代碼',
+  'pages.system.role.action.permission': '權限',
+  'pages.system.role.delete.title': '刪除角色',
+  'pages.system.role.delete.description':
+    '將同時解除全部使用者的角色綁定，確定刪除？',
+  'pages.system.role.form.code.placeholder':
+    '2-64 位小寫字母/數字/底線，建立後不可修改',
+  'pages.system.role.form.code.pattern': '2-64 位小寫字母/數字/底線',
+  'pages.system.role.form.code.tooltip': '代碼建立後不可修改',
+  'pages.system.role.bizScope.label': '通知業務範圍',
+  'pages.system.role.bizScope.tooltip':
+    '限制該角色可管理的通知業務（biz）；留空 = 不限。多角色取聯集，任一角色不限即不限',
+  'pages.system.role.bizScope.placeholder':
+    '輸入 biz 標識後按 Enter，留空 = 不限',
+  'pages.system.role.bizScope.max': '最多 64 項',
+  'pages.system.role.bizScope.duplicate': '條目不可重複',
+  'pages.system.role.bizScope.pattern': '1-64 位小寫字母/數字/底線/連字號',
+  'pages.system.role.bizScope.unlimited': '不限',
+
+  // 個人設定
+  'pages.account.base.success': '更新基本資訊成功',
+  'pages.account.base.submit': '更新基本資訊',
+  'pages.account.base.nickname.required': '請輸入您的暱稱!',
+  'pages.account.base.email.invalid': '電子郵件格式不正確!',
+  'pages.account.security.modify': '修改',
+  'pages.account.security.password.title': '帳戶密碼',
+  'pages.account.security.password.desc': '定期更換密碼可有效保護帳戶安全',
+  'pages.account.security.phone.title': '安全手機',
+  'pages.account.security.phone.bound': '已綁定手機：{phone}',
+  'pages.account.security.phone.unbound': '未綁定手機，可在基本設定中填寫',
+  'pages.account.security.email.title': '備用電子郵件',
+  'pages.account.security.email.bound': '已綁定電子郵件：{email}',
+  'pages.account.security.email.unbound': '未綁定電子郵件，可在基本設定中填寫',
+  'pages.account.security.changePassword.title': '修改密碼',
+  'pages.account.security.changePassword.submit': '確認修改',
+  'pages.account.security.changePassword.success': '密碼已修改',
+  'pages.account.menu.base': '基本設定',
+  'pages.account.menu.security': '安全設定',
+
+  // 登入日誌
+  'pages.system.loginLog.column.result': '登入結果',
+  'pages.system.loginLog.column.ip': 'IP 位址',
+  'pages.system.loginLog.column.loginTime': '登入時間',
+
+  // 角色權限
+  'pages.system.permission.tab.elements': '頁面標籤',
+  'pages.system.permission.tab.apis': '介面權限',
+  'pages.system.permission.desc.elements':
+    '勾選該頁面內允許使用的操作；全部不勾選時為唯讀存取。',
+  'pages.system.permission.desc.apis':
+    '勾選即授權；隨選單/標籤自動連動的介面鎖定，取消對應勾選後解鎖。',
+  'pages.system.permission.tip.noApis': '該標籤暫無綁定介面',
+  'pages.system.permission.tip.apis': '該標籤關聯介面：',
+  'pages.system.permission.tip.apiPath': '介面路徑：{path}',
+  'pages.system.permission.tip.apiMethod': '介面方法：{method}',
+  'pages.system.permission.origin.menuDefault': '頁面預設',
+  'pages.system.permission.origin.menuDefaultOf': '頁面預設·{name}',
+  'pages.system.permission.save.title': '儲存權限',
+  'pages.system.permission.save.content':
+    '將以目前勾選全量覆蓋該角色的權限，確定儲存？',
+  'pages.system.permission.saved': '權限已儲存',
+
+  // 系統設定
+  'pages.system.config.readonly':
+    '目前角色未授權「編輯系統設定」，以下內容僅可查看。',
+  'pages.system.config.submit': '儲存設定',
+  'pages.system.config.saved': '系統設定已儲存',
+  'pages.system.config.title.label': '系統標題',
+  'pages.system.config.title.placeholder':
+    '顯示在頂欄、瀏覽器分頁與登入頁；留空使用預設標題',
+  'pages.system.config.subTitle.label': '系統子標題',
+  'pages.system.config.subTitle.placeholder': '標題旁的補充小字；留空不顯示',
+  'pages.system.config.logo.label': '系統 Logo',
+  'pages.system.config.logo.mode.url': '圖片 URL',
+  'pages.system.config.logo.mode.upload': '本機上傳',
+  'pages.system.config.logo.preview': 'logo 預覽',
+  'pages.system.config.logo.urlPlaceholder':
+    'https://example.com/logo.svg；留空使用預設 logo',
+  'pages.system.config.logo.uploadButton': '上傳本機圖片',
+  'pages.system.config.logo.hint':
+    '支援 PNG/JPEG/SVG/WebP/ICO，≤2MB；上傳後隨儲存設定生效',
+  'pages.system.config.logo.unsupported':
+    '不支援的圖片格式 {type}，僅支援 PNG/JPEG/SVG/WebP/ICO',
+  'pages.system.config.logo.unknownType': '(未知)',
+  'pages.system.config.logo.tooLarge': '圖片大小不能超過 2MB',
+  'pages.system.config.logo.uploaded': 'Logo 已上傳，儲存設定後生效',
+  'pages.system.config.logo.uploadFailed': '上傳失敗，請重試',
+  'pages.system.config.footer.label': '頁尾文案',
+  'pages.system.config.footer.placeholder':
+    '頁面底部顯示的版權/描述文字；留空使用預設',
+
+  // 頂欄 / 智慧助理
+  'component.avatar.settings': '個人設定',
+  'component.avatar.logout': '登出',
+  'component.avatar.logout.confirm': '確定要登出目前帳號嗎？',
+  'component.chat.title': '智慧助理',
+  'component.chat.welcome': '🤖 你好，有什麼可以幫你？',
+  'component.chat.newConversation': '💬 新對話',
+  'component.chat.newConversationPlain': '新對話',
+  'component.chat.create': '新建對話',
+  'component.chat.group.today': '今天',
+  'component.chat.group.yesterday': '昨天',
+  'component.chat.group.earlier': '更早',
+  'component.chat.placeholder': '輸入訊息，按 Enter 送出...',
+  'component.chat.thinking': '思考過程',
+  'component.chat.steps': '操作步驟',
+  'component.chat.pendingNotice':
+    '有一個操作等待確認；送出新訊息將自動取消它。',
+  'component.chat.confirm.title': '該操作會修改資料，請確認後執行',
+  'component.chat.confirm.approve': '確認執行',
+  'component.chat.confirm.reject': '拒絕',
+  'component.chat.step.input': '參數',
+  'component.chat.step.output': '結果',
+  'component.chat.step.pending': '等待確認',
+  'component.chat.step.approved': '執行中',
+  'component.chat.step.rejected': '已拒絕',
+  'component.chat.step.denied': '無權限',
+  'component.chat.step.succeeded': '已完成',
+  'component.chat.step.failed': '失敗',
+  'component.chat.step.cancelled': '已取消',
+  'component.chat.error.disabled': '智慧助理尚未設定模型服務，請聯絡管理員。',
+  'component.chat.error.busy': '該會話正在回覆中，請稍後再試。',
+  'component.chat.error.notPending': '該操作已被處理，無需再次確認。',
+  'component.chat.error.generic': '助理請求失敗，請重試。',
+  'component.chat.error.loadFailed': '載入會話失敗',
+  'component.chat.deleteConfirm': '確定刪除該會話？',
+  'component.chat.stopped': '已停止',
+
+  // 請求錯誤（requestErrorConfig / request.ts）
+  'app.request.httpFailed': '請求失敗（HTTP {status}）',
+  'app.request.retry': '請求失敗，請重試',
+  'app.request.noResponse': 'None response! Please retry.',
+  'app.request.error': 'Request error, please retry.',
+};

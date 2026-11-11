@@ -28,6 +28,7 @@ export default function access(
     has('notify.dlq');
   return {
     canAdmin: isAdmin,
+    canAssistant: has('assistant'),
     canSystemUser: has('system.user'),
     canSystemRole: has('system.role'),
     canSystemLoginLog: has('system.login_log'),

@@ -2,9 +2,9 @@ import { ModalForm, ProFormText } from '@ant-design/pro-components';
 import { useModel } from '@umijs/max';
 import { App, Button, Flex, Listy, Typography } from 'antd';
 import React, { useState } from 'react';
-import { PASSWORD_LENGTH_RULE } from '@/constants';
 import { resetUserPassword } from '@/services/system/user';
 import { encodeSensitive } from '@/utils/encoding';
+import { useFormRules, useT } from '@/utils/i18n';
 import useStyles from '../style';
 
 const maskPhone = (phone: string) =>
@@ -26,6 +26,8 @@ interface SecurityItem {
 const SecurityView: React.FC = () => {
   const { styles } = useStyles();
   const { message } = App.useApp();
+  const t = useT();
+  const rules = useFormRules();
   const { initialState } = useModel('@@initialState');
   const [pwdOpen, setPwdOpen] = useState(false);
   const currentUser = initialState?.currentUser;
@@ -35,8 +37,8 @@ const SecurityView: React.FC = () => {
   const items: SecurityItem[] = [
     {
       key: 'password',
-      title: '账户密码',
-      description: '定期更换密码可有效保护账户安全',
+      title: t('pages.account.security.password.title'),
+      description: t('pages.account.security.password.desc'),
       actions: [
         <Button
           key="modify"
@@ -45,23 +47,27 @@ const SecurityView: React.FC = () => {
             setPwdOpen(true);
           }}
         >
-          修改
+          {t('pages.account.security.modify')}
         </Button>,
       ],
     },
     {
       key: 'phone',
-      title: '密保手机',
+      title: t('pages.account.security.phone.title'),
       description: currentUser.phone
-        ? `已绑定手机：${maskPhone(currentUser.phone)}`
-        : '未绑定手机，可在基本设置中填写',
+        ? t('pages.account.security.phone.bound', {
+            phone: maskPhone(currentUser.phone),
+          })
+        : t('pages.account.security.phone.unbound'),
     },
     {
       key: 'email',
-      title: '备用邮箱',
+      title: t('pages.account.security.email.title'),
       description: currentUser.email
-        ? `已绑定邮箱：${maskEmail(currentUser.email)}`
-        : '未绑定邮箱，可在基本设置中填写',
+        ? t('pages.account.security.email.bound', {
+            email: maskEmail(currentUser.email),
+          })
+        : t('pages.account.security.email.unbound'),
     },
   ];
 
@@ -86,30 +92,33 @@ const SecurityView: React.FC = () => {
 
       {/* 修改密码：与登录/重置密码一致，密码经 Base64 编码后传输 */}
       <ModalForm
-        title="修改密码"
+        title={t('pages.account.security.changePassword.title')}
         width={480}
         open={pwdOpen}
         onOpenChange={setPwdOpen}
         modalProps={{ destroyOnHidden: true }}
         submitter={{
-          searchConfig: { submitText: '确认修改', resetText: '取消' },
+          searchConfig: {
+            submitText: t('pages.account.security.changePassword.submit'),
+            resetText: t('common.action.cancel'),
+          },
         }}
         onFinish={async (values) => {
           await resetUserPassword(
             currentUser.id,
             encodeSensitive(values.password),
           );
-          message.success('密码已修改');
+          message.success(t('pages.account.security.changePassword.success'));
           return true;
         }}
       >
         <ProFormText.Password
           name="password"
-          label="新密码"
-          placeholder="8-64 位"
+          label={t('pages.system.user.form.newPassword')}
+          placeholder={t('pages.system.user.form.password.placeholder')}
           rules={[
-            { required: true, message: '请输入新密码' },
-            PASSWORD_LENGTH_RULE,
+            rules.required(t('pages.system.user.form.newPassword')),
+            rules.passwordLength(),
           ]}
         />
       </ModalForm>

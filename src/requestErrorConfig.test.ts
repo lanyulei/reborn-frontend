@@ -11,7 +11,16 @@ vi.mock('antd', () => ({
 
 vi.mock('@umijs/max', () => ({
   getIntl: vi.fn(() => ({
-    formatMessage: vi.fn(({ defaultMessage }) => defaultMessage),
+    // 以 defaultMessage 代替语言包，并做最简 ICU 占位替换（{status} 等）
+    formatMessage: vi.fn(
+      (
+        { defaultMessage }: { defaultMessage: string },
+        values?: Record<string, unknown>,
+      ) =>
+        defaultMessage.replace(/\{(\w+)\}/g, (_, key: string) =>
+          String(values?.[key] ?? ''),
+        ),
+    ),
   })),
 }));
 

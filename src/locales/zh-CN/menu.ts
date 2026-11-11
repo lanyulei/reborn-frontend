@@ -1,6 +1,7 @@
 export default {
   'menu.more-blocks': '更多区块',
   'menu.home': '首页',
+  'menu.assistant': '智能助手',
   'menu.system': '系统管理',
   'menu.system.user': '用户管理',
   'menu.system.role': '角色管理',
