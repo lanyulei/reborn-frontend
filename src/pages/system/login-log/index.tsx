@@ -1,5 +1,6 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
+import { Typography } from 'antd';
 import dayjs from 'dayjs';
 import React from 'react';
 import { LOGIN_LOG_RESULT_ENUM } from '@/constants';
@@ -17,35 +18,46 @@ const LoginLogList: React.FC = () => {
       title: '用户名',
       dataIndex: 'username',
       copyable: true,
-      ellipsis: true,
+      // 自动布局下按内容自适应，最窄 120px
+      minWidth: 120,
       fieldProps: { placeholder: '用户名' },
     },
     {
       title: '登录结果',
       dataIndex: 'result',
       valueEnum: LOGIN_LOG_RESULT_ENUM,
-      width: 130,
+      minWidth: 120,
     },
     {
       title: 'IP 地址',
       dataIndex: 'ip',
       search: false,
-      width: 140,
+      minWidth: 120,
       render: (_, record) => record.ip || '-',
     },
     {
       title: 'User-Agent',
       dataIndex: 'userAgent',
-      ellipsis: true,
       search: false,
-      render: (_, record) => record.userAgent || '-',
+      // 自动布局下吸收全部剩余宽度（width 100% + 单元格 maxWidth 0 是自动布局做省略的标准写法），
+      // 单行省略、悬停气泡显示全文
+      width: '100%',
+      onCell: () => ({ style: { maxWidth: 0 } }),
+      render: (_, record) =>
+        record.userAgent ? (
+          <Typography.Text ellipsis={{ tooltip: record.userAgent }}>
+            {record.userAgent}
+          </Typography.Text>
+        ) : (
+          '-'
+        ),
     },
     {
       title: '登录时间',
       dataIndex: 'createTime',
       valueType: 'dateTime',
       search: false,
-      width: 170,
+      minWidth: 180,
     },
     {
       title: '时间范围',
@@ -66,6 +78,8 @@ const LoginLogList: React.FC = () => {
     <PageContainer title={false}>
       <ProTable<LoginLog>
         rowKey="id"
+        // 自动布局：各列按内容自适应、以 minWidth 兜底（minWidth 仅在 auto 下生效）
+        tableLayout="auto"
         search={{ labelWidth: 'auto' }}
         columns={columns}
         request={async (params) => {

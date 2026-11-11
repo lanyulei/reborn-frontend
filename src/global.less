@@ -90,3 +90,9 @@ ol {
     }
   }
 }
+
+// ProTable copyable 列把复制图标渲染为独立的纯图标 Typography（antd 对其置 margin 0），
+// 与左侧数据贴死；表格体内的复制图标统一给 4px 间距（含展开行描述列表里的复制项）
+.ant-pro-table .ant-table-tbody .ant-typography-copy {
+  margin-inline-start: 4px;
+}

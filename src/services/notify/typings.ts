@@ -269,6 +269,27 @@ export interface NotifyEvent {
 /** 发送任务状态：1 pending / 2 sending / 3 sent / 4 failed（重试中）/ 5 dead（死信） */
 export type NotifyDispatchStatus = 1 | 2 | 3 | 4 | 5;
 
+/**
+ * DispatchContentSnapshot 发送任务渲染快照（管道写入的 jsonb，键为 snake_case）：
+ * 路由命中时写入模板引用与聚合上下文，渠道发送前回填 subject/body。
+ */
+export interface DispatchContentSnapshot {
+  /** 渲染后的标题（发送前为空） */
+  subject?: string;
+  /** 渲染后的正文（发送前为空） */
+  body?: string;
+  /** 渲染所用模板标识；空 = 内置默认模板 */
+  template_id?: string;
+  template_version?: number;
+  /** 聚合汇总上下文（仅聚合窗口关闭产出的汇总任务） */
+  agg?: {
+    count: number;
+    samples?: { event_id: string; title: string; severity: number }[];
+    /** 超阈值摘要模式（不列明细） */
+    digest?: boolean;
+  };
+}
+
 /** NotifyDispatch 发送任务实体（事件 × 渠道 × 收件人，状态机由管道 sender 推进） */
 export interface NotifyDispatch {
   /** 任务唯一标识（UUIDv7） */
@@ -282,7 +303,7 @@ export interface NotifyDispatch {
   /** 渲染用模板版本；未设置表示无模板（纯文本通知） */
   templateId?: string;
   /** 渲染快照（排障复现用）；未设置表示无快照 */
-  content?: Record<string, unknown>;
+  content?: DispatchContentSnapshot;
   /** 任务状态 */
   status: NotifyDispatchStatus;
   /** 已尝试次数（失败重试累加） */

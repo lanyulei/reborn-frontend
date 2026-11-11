@@ -5,7 +5,7 @@ import type {
 } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { Link, useAccess, useSearchParams } from '@umijs/max';
-import { Descriptions, Typography } from 'antd';
+import { Descriptions, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import React, { useRef } from 'react';
 import { NOTIFY_DISPATCH_STATUS_ENUM } from '@/constants';
@@ -16,6 +16,7 @@ import type {
   NotifyDispatchStatus,
 } from '@/services/notify/typings';
 import { useRequiredChannelFilter } from '../components/bizScope';
+import { JsonView } from '../components/JsonView';
 
 /**
  * 通知发送任务：路由命中后生成的发送任务（事件 × 渠道 × 收件人），
@@ -163,52 +164,104 @@ const DispatchList: React.FC = () => {
           success: true,
         };
       }}
-      // 展开行：渲染快照与幂等键（排障复现）
+      // 展开行：渲染快照按人读字段拆开（模板 / 聚合 / 标题 / 正文），原始 JSON 块收尾备查
       expandable={{
-        expandedRowRender: (record) => (
-          <Descriptions
-            size="small"
-            column={2}
-            items={[
-              {
-                key: 'id',
-                label: '任务 ID',
-                children: (
-                  <Typography.Text copyable>{record.id}</Typography.Text>
-                ),
-              },
-              {
-                key: 'templateId',
-                label: '渲染模板版本',
-                children: record.templateId || '—（纯文本通知）',
-              },
-              {
-                key: 'content',
-                label: '渲染快照',
-                span: 2,
-                children: record.content ? (
-                  <Typography.Paragraph
-                    code
-                    copyable={{ text: JSON.stringify(record.content) }}
-                    style={{ marginBottom: 0 }}
-                  >
-                    {JSON.stringify(record.content)}
-                  </Typography.Paragraph>
-                ) : (
-                  '—'
-                ),
-              },
-              {
-                key: 'sendKey',
-                label: '幂等键',
-                span: 2,
-                children: (
-                  <Typography.Text copyable>{record.sendKey}</Typography.Text>
-                ),
-              },
-            ]}
-          />
-        ),
+        expandedRowRender: (record) => {
+          const snapshot = record.content;
+          const rendered = Boolean(snapshot?.subject || snapshot?.body);
+          const templateId = snapshot?.template_id || record.templateId;
+          const pending = (
+            <Typography.Text type="secondary">—（发送时渲染）</Typography.Text>
+          );
+          return (
+            <Descriptions
+              bordered
+              size="small"
+              column={2}
+              styles={{ label: { width: 120, whiteSpace: 'nowrap' } }}
+              items={[
+                {
+                  key: 'id',
+                  label: '任务 ID',
+                  children: (
+                    <Typography.Text copyable>{record.id}</Typography.Text>
+                  ),
+                },
+                {
+                  key: 'sendKey',
+                  label: '幂等键',
+                  children: (
+                    <Typography.Text copyable>{record.sendKey}</Typography.Text>
+                  ),
+                },
+                {
+                  key: 'template',
+                  label: '渲染模板',
+                  children: templateId ? (
+                    <>
+                      <Typography.Text copyable>{templateId}</Typography.Text>
+                      {snapshot?.template_version != null && (
+                        <Tag style={{ marginInlineStart: 8 }}>
+                          v{snapshot.template_version}
+                        </Tag>
+                      )}
+                    </>
+                  ) : (
+                    <Typography.Text type="secondary">
+                      内置默认模板
+                    </Typography.Text>
+                  ),
+                },
+                {
+                  key: 'agg',
+                  label: '聚合汇总',
+                  children: snapshot?.agg ? (
+                    <>
+                      <Tag color="blue">{snapshot.agg.count} 条事件</Tag>
+                      {snapshot.agg.digest ? (
+                        <Tag color="orange">摘要模式（超阈值，不列明细）</Tag>
+                      ) : (
+                        <Tag>样本 {snapshot.agg.samples?.length ?? 0} 条</Tag>
+                      )}
+                    </>
+                  ) : (
+                    <Typography.Text type="secondary">
+                      —（单事件）
+                    </Typography.Text>
+                  ),
+                },
+                {
+                  key: 'subject',
+                  label: '渲染标题',
+                  span: 2,
+                  children: rendered ? snapshot?.subject || '—' : pending,
+                },
+                {
+                  key: 'body',
+                  label: '渲染正文',
+                  span: 2,
+                  children: rendered ? (
+                    <Typography.Paragraph
+                      style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}
+                    >
+                      {snapshot?.body || '—'}
+                    </Typography.Paragraph>
+                  ) : (
+                    pending
+                  ),
+                },
+                {
+                  key: 'raw',
+                  label: '原始快照',
+                  span: 2,
+                  children: (
+                    <JsonView value={snapshot} emptyText="—（无快照）" />
+                  ),
+                },
+              ]}
+            />
+          );
+        },
       }}
     />
   );

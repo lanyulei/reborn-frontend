@@ -13,6 +13,7 @@ import { listEvents } from '@/services/notify/event';
 import { useBizScope } from '@/services/notify/hooks';
 import type { NotifyEvent, NotifyEventStatus } from '@/services/notify/typings';
 import { bizIdColumn } from '../components/bizScope';
+import { JsonView } from '../components/JsonView';
 
 /** 事件来源标识：api（生产者经 ingress）/ internal（core 同事务直插） */
 const EVENT_SOURCE_TEXT: Record<string, string> = {
@@ -136,12 +137,14 @@ const EventList: React.FC = () => {
           success: true,
         };
       }}
-      // 展开行：载荷 JSON、去重/聚合键、显式收件与发布退避（排障下钻）
+      // 展开行：标识/退避/去重聚合键成对排布，显式收件以标签呈现，载荷用美化 JSON 块收尾
       expandable={{
         expandedRowRender: (record) => (
           <Descriptions
+            bordered
             size="small"
             column={2}
+            styles={{ label: { width: 120, whiteSpace: 'nowrap' } }}
             items={[
               {
                 key: 'id',
@@ -151,43 +154,49 @@ const EventList: React.FC = () => {
                 ),
               },
               {
-                key: 'payload',
-                label: '载荷',
-                span: 2,
-                children: record.payload ? (
-                  <Typography.Paragraph
-                    code
-                    copyable={{ text: JSON.stringify(record.payload) }}
-                    style={{ marginBottom: 0 }}
-                  >
-                    {JSON.stringify(record.payload)}
-                  </Typography.Paragraph>
+                key: 'nextPublishTime',
+                label: '下次发布时间',
+                children: record.nextPublishTime
+                  ? dayjs(record.nextPublishTime).format('YYYY-MM-DD HH:mm:ss')
+                  : '—',
+              },
+              {
+                key: 'dedupKey',
+                label: '去重指纹',
+                children: record.dedupKey ? (
+                  <Typography.Text copyable>{record.dedupKey}</Typography.Text>
                 ) : (
                   '—'
                 ),
               },
               {
-                key: 'dedupKey',
-                label: '去重指纹',
-                children: record.dedupKey || '—',
-              },
-              {
                 key: 'groupKey',
                 label: '聚合分组键',
-                children: record.groupKey || '—',
+                children: record.groupKey ? (
+                  <Typography.Text copyable>{record.groupKey}</Typography.Text>
+                ) : (
+                  '—'
+                ),
               },
               {
                 key: 'recipients',
                 label: '显式收件',
                 span: 2,
-                children: record.recipients?.length
-                  ? record.recipients.join('、')
-                  : '—（走路由解析）',
+                children: record.recipients?.length ? (
+                  record.recipients.map((item) => <Tag key={item}>{item}</Tag>)
+                ) : (
+                  <Typography.Text type="secondary">
+                    —（走路由收件策略解析）
+                  </Typography.Text>
+                ),
               },
               {
-                key: 'nextPublishTime',
-                label: '下次发布时间',
-                children: record.nextPublishTime || '—',
+                key: 'payload',
+                label: '载荷',
+                span: 2,
+                children: (
+                  <JsonView value={record.payload} emptyText="—（无载荷）" />
+                ),
               },
             ]}
           />
