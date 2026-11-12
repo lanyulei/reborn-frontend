@@ -78,6 +78,9 @@ export default {
   'pages.cmdb.model.action.disable': '停用',
   'pages.cmdb.model.action.enable': '启用',
   'pages.cmdb.model.delete.title': '删除模型',
+  'pages.cmdb.model.disableConfirm.title': '停用模型',
+  'pages.cmdb.model.disableConfirm.description':
+    '停用后将无法新增该类型的资源实例，确定停用？',
   'pages.cmdb.model.delete.description':
     '仍有资源或被关系类型引用的类型无法删除。确定删除？',
 
@@ -386,8 +389,6 @@ export default {
   'pages.cmdb.model.empty': '没有匹配的模型',
   'pages.cmdb.model.tip':
     '模型定义一类资源的数据结构：新增一种需要纳管的设备或服务时，先新建模型并定义字段，再配置它与其他模型的关联。',
-  'pages.cmdb.model.group.empty': '该分组暂无模型，',
-  'pages.cmdb.model.group.empty.add': '立即添加',
   'pages.cmdb.model.form.icon.tooltip': '展示在资源实例与模型关系图中的图标',
   // 模型详情
   'pages.cmdb.modelDetail.notFound': '模型不存在或已被删除',
@@ -403,6 +404,11 @@ export default {
   'pages.cmdb.modelDetail.fields.empty': '暂无字段',
   'pages.cmdb.modelDetail.fields.groupEmpty':
     '该分组暂无字段，可在“详情布局”中调整',
+  'pages.cmdb.modelDetail.fields.group.delete.title': '删除分组',
+  'pages.cmdb.modelDetail.fields.group.delete.content':
+    '确定删除分组「{name}」？',
+  'pages.cmdb.modelDetail.fields.group.delete.contentFields':
+    '「{name}」中的 {n} 个字段将归入「其他」，确定删除？',
   'pages.cmdb.modelDetail.fields.syncReadonly': '同步只读',
   'pages.cmdb.modelDetail.unique.explain':
     '当前模型的全部唯一字段将组合为一个唯一键：新建或更新资源时，这些字段取值完全相同的记录会被拒绝。字段级唯一开关在“模型字段”中维护。',

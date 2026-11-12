@@ -78,6 +78,9 @@ export default {
   'pages.cmdb.model.action.disable': 'Disable',
   'pages.cmdb.model.action.enable': 'Enable',
   'pages.cmdb.model.delete.title': 'Delete model',
+  'pages.cmdb.model.disableConfirm.title': 'Disable model',
+  'pages.cmdb.model.disableConfirm.description':
+    'Instances of this type cannot be created while it is disabled. Disable it?',
   'pages.cmdb.model.delete.description':
     'Models with resources or referenced by relation types cannot be deleted. Delete?',
 
@@ -407,8 +410,6 @@ export default {
   'pages.cmdb.model.empty': 'No matching models',
   'pages.cmdb.model.tip':
     'A model defines the data structure of one kind of resource. To manage a new kind of device or service, create a model, define its fields, then configure its relations to other models.',
-  'pages.cmdb.model.group.empty': 'No models in this group. ',
-  'pages.cmdb.model.group.empty.add': 'Add one',
   'pages.cmdb.model.form.icon.tooltip':
     'Icon shown in the instance list and relation graph',
   // model detail
@@ -425,6 +426,11 @@ export default {
   'pages.cmdb.modelDetail.fields.empty': 'No fields yet',
   'pages.cmdb.modelDetail.fields.groupEmpty':
     'No fields in this group; adjust in "Detail layout"',
+  'pages.cmdb.modelDetail.fields.group.delete.title': 'Delete group',
+  'pages.cmdb.modelDetail.fields.group.delete.content':
+    'Delete group "{name}"?',
+  'pages.cmdb.modelDetail.fields.group.delete.contentFields':
+    'The {n} fields in "{name}" will move to "Others". Delete?',
   'pages.cmdb.modelDetail.fields.syncReadonly': 'Sync read-only',
   'pages.cmdb.modelDetail.unique.explain':
     'All unique fields of this model compose a single uniqueness key: creating or updating a record whose values of these fields all match an existing one will be rejected. The per-field unique switch is maintained under "Fields".',

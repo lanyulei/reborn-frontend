@@ -3,7 +3,7 @@
  * 新增一类基础设施 = 新建模型（选分组与图标）→ 详情页定义字段 → 配置关联。
  */
 
-import { SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   ModalForm,
@@ -111,6 +111,7 @@ const GroupMenu: React.FC<{
   onDelete: () => void;
 }> = ({ group, onRename, onDelete }) => {
   const t = useT();
+  const { styles } = useCmdbStyles();
   const deleteBlocked = group.builtin || group.modelCount > 0;
   return (
     <Dropdown
@@ -132,14 +133,14 @@ const GroupMenu: React.FC<{
         },
       }}
     >
-      <Button
-        type="text"
-        size="small"
+      <button
+        type="button"
+        className={styles.groupMenuIcon}
         aria-label={t('pages.cmdb.model.group.manage')}
         onClick={(e) => e.stopPropagation()}
       >
         <UiIcon name="more" />
-      </Button>
+      </button>
     </Dropdown>
   );
 };
@@ -204,34 +205,39 @@ const ModelsTab: React.FC = () => {
   const collapseItems = visibleGroups.map(({ group, models }) => ({
     key: group.code,
     label: (
-      <Space size={8}>
+      <Space size={8} align="center">
         <span className={styles.groupTitle}>{group.name}</span>
         <span className={styles.groupCount}>( {models.length} )</span>
+        {/* 分组管理（更多）按钮紧跟名称与计数，不再挂在标题栏最右侧 */}
+        {canManageGroups && (
+          <GroupMenu
+            group={group}
+            onRename={() => setRenameGroup(group)}
+            onDelete={() => onDeleteGroup(group)}
+          />
+        )}
       </Space>
     ),
-    extra: canManageGroups ? (
-      <GroupMenu
-        group={group}
-        onRename={() => setRenameGroup(group)}
-        onDelete={() => onDeleteGroup(group)}
-      />
-    ) : undefined,
     children:
       models.length === 0 ? (
-        <div className={styles.emptyGroup}>
-          {t('pages.cmdb.model.group.empty')}
-          {has('cmdb.model.create') && (
-            <Button
-              type="link"
-              size="small"
-              onClick={() => {
-                setCreateGroup(group.code);
-                setCreateOpen(true);
-              }}
-            >
-              {t('pages.cmdb.model.group.empty.add')}
-            </Button>
-          )}
+        // 空分组占位与模型卡片同宽（占一个网格位），内为文本链接
+        <div className={styles.cardGrid}>
+          <div className={styles.emptyGroup}>
+            {has('cmdb.model.create') ? (
+              <a
+                className={styles.emptyGroupLink}
+                onClick={() => {
+                  setCreateGroup(group.code);
+                  setCreateOpen(true);
+                }}
+              >
+                <PlusOutlined />
+                {t('pages.cmdb.model.create.title')}
+              </a>
+            ) : (
+              t('common.empty')
+            )}
+          </div>
         </div>
       ) : (
         <div className={styles.cardGrid}>

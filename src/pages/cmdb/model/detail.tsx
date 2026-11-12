@@ -2,12 +2,19 @@
  * 模型详情：标题条（返回）+ 概要头（图标 / 名称 / 元信息栅格 / 操作）+
  * 四个标签：模型字段（按详情布局分组的字段卡片）| 模型关联（表格）| 唯一校验 | 详情布局。
  */
-import { PageContainer, ProTable } from '@ant-design/pro-components';
+import {
+  ModalForm,
+  PageContainer,
+  ProFormText,
+  ProTable,
+} from '@ant-design/pro-components';
 import { history, useAccess, useParams } from '@umijs/max';
 import {
   App,
   Button,
   Card,
+  Collapse,
+  Dropdown,
   Empty,
   Input,
   Space,
@@ -17,10 +24,9 @@ import {
   Typography,
 } from 'antd';
 import { createStyles } from 'antd-style';
-import dayjs from 'dayjs';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { DeleteConfirmLink } from '@/components/TableActions';
+import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
 import {
   deleteModel,
   deprecateField,
@@ -55,7 +61,7 @@ const useStyles = createStyles(({ token, css }) => ({
   /** 概要头右侧元信息栅格（标签在上、取值在下） */
   metaGrid: css`
     display: grid;
-    grid-template-columns: repeat(4, minmax(110px, auto));
+    grid-template-columns: repeat(2, minmax(110px, auto));
     gap: 4px 40px;
   `,
   metaLabel: css`
@@ -65,17 +71,6 @@ const useStyles = createStyles(({ token, css }) => ({
   metaValue: css`
     color: ${token.colorText};
     white-space: nowrap;
-  `,
-  groupHead: css`
-    margin: 4px 0 12px;
-    color: ${token.colorText};
-    font-weight: 600;
-  `,
-  fieldGrid: css`
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
   `,
   /** 字段卡片：类型图标 + 名称/编码；标记在右上角，操作悬停显现 */
   fieldCard: css`
@@ -172,6 +167,8 @@ interface FieldGroup {
   key: string;
   title: string;
   fields: CmdbField[];
+  /** 详情布局中的真实下标；-1 = 未入组字段聚合的「其他」 */
+  sectionIndex: number;
 }
 
 /** 新建字段分组：展开内联输入，确认后追加到详情布局 */
@@ -220,7 +217,7 @@ const AddGroupButton: React.FC<{ onAdd: (title: string) => void }> = ({
 const ModelDetailPage: React.FC = () => {
   const { code } = useParams<{ code: string }>();
   const t = useT();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const has = usePermissions();
   const access = useAccess();
   const typeText = useEnumText(CMDB_FIELD_TYPE_META);
@@ -237,6 +234,10 @@ const ModelDetailPage: React.FC = () => {
   const [sections, setSections] = useState<ViewSection[]>([]);
   const [modelNames, setModelNames] = useState<Record<string, string>>({});
   const [editOpen, setEditOpen] = useState(false);
+  const [renameGroup, setRenameGroup] = useState<{
+    index: number;
+    title: string;
+  } | null>(null);
   const [fieldModal, setFieldModal] = useState<{
     open: boolean;
     field: CmdbField | null;
@@ -272,21 +273,25 @@ const ModelDetailPage: React.FC = () => {
 
   // 字段按详情布局的属性分组展示；未入组字段归“其他”
   const fieldGroups = useMemo<FieldGroup[]>(() => {
-    const attrsSections = sections.filter((s) => s.type === 'attrs');
-    const grouped = attrsSections.map((s, i) => ({
+    const attrsSections = sections
+      .map((s, i) => ({ section: s, index: i }))
+      .filter((x) => x.section.type === 'attrs');
+    const grouped = attrsSections.map(({ section: s, index }, i) => ({
       key: `group-${i}`,
       title: s.title || t('pages.cmdb.modelDetail.fields.defaultGroup'),
       fields: (s.fields ?? [])
         .map((fc) => fields.find((f) => f.code === fc))
         .filter((f): f is CmdbField => !!f),
+      sectionIndex: index,
     }));
-    const inAny = new Set(attrsSections.flatMap((s) => s.fields ?? []));
+    const inAny = new Set(attrsSections.flatMap((x) => x.section.fields ?? []));
     const rest = fields.filter((f) => !inAny.has(f.code));
     if (rest.length > 0) {
       grouped.push({
         key: 'group-other',
         title: t('pages.cmdb.modelDetail.fields.otherGroup'),
         fields: rest,
+        sectionIndex: -1,
       });
     }
     return grouped;
@@ -334,6 +339,30 @@ const ModelDetailPage: React.FC = () => {
     message.success(t('common.msg.created'));
   };
 
+  /** 删除字段分组：仅移除布局分组，组内字段自动归入「其他」 */
+  const onDeleteGroup = (g: FieldGroup) => {
+    modal.confirm({
+      title: t('pages.cmdb.modelDetail.fields.group.delete.title'),
+      content:
+        g.fields.length > 0
+          ? t('pages.cmdb.modelDetail.fields.group.delete.contentFields', {
+              name: g.title,
+              n: g.fields.length,
+            })
+          : t('pages.cmdb.modelDetail.fields.group.delete.content', {
+              name: g.title,
+            }),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        if (!code) return;
+        const next = sections.filter((_, i) => i !== g.sectionIndex);
+        const { sections: saved } = await updateModelView(code, next);
+        setSections(saved);
+        message.success(t('common.msg.deleted'));
+      },
+    });
+  };
+
   if (loading) {
     return (
       <div style={{ padding: 96, textAlign: 'center' }}>
@@ -362,17 +391,6 @@ const ModelDetailPage: React.FC = () => {
 
   return (
     <PageContainer title={false}>
-      <div className={pageStyles.pageBar}>
-        <Button
-          type="text"
-          aria-label={t('pages.cmdb.modelDetail.backToList')}
-          onClick={() => history.push('/cmdb/model')}
-          icon={<UiIcon name="back" size={18} />}
-        />
-        <span className={pageStyles.pageBarTitle}>
-          {t('menu.cmdb.model-detail')}【{model.name}】
-        </span>
-      </div>
       <div className={pageStyles.summaryHeader}>
         <ModelIcon icon={model.icon} size={56} muted={model.status === 2} />
         <div className={pageStyles.summaryBody}>
@@ -384,7 +402,6 @@ const ModelDetailPage: React.FC = () => {
             {model.status === 2 && <Tag>{t('common.status.disabled')}</Tag>}
           </span>
           <span className={pageStyles.summaryMeta}>
-            <Typography.Text code>{model.code}</Typography.Text>
             {model.description && <span>{model.description}</span>}
           </span>
         </div>
@@ -394,12 +411,6 @@ const ModelDetailPage: React.FC = () => {
           </span>
           <span className={styles.metaLabel}>
             {t('pages.cmdb.model.column.ciCount')}
-          </span>
-          <span className={styles.metaLabel}>
-            {t('common.column.updateTime')}
-          </span>
-          <span className={styles.metaLabel}>
-            {t('common.column.createTime')}
           </span>
           <span className={styles.metaValue}>{groupName}</span>
           <span className={styles.metaValue}>
@@ -411,24 +422,29 @@ const ModelDetailPage: React.FC = () => {
               (model.ciCount ?? 0)
             )}
           </span>
-          <span className={styles.metaValue}>
-            {dayjs(model.updateTime).format('YYYY-MM-DD HH:mm')}
-          </span>
-          <span className={styles.metaValue}>
-            {dayjs(model.createTime).format('YYYY-MM-DD HH:mm')}
-          </span>
         </div>
         <Space className={pageStyles.summaryActions}>
           {has('cmdb.model.edit') && (
             <>
-              <Button onClick={() => setEditOpen(true)}>
-                {t('common.action.edit')}
-              </Button>
-              <Button onClick={() => void onToggleStatus()}>
+              <a onClick={() => setEditOpen(true)}>{t('common.action.edit')}</a>
+              <a
+                onClick={() => {
+                  // 停用需二次确认；启用直接执行
+                  if (model.status === 1) {
+                    modal.confirm({
+                      title: t('pages.cmdb.model.disableConfirm.title'),
+                      content: t('pages.cmdb.model.disableConfirm.description'),
+                      onOk: () => onToggleStatus(),
+                    });
+                    return;
+                  }
+                  void onToggleStatus();
+                }}
+              >
                 {model.status === 1
                   ? t('pages.cmdb.model.action.disable')
                   : t('pages.cmdb.model.action.enable')}
-              </Button>
+              </a>
             </>
           )}
           {has('cmdb.model.delete') && !model.builtin && (
@@ -454,16 +470,17 @@ const ModelDetailPage: React.FC = () => {
             children: (
               <>
                 {(canField || canView) && (
-                  <div className={pageStyles.toolbar}>
+                  <div
+                    className={cx(pageStyles.toolbar, pageStyles.toolbarTight)}
+                  >
                     {canField && (
-                      <Button
-                        type="primary"
+                      <CreateButton
                         onClick={() =>
                           setFieldModal({ open: true, field: null })
                         }
                       >
                         {t('pages.cmdb.modelDetail.fields.add')}
-                      </Button>
+                      </CreateButton>
                     )}
                     {canView && (
                       <AddGroupButton
@@ -479,112 +496,166 @@ const ModelDetailPage: React.FC = () => {
                     style={{ padding: 48 }}
                   />
                 ) : (
-                  fieldGroups.map((g) => (
-                    <section key={g.key}>
-                      <div className={styles.groupHead}>
-                        {g.title} ( {g.fields.length} )
-                      </div>
-                      {g.fields.length === 0 ? (
-                        <div
-                          className={pageStyles.emptyGroup}
-                          style={{ marginBottom: 24 }}
-                        >
-                          {t('pages.cmdb.modelDetail.fields.groupEmpty')}
-                        </div>
-                      ) : (
-                        <div className={styles.fieldGrid}>
-                          {g.fields.map((f) => (
-                            <div
-                              key={f.id}
-                              className={cx(
-                                styles.fieldCard,
-                                f.deprecated && styles.fieldCardMuted,
-                              )}
+                  <Collapse
+                    ghost
+                    size="small"
+                    // 与模型管理一致：折叠头 8px 0、内容区 6px 0 6px 4px（行内样式，直接生效）
+                    styles={{
+                      header: { padding: '8px 0 2px' },
+                      body: { padding: '6px 0 6px 4px' },
+                    }}
+                    defaultActiveKey={fieldGroups.map((g) => g.key)}
+                    items={fieldGroups.map((g) => ({
+                      key: g.key,
+                      label: (
+                        <Space size={8} align="center">
+                          <span className={pageStyles.groupTitle}>
+                            {g.title}
+                          </span>
+                          <span className={pageStyles.groupCount}>
+                            ( {g.fields.length} )
+                          </span>
+                          {canView && g.sectionIndex >= 0 && (
+                            <Dropdown
+                              trigger={['click']}
+                              menu={{
+                                items: [
+                                  {
+                                    key: 'rename',
+                                    label: t('pages.cmdb.model.group.rename'),
+                                  },
+                                  {
+                                    key: 'delete',
+                                    label: t('common.action.delete'),
+                                    danger: true,
+                                  },
+                                ],
+                                onClick: ({ key }) => {
+                                  if (key === 'rename')
+                                    setRenameGroup({
+                                      index: g.sectionIndex,
+                                      title: g.title,
+                                    });
+                                  if (key === 'delete') onDeleteGroup(g);
+                                },
+                              }}
                             >
-                              <FieldTypeIcon type={f.type} />
-                              <div className={styles.fieldBody}>
-                                <span className={styles.fieldName}>
-                                  {f.name}
-                                  {f.required && (
-                                    <span className={styles.requiredMark}>
-                                      {' '}
-                                      *
+                              <button
+                                type="button"
+                                className={pageStyles.groupMenuIcon}
+                                aria-label={t('pages.cmdb.model.group.manage')}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <UiIcon name="more" />
+                              </button>
+                            </Dropdown>
+                          )}
+                        </Space>
+                      ),
+                      children:
+                        g.fields.length === 0 ? (
+                          <div
+                            className={pageStyles.emptyGroup}
+                            style={{ marginBottom: 12 }}
+                          >
+                            {t('pages.cmdb.modelDetail.fields.groupEmpty')}
+                          </div>
+                        ) : (
+                          <div className={pageStyles.cardGrid}>
+                            {g.fields.map((f) => (
+                              <div
+                                key={f.id}
+                                className={cx(
+                                  styles.fieldCard,
+                                  f.deprecated && styles.fieldCardMuted,
+                                )}
+                              >
+                                <FieldTypeIcon type={f.type} />
+                                <div className={styles.fieldBody}>
+                                  <span className={styles.fieldName}>
+                                    {f.name}
+                                    {f.required && (
+                                      <span className={styles.requiredMark}>
+                                        {' '}
+                                        *
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className={pageStyles.modelCardCode}>
+                                    {f.code} · {typeText(f.type)}
+                                    {f.type === 'ref' && f.refModel
+                                      ? ` → ${modelName(f.refModel)}`
+                                      : ''}
+                                  </span>
+                                </div>
+                                <div className={styles.fieldMarks}>
+                                  {f.unique && (
+                                    <span className={styles.fieldMark}>
+                                      {t('pages.cmdb.field.column.unique')}
                                     </span>
                                   )}
-                                </span>
-                                <span className={pageStyles.modelCardCode}>
-                                  {f.code} · {typeText(f.type)}
-                                  {f.type === 'ref' && f.refModel
-                                    ? ` → ${modelName(f.refModel)}`
-                                    : ''}
-                                </span>
-                              </div>
-                              <div className={styles.fieldMarks}>
-                                {f.unique && (
-                                  <span className={styles.fieldMark}>
-                                    {t('pages.cmdb.field.column.unique')}
-                                  </span>
-                                )}
-                                {f.owner === 'sync' && (
-                                  <span
-                                    className={cx(
-                                      styles.fieldMark,
-                                      styles.fieldMarkMuted,
-                                    )}
-                                  >
-                                    {t(
-                                      'pages.cmdb.modelDetail.fields.syncReadonly',
-                                    )}
-                                  </span>
-                                )}
-                                {f.deprecated && (
-                                  <span
-                                    className={cx(
-                                      styles.fieldMark,
-                                      styles.fieldMarkMuted,
-                                    )}
-                                  >
-                                    {t('pages.cmdb.field.tag.deprecated')}
-                                  </span>
-                                )}
-                              </div>
-                              {canField && !f.deprecated && (
-                                <div
-                                  className={cx(
-                                    styles.fieldActions,
-                                    'cmdb-field-actions',
+                                  {f.owner === 'sync' && (
+                                    <span
+                                      className={cx(
+                                        styles.fieldMark,
+                                        styles.fieldMarkMuted,
+                                      )}
+                                    >
+                                      {t(
+                                        'pages.cmdb.modelDetail.fields.syncReadonly',
+                                      )}
+                                    </span>
                                   )}
-                                >
-                                  <a
-                                    onClick={() =>
-                                      setFieldModal({ open: true, field: f })
-                                    }
-                                  >
-                                    {t('common.action.edit')}
-                                  </a>
-                                  <DeleteConfirmLink
-                                    title={t(
-                                      'pages.cmdb.field.deprecate.title',
-                                    )}
-                                    description={t(
-                                      'pages.cmdb.field.deprecate.description',
-                                    )}
-                                    onConfirm={async () => {
-                                      await deprecateField(model.code, f.id);
-                                      message.success(t('common.msg.updated'));
-                                      await load();
-                                    }}
-                                  >
-                                    {t('pages.cmdb.field.deprecate.action')}
-                                  </DeleteConfirmLink>
+                                  {f.deprecated && (
+                                    <span
+                                      className={cx(
+                                        styles.fieldMark,
+                                        styles.fieldMarkMuted,
+                                      )}
+                                    >
+                                      {t('pages.cmdb.field.tag.deprecated')}
+                                    </span>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </section>
-                  ))
+                                {canField && !f.deprecated && (
+                                  <div
+                                    className={cx(
+                                      styles.fieldActions,
+                                      'cmdb-field-actions',
+                                    )}
+                                  >
+                                    <a
+                                      onClick={() =>
+                                        setFieldModal({ open: true, field: f })
+                                      }
+                                    >
+                                      {t('common.action.edit')}
+                                    </a>
+                                    <DeleteConfirmLink
+                                      title={t(
+                                        'pages.cmdb.field.deprecate.title',
+                                      )}
+                                      description={t(
+                                        'pages.cmdb.field.deprecate.description',
+                                      )}
+                                      onConfirm={async () => {
+                                        await deprecateField(model.code, f.id);
+                                        message.success(
+                                          t('common.msg.updated'),
+                                        );
+                                        await load();
+                                      }}
+                                    >
+                                      {t('pages.cmdb.field.deprecate.action')}
+                                    </DeleteConfirmLink>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ),
+                    }))}
+                  />
                 )}
               </>
             ),
@@ -699,6 +770,35 @@ const ModelDetailPage: React.FC = () => {
         model={model}
         onSuccess={(saved) => setModel(saved)}
       />
+      {renameGroup && (
+        <ModalForm<{ title: string }>
+          key={`rename-field-group-${renameGroup.index}`}
+          title={t('pages.cmdb.model.group.rename')}
+          width={480}
+          open={!!renameGroup}
+          onOpenChange={(open) => {
+            if (!open) setRenameGroup(null);
+          }}
+          modalProps={{ destroyOnHidden: true }}
+          initialValues={{ title: renameGroup.title }}
+          onFinish={async (values) => {
+            if (!code) return false;
+            const next = sections.map((sec, i) =>
+              i === renameGroup.index ? { ...sec, title: values.title } : sec,
+            );
+            const { sections: saved } = await updateModelView(code, next);
+            setSections(saved);
+            message.success(t('common.msg.saved'));
+            return true;
+          }}
+        >
+          <ProFormText
+            name="title"
+            label={t('pages.cmdb.view.section.title')}
+            rules={[{ required: true }, { max: 64 }]}
+          />
+        </ModalForm>
+      )}
       <FieldFormModal
         open={fieldModal.open}
         onOpenChange={(open) => setFieldModal((s) => ({ ...s, open }))}

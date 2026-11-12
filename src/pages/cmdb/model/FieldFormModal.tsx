@@ -1,9 +1,9 @@
 /**
- * 字段新建 / 编辑弹窗（自 FieldDrawer 抽出，供模型详情页复用）。
+ * 字段新建 / 编辑抽屉（自 FieldDrawer 抽出，供模型详情页复用）。
  * 编码与数据类型创建后不可改（历史数据可解释）。
  */
 import {
-  ModalForm,
+  DrawerForm,
   ProFormDependency,
   ProFormDigit,
   ProFormSelect,
@@ -93,6 +93,7 @@ export const FieldFormModal: React.FC<{
     <>
       <ProFormText
         name="code"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.field.column.code')}
         disabled={isEdit}
         rules={
@@ -109,6 +110,7 @@ export const FieldFormModal: React.FC<{
       />
       <ProFormText
         name="name"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.field.column.name')}
         rules={[
           rules.required(t('pages.cmdb.field.column.name')),
@@ -117,6 +119,7 @@ export const FieldFormModal: React.FC<{
       />
       <ProFormSelect
         name="type"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.field.column.type')}
         options={typeOptions}
         disabled={isEdit}
@@ -129,6 +132,7 @@ export const FieldFormModal: React.FC<{
             {type === 'enum' && (
               <ProFormSelect
                 name="enumValues"
+                colProps={{ span: 24 }}
                 label={t('pages.cmdb.field.form.enumValues')}
                 fieldProps={{
                   mode: 'tags',
@@ -144,6 +148,7 @@ export const FieldFormModal: React.FC<{
             {type === 'ref' && (
               <ProFormSelect
                 name="refModel"
+                colProps={{ span: 12 }}
                 label={t('pages.cmdb.field.form.refModel')}
                 disabled={isEdit}
                 showSearch
@@ -165,15 +170,18 @@ export const FieldFormModal: React.FC<{
               <>
                 <ProFormText
                   name="pattern"
+                  colProps={{ span: 24 }}
                   label={t('pages.cmdb.field.form.pattern')}
                 />
                 <ProFormDigit
                   name="minLen"
+                  colProps={{ span: 12 }}
                   label={t('pages.cmdb.field.form.minLen')}
                   min={0}
                 />
                 <ProFormDigit
                   name="maxLen"
+                  colProps={{ span: 12 }}
                   label={t('pages.cmdb.field.form.maxLen')}
                   min={0}
                 />
@@ -183,10 +191,12 @@ export const FieldFormModal: React.FC<{
               <>
                 <ProFormDigit
                   name="min"
+                  colProps={{ span: 12 }}
                   label={t('pages.cmdb.field.form.min')}
                 />
                 <ProFormDigit
                   name="max"
+                  colProps={{ span: 12 }}
                   label={t('pages.cmdb.field.form.max')}
                 />
               </>
@@ -196,35 +206,46 @@ export const FieldFormModal: React.FC<{
       </ProFormDependency>
       <ProFormSwitch
         name="required"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.field.column.required')}
       />
       <ProFormSwitch
         name="unique"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.field.column.unique')}
       />
       <ProFormSwitch
         name="listVisible"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.field.column.listVisible')}
       />
       <ProFormSwitch
         name="indexed"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.field.column.indexed')}
         tooltip={t('pages.cmdb.field.form.indexed.tooltip')}
       />
       <ProFormSwitch
         name="sensitive"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.field.column.sensitive')}
         tooltip={t('pages.cmdb.field.form.sensitive.tooltip')}
       />
       <ProFormSelect
         name="owner"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.field.column.owner')}
         options={ownerOptions}
         allowClear={false}
       />
-      <ProFormDigit name="sort" label={t('pages.cmdb.field.column.sort')} />
+      <ProFormDigit
+        name="sort"
+        colProps={{ span: 12 }}
+        label={t('pages.cmdb.field.column.sort')}
+      />
       <ProFormText
         name="description"
+        colProps={{ span: 24 }}
         label={t('pages.cmdb.field.form.description')}
         rules={[rules.max(256)]}
       />
@@ -232,17 +253,18 @@ export const FieldFormModal: React.FC<{
   );
 
   return (
-    <ModalForm<FieldFormValues>
+    <DrawerForm<FieldFormValues>
       key={field ? `edit-field-${field.id}` : `create-field-${modelCode}`}
       title={
         field
           ? t('pages.cmdb.field.edit.title', { name: field.name })
           : t('pages.cmdb.field.create.title')
       }
-      width={560}
+      grid
       open={open}
       onOpenChange={onOpenChange}
-      modalProps={{ destroyOnHidden: true }}
+      drawerProps={{ destroyOnHidden: true }}
+      width={560}
       initialValues={
         field
           ? {
@@ -288,6 +310,6 @@ export const FieldFormModal: React.FC<{
       }}
     >
       {formItems(editing)}
-    </ModalForm>
+    </DrawerForm>
   );
 };

@@ -9,7 +9,7 @@ import {
   ProFormText,
   ProFormTextArea,
 } from '@ant-design/pro-components';
-import { App } from 'antd';
+import { App, Col } from 'antd';
 import type React from 'react';
 import { createModel, updateModel } from '@/services/cmdb/model';
 import type { CmdbModel, CmdbModelStatus } from '@/services/cmdb/typings';
@@ -69,6 +69,7 @@ export const ModelFormModal: React.FC<{
           : t('pages.cmdb.model.create.title')
       }
       width={560}
+      grid
       open={open}
       onOpenChange={onOpenChange}
       modalProps={{ destroyOnHidden: true }}
@@ -110,52 +111,65 @@ export const ModelFormModal: React.FC<{
         return true;
       }}
     >
-      <ProFormText
-        name="code"
-        label={t('pages.cmdb.model.column.code')}
-        placeholder={t('pages.cmdb.model.form.code.placeholder')}
-        disabled={editing}
-        rules={
-          editing
-            ? []
-            : [
-                rules.required(t('pages.cmdb.model.column.code')),
-                {
-                  pattern: CODE_PATTERN,
-                  message: t('pages.cmdb.model.form.code.pattern'),
-                },
-              ]
-        }
-      />
-      <ProFormText
-        name="name"
-        label={t('pages.cmdb.model.column.name')}
-        rules={[
-          rules.required(t('pages.cmdb.model.column.name')),
-          rules.max(64),
-        ]}
-      />
-      <ProFormSelect
-        name="category"
-        label={t('pages.cmdb.model.column.category')}
-        options={groupOptions}
-        allowClear={false}
-      />
-      {editing && (
+      {/* 类型编码 + 类型名称 同一行 */}
+      <ProForm.Group>
+        <ProFormText
+          name="code"
+          colProps={{ span: 12 }}
+          label={t('pages.cmdb.model.column.code')}
+          placeholder={t('pages.cmdb.model.form.code.placeholder')}
+          disabled={editing}
+          rules={
+            editing
+              ? []
+              : [
+                  rules.required(t('pages.cmdb.model.column.code')),
+                  {
+                    pattern: CODE_PATTERN,
+                    message: t('pages.cmdb.model.form.code.pattern'),
+                  },
+                ]
+          }
+        />
+        <ProFormText
+          name="name"
+          colProps={{ span: 12 }}
+          label={t('pages.cmdb.model.column.name')}
+          rules={[
+            rules.required(t('pages.cmdb.model.column.name')),
+            rules.max(64),
+          ]}
+        />
+      </ProForm.Group>
+      {/* 编辑态：分类 + 状态 同一行 */}
+      <ProForm.Group>
         <ProFormSelect
-          name="status"
-          label={t('common.column.status')}
-          options={statusOptions}
+          name="category"
+          colProps={editing ? { span: 12 } : undefined}
+          label={t('pages.cmdb.model.column.category')}
+          options={groupOptions}
           allowClear={false}
         />
-      )}
-      <ProForm.Item
-        name="icon"
-        label={t('pages.cmdb.model.column.icon')}
-        tooltip={t('pages.cmdb.model.form.icon.tooltip')}
-      >
-        <IconPicker />
-      </ProForm.Item>
+        {editing && (
+          <ProFormSelect
+            name="status"
+            colProps={{ span: 12 }}
+            label={t('common.column.status')}
+            options={statusOptions}
+            allowClear={false}
+          />
+        )}
+      </ProForm.Group>
+      {/* ProForm.Item 不消费 colProps，用 Col 包裹使其独占一行 */}
+      <Col span={24}>
+        <ProForm.Item
+          name="icon"
+          label={t('pages.cmdb.model.column.icon')}
+          tooltip={t('pages.cmdb.model.form.icon.tooltip')}
+        >
+          <IconPicker />
+        </ProForm.Item>
+      </Col>
       <ProFormTextArea
         name="description"
         label={t('pages.cmdb.model.column.description')}

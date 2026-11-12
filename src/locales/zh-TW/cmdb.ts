@@ -78,6 +78,9 @@ export default {
   'pages.cmdb.model.action.disable': '停用',
   'pages.cmdb.model.action.enable': '啟用',
   'pages.cmdb.model.delete.title': '刪除模型',
+  'pages.cmdb.model.disableConfirm.title': '停用模型',
+  'pages.cmdb.model.disableConfirm.description':
+    '停用後將無法新增該類型的資源實例，確定停用？',
   'pages.cmdb.model.delete.description':
     '仍有資源或被關係類型引用的類型無法刪除。確定刪除？',
 
@@ -401,8 +404,6 @@ export default {
   'pages.cmdb.model.empty': '沒有符合的模型',
   'pages.cmdb.model.tip':
     '模型定義一類資源的資料結構：新增一種需要納管的設備或服務時，先新建模型並定義欄位，再設定它與其他模型的關聯。',
-  'pages.cmdb.model.group.empty': '該分組暫無模型，',
-  'pages.cmdb.model.group.empty.add': '立即新增',
   'pages.cmdb.model.form.icon.tooltip': '展示在資源實例與模型關聯圖中的圖示',
   // 模型詳情
   'pages.cmdb.modelDetail.notFound': '模型不存在或已被刪除',
@@ -418,6 +419,11 @@ export default {
   'pages.cmdb.modelDetail.fields.empty': '暫無欄位',
   'pages.cmdb.modelDetail.fields.groupEmpty':
     '該分組暫無欄位，可在「詳情版面」中調整',
+  'pages.cmdb.modelDetail.fields.group.delete.title': '刪除分組',
+  'pages.cmdb.modelDetail.fields.group.delete.content':
+    '確定刪除分組「{name}」？',
+  'pages.cmdb.modelDetail.fields.group.delete.contentFields':
+    '「{name}」中的 {n} 個欄位將歸入「其他」，確定刪除？',
   'pages.cmdb.modelDetail.fields.syncReadonly': '同步唯讀',
   'pages.cmdb.modelDetail.unique.explain':
     '目前模型的全部唯一欄位將組合為一個唯一鍵：新建或更新資源時，這些欄位取值完全相同的記錄會被拒絕。欄位級唯一開關在「模型欄位」中維護。',

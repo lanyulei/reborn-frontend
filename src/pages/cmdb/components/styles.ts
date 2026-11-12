@@ -85,9 +85,47 @@ export const useCmdbStyles = createStyles(({ token, css }) => ({
     font-size: ${token.fontSizeLG}px;
     font-variant-numeric: tabular-nums;
   `,
-  /** 空分组占位（虚线框 + 引导） */
+  /** 分组管理的裸图标触发器（无按钮底，悬停着色；与文字行垂直居中） */
+  groupMenuIcon: css`
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    color: ${token.colorTextTertiary};
+    vertical-align: middle;
+    background: transparent;
+    border: none;
+    border-radius: ${token.borderRadiusSM}px;
+    cursor: pointer;
+    transition: color ${token.motionDurationMid};
+    &:hover {
+      color: ${token.colorPrimary};
+    }
+  `,
+  /** 空分组内的文本链接：图标 + 文案 */
+  emptyGroupLink: css`
+    display: inline-flex;
+    flex: none;
+    gap: 4px;
+    align-items: center;
+    color: ${token.colorPrimary};
+    cursor: pointer;
+    &:hover {
+      color: ${token.colorPrimaryHover};
+    }
+  `,
+  /** 空分组占位：与模型卡片同格（一个网格位），内含铺满的新建按钮 */
   emptyGroup: css`
-    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    min-height: 64px;
+    padding: 16px;
     color: ${token.colorTextTertiary};
     text-align: center;
     border: 1px dashed ${token.colorBorder};
