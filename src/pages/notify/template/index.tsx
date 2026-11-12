@@ -119,6 +119,7 @@ const TemplateList: React.FC = () => {
       title: t('pages.notify.template.column.subject'),
       dataIndex: 'subject',
       ellipsis: true,
+      width: 200,
       search: false,
     },
     {
@@ -251,6 +252,7 @@ const TemplateList: React.FC = () => {
   return (
     <>
       <ProTable<NotifyTemplate>
+        cardBordered
         headerTitle={
           has('notify.template.create') && (
             <CreateButton

@@ -18,6 +18,8 @@ export default function access(
   const isAdmin = currentUser?.isAdmin === true;
   const has = (code: MenuPermissionCode) =>
     isAdmin || (menus ?? []).includes(code);
+  // cmdb 运营统计：实例或审计任一权限即可见（复用现有权限码，不新增）
+  const canCmdbStats = has('cmdb.ci') || has('cmdb.audit');
   // 通知模块 Tab 容器页：任一子页可见即可进入容器（Tab 级再按子页权限过滤）
   const canNotifyRule =
     has('notify.route') || has('notify.silence') || has('notify.template');
@@ -29,6 +31,16 @@ export default function access(
   return {
     canAdmin: isAdmin,
     canAssistant: has('assistant'),
+    canCmdbModel: has('cmdb.model'),
+    canCmdbCI: has('cmdb.ci'),
+    canCmdbSync: has('cmdb.sync'),
+    canCmdbAudit: has('cmdb.audit'),
+    canCmdbStats,
+    canCmdb:
+      has('cmdb.model') ||
+      has('cmdb.ci') ||
+      has('cmdb.sync') ||
+      has('cmdb.audit'),
     canSystemUser: has('system.user'),
     canSystemRole: has('system.role'),
     canSystemLoginLog: has('system.login_log'),

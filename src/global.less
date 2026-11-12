@@ -96,3 +96,15 @@ ol {
 .ant-pro-table .ant-table-tbody .ant-typography-copy {
   margin-inline-start: 4px;
 }
+
+// 白底内容卡片（antd Card / ProCard，含 ProTable 的搜索栏与表格卡片）的外边框统一加深一档：
+// 默认 colorBorderSecondary 在灰色页面底上偏淡，取它与 colorBorder 的中间色（CSS 变量，跟随明暗主题）
+body .ant-card.ant-card-bordered,
+body .ant-pro-card.ant-pro-card-border {
+  border-color: color-mix(in srgb, var(--ant-color-border) 25%, var(--ant-color-border-secondary));
+}
+
+// PageContainer 页头（面包屑 / 标签页）与内容区之间不再留底部内边距
+.ant-pro-page-container .ant-pro-page-container-warp-page-header {
+  padding-block-end: 0;
+}

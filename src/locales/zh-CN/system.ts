@@ -38,7 +38,9 @@ export default {
   'pages.system.user.roles.label': '已绑定角色',
   'pages.system.user.roles.placeholder': '请选择角色（最多 100 个）',
   'pages.system.user.roles.option': '{name}（{code}）',
+  'pages.system.user.roles.optionBuiltin': '{name}（{code}）· 内置',
   'pages.system.user.roles.success': '角色绑定已保存',
+  'pages.system.user.roles.builtinHint': '内置角色默认绑定，不可解绑',
 
   // 角色管理
   'pages.system.role.create.title': '新建角色',
@@ -62,8 +64,14 @@ export default {
   'pages.system.role.bizScope.duplicate': '条目不可重复',
   'pages.system.role.bizScope.pattern': '1-64 位小写字母/数字/下划线/连字符',
   'pages.system.role.bizScope.unlimited': '不限',
+  'pages.system.role.tag.builtin': '内置',
 
   // 个人设置
+  'pages.account.avatar.upload': '上传头像',
+  'pages.account.avatar.hint': '支持 PNG / JPEG / WebP，不超过 1MB',
+  'pages.account.avatar.type': '仅支持 PNG / JPEG / WebP 图片',
+  'pages.account.avatar.size': '图片不能超过 1MB',
+  'pages.account.avatar.success': '头像已更新',
   'pages.account.base.success': '更新基本信息成功',
   'pages.account.base.submit': '更新基本信息',
   'pages.account.base.nickname.required': '请输入您的昵称!',
@@ -105,6 +113,8 @@ export default {
   'pages.system.permission.save.content':
     '将以当前勾选全量覆盖该角色的权限，确定保存？',
   'pages.system.permission.saved': '权限已保存',
+  'pages.system.permission.readonly':
+    '当前角色为内置角色，仅超级管理员可修改授权，以下内容仅可查看。',
 
   // 系统配置
   'pages.system.config.readonly':

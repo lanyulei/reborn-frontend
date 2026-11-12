@@ -41,7 +41,10 @@ export default {
   'pages.system.user.roles.label': 'Bound roles',
   'pages.system.user.roles.placeholder': 'Select roles (up to 100)',
   'pages.system.user.roles.option': '{name} ({code})',
+  'pages.system.user.roles.optionBuiltin': '{name} ({code}) · built-in',
   'pages.system.user.roles.success': 'Role binding saved',
+  'pages.system.user.roles.builtinHint':
+    'Built-in roles are bound by default and cannot be unbound',
 
   // Roles
   'pages.system.role.create.title': 'Create role',
@@ -69,8 +72,14 @@ export default {
   'pages.system.role.bizScope.pattern':
     '1-64 lowercase letters, digits, underscores or hyphens',
   'pages.system.role.bizScope.unlimited': 'Unrestricted',
+  'pages.system.role.tag.builtin': 'Built-in',
 
   // Account settings
+  'pages.account.avatar.upload': 'Upload avatar',
+  'pages.account.avatar.hint': 'PNG / JPEG / WebP, up to 1MB',
+  'pages.account.avatar.type': 'Only PNG / JPEG / WebP images are supported',
+  'pages.account.avatar.size': 'Image must be 1MB or smaller',
+  'pages.account.avatar.success': 'Avatar updated',
   'pages.account.base.success': 'Basic information updated',
   'pages.account.base.submit': 'Update information',
   'pages.account.base.nickname.required': 'Please enter your nickname!',
@@ -115,6 +124,8 @@ export default {
   'pages.system.permission.save.content':
     "The current selection will fully replace this role's permissions. Save?",
   'pages.system.permission.saved': 'Permissions saved',
+  'pages.system.permission.readonly':
+    'This is a built-in role; only super admins can change its permissions. The content below is read-only.',
 
   // System config
   'pages.system.config.readonly':

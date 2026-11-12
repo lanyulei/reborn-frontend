@@ -28,7 +28,7 @@ const useStyles = createStyles(({ token }) => ({
     flexDirection: 'column',
     overflow: 'hidden',
     backgroundColor: token.colorBgContainer,
-    border: `${token.lineWidth}px solid ${token.colorBorderSecondary}`,
+    border: `${token.lineWidth}px solid color-mix(in srgb, ${token.colorBorder} 25%, ${token.colorBorderSecondary})`,
     borderRadius: token.borderRadiusLG,
     // 整页会话列表内边距（弹窗内另有左侧贴边的覆盖，互不影响）
     '.ant-conversations': {

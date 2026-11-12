@@ -432,6 +432,7 @@ const ChannelList: React.FC = () => {
       dataIndex: 'config',
       search: false,
       ellipsis: true,
+      width: 240,
       render: (_, record) => {
         if (record.email) return `${record.email.host}:${record.email.port}`;
         if (record.webhook) return record.webhook.url;
@@ -542,6 +543,7 @@ const ChannelList: React.FC = () => {
     <>
       <PageContainer title={false}>
         <ProTable<NotifyChannel>
+          cardBordered
           headerTitle={
             has('notify.channel.create') && (
               <CreateButton

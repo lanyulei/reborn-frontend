@@ -9,6 +9,8 @@ const useStyles = createStyles(({ token }) => {
       paddingTop: '16px',
       paddingBottom: '16px',
       backgroundColor: token.colorBgContainer,
+      border: `${token.lineWidth}px solid color-mix(in srgb, ${token.colorBorder} 25%, ${token.colorBorderSecondary})`,
+      borderRadius: token.borderRadiusLG,
       '.ant-list-item': { paddingTop: '14px', paddingBottom: '14px' },
       [`@media screen and (max-width: ${token.screenMD}px)`]: {
         flexDirection: 'column',

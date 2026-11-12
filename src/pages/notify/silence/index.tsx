@@ -294,6 +294,7 @@ const SilenceList: React.FC = () => {
   return (
     <>
       <ProTable<NotifySilence>
+        cardBordered
         headerTitle={
           has('notify.silence.create') && (
             <CreateButton

@@ -13,6 +13,7 @@ import type {
 } from '@ant-design/x/es/bubble/interface';
 import type { ThoughtChainItemType } from '@ant-design/x/es/thought-chain/interface';
 import XMarkdown from '@ant-design/x-markdown';
+import { useModel } from '@umijs/max';
 import {
   Alert,
   App,
@@ -78,10 +79,11 @@ const MarkdownBody: React.FC<{ content: string; updating: boolean }> = ({
   );
 };
 
-const roleConfig: BubbleListProps['role'] = {
+/** 角色配置：用户气泡头像取当前登录用户头像（无头像回退图标） */
+const buildRoleConfig = (avatar?: string): BubbleListProps['role'] => ({
   user: {
     placement: 'end',
-    avatar: <Avatar icon={<UserOutlined />} />,
+    avatar: <Avatar src={avatar || undefined} icon={<UserOutlined />} />,
   },
   ai: {
     placement: 'start',
@@ -114,7 +116,7 @@ const roleConfig: BubbleListProps['role'] = {
       );
     },
   },
-};
+});
 
 /** 工具步骤状态 → 思维链节点状态（pending 等待用户，不展示进度图标） */
 const stepStatus = (
@@ -217,6 +219,11 @@ const ChatPanel: React.FC = () => {
   const { modal } = App.useApp();
   const [inputValue, setInputValue] = useState('');
   const chat = useAssistantChat();
+  const { initialState } = useModel('@@initialState');
+  const roleConfig = useMemo(
+    () => buildRoleConfig(initialState?.currentUser?.avatar),
+    [initialState?.currentUser?.avatar],
+  );
 
   const sendMessage = (content: string) => {
     setInputValue('');

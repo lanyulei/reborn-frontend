@@ -39,7 +39,9 @@ export default {
   'pages.system.user.roles.label': '已綁定角色',
   'pages.system.user.roles.placeholder': '請選擇角色（最多 100 個）',
   'pages.system.user.roles.option': '{name}（{code}）',
+  'pages.system.user.roles.optionBuiltin': '{name}（{code}）· 內建',
   'pages.system.user.roles.success': '角色綁定已儲存',
+  'pages.system.user.roles.builtinHint': '內建角色預設綁定，不可解除綁定',
 
   // 角色管理
   'pages.system.role.create.title': '新建角色',
@@ -64,8 +66,14 @@ export default {
   'pages.system.role.bizScope.duplicate': '條目不可重複',
   'pages.system.role.bizScope.pattern': '1-64 位小寫字母/數字/底線/連字號',
   'pages.system.role.bizScope.unlimited': '不限',
+  'pages.system.role.tag.builtin': '內建',
 
   // 個人設定
+  'pages.account.avatar.upload': '上傳頭像',
+  'pages.account.avatar.hint': '支援 PNG / JPEG / WebP，不超過 1MB',
+  'pages.account.avatar.type': '僅支援 PNG / JPEG / WebP 圖片',
+  'pages.account.avatar.size': '圖片不能超過 1MB',
+  'pages.account.avatar.success': '頭像已更新',
   'pages.account.base.success': '更新基本資訊成功',
   'pages.account.base.submit': '更新基本資訊',
   'pages.account.base.nickname.required': '請輸入您的暱稱!',
@@ -107,6 +115,8 @@ export default {
   'pages.system.permission.save.content':
     '將以目前勾選全量覆蓋該角色的權限，確定儲存？',
   'pages.system.permission.saved': '權限已儲存',
+  'pages.system.permission.readonly':
+    '目前角色為內建角色，僅超級管理員可修改授權，以下內容僅可查看。',
 
   // 系統設定
   'pages.system.config.readonly':

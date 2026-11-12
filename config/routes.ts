@@ -17,6 +17,77 @@ export default [
     component: './Home',
   },
   {
+    // CMDB：资源模型（元数据）与资源管理；详情页隐藏于菜单
+    path: '/cmdb',
+    name: 'cmdb',
+    icon: 'database',
+    access: 'canCmdb',
+    routes: [
+      {
+        path: '/cmdb',
+        redirect: '/cmdb/search',
+      },
+      {
+        // 全局搜索：默认落地；独立页面，跨模型检索资源（关键字进 URL ?q=）
+        path: '/cmdb/search',
+        name: 'search',
+        component: './cmdb/search',
+        access: 'canCmdbCI',
+      },
+      {
+        path: '/cmdb/ci',
+        name: 'ci',
+        component: './cmdb/ci',
+        access: 'canCmdbCI',
+      },
+      {
+        path: '/cmdb/ci/:id',
+        name: 'ci-detail',
+        hideInMenu: true,
+        component: './cmdb/ci/detail',
+        access: 'canCmdbCI',
+      },
+      {
+        path: '/cmdb/model',
+        name: 'model',
+        component: './cmdb/model',
+        access: 'canCmdbModel',
+      },
+      {
+        path: '/cmdb/model/:code',
+        name: 'model-detail',
+        hideInMenu: true,
+        component: './cmdb/model/detail',
+        access: 'canCmdbModel',
+      },
+      {
+        path: '/cmdb/topology',
+        name: 'topology',
+        component: './cmdb/topology',
+        access: 'canCmdbModel',
+      },
+      {
+        path: '/cmdb/sync',
+        name: 'sync',
+        component: './cmdb/sync',
+        access: 'canCmdbSync',
+      },
+      {
+        path: '/cmdb/audit',
+        name: 'audit',
+        component: './cmdb/audit',
+        access: 'canCmdbAudit',
+      },
+      {
+        // 运营统计：概览接口按数据范围统计，读权限即可见
+        path: '/cmdb/stats',
+        name: 'stats',
+        component: './cmdb/stats',
+        access: 'canCmdbStats',
+      },
+    ],
+  },
+  {
     path: '/account',
     name: 'account',
     hideInMenu: true,

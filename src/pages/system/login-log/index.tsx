@@ -69,9 +69,12 @@ const LoginLogList: React.FC = () => {
   return (
     <PageContainer title={false}>
       <ProTable<LoginLog>
+        cardBordered
         rowKey="id"
         // 自动布局：各列按内容自适应、以 minWidth 兜底（minWidth 仅在 auto 下生效）
         tableLayout="auto"
+        // 覆盖全局 max-content：表宽 auto 让 User-Agent 列吸收余量并省略，仅各列 minWidth 之和超出容器时才横向滚动
+        scroll={{ x: true }}
         search={{ labelWidth: 'auto' }}
         columns={columns}
         request={async (params) => {

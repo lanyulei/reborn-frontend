@@ -1,3 +1,4 @@
+import cmdb from './zh-TW/cmdb';
 import common from './zh-TW/common';
 import component from './zh-TW/component';
 import enumMessages from './zh-TW/enum';
@@ -27,4 +28,5 @@ export default {
   ...enumMessages,
   ...system,
   ...notify,
+  ...cmdb,
 };

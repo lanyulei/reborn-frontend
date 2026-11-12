@@ -7,7 +7,7 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import { history } from '@umijs/max';
+import { history, useAccess } from '@umijs/max';
 import { App, Tag } from 'antd';
 import React, { useRef, useState } from 'react';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
@@ -93,6 +93,8 @@ const RoleList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
   const { message } = App.useApp();
   const has = usePermissions();
+  // 内置角色写操作仅超管（元素权限对超管恒放行，故需单独取 isAdmin）
+  const { canAdmin: isAdmin } = useAccess();
   const t = useT();
   const rules = useFormRules();
   const submitter = useSubmitter();
@@ -129,6 +131,16 @@ const RoleList: React.FC = () => {
       ellipsis: true,
       // 角色名称搜索由「关键字」字段覆盖（后端 keyword 模糊匹配名称/编码）
       search: false,
+      render: (_, record) => (
+        <>
+          {record.name}
+          {record.builtin && (
+            <Tag color="gold" style={{ marginInlineStart: 8 }}>
+              {t('pages.system.role.tag.builtin')}
+            </Tag>
+          )}
+        </>
+      ),
     },
     {
       title: t('pages.system.role.column.code'),
@@ -173,9 +185,11 @@ const RoleList: React.FC = () => {
       width: 160,
       hideInTable: !hasAnyAction,
       render: (_, record) => {
-        // 元素权限显隐：无对应权限码的操作不渲染
+        // 元素权限显隐：无对应权限码的操作不渲染；
+        // 内置角色：编辑/权限仅超管可见，删除对任何人不可见（后端同样拒绝）
+        const locked = record.builtin === true && !isAdmin;
         const actions: React.ReactNode[] = [];
-        if (has('system.role.edit')) {
+        if (has('system.role.edit') && !locked) {
           actions.push(
             <a
               key="edit"
@@ -187,7 +201,7 @@ const RoleList: React.FC = () => {
             </a>,
           );
         }
-        if (has('system.role.grant')) {
+        if (has('system.role.grant') && !locked) {
           actions.push(
             <a
               key="permissions"
@@ -199,7 +213,7 @@ const RoleList: React.FC = () => {
             </a>,
           );
         }
-        if (has('system.role.delete')) {
+        if (has('system.role.delete') && !record.builtin) {
           actions.push(
             <DeleteConfirmLink
               key="delete"
@@ -213,7 +227,7 @@ const RoleList: React.FC = () => {
             />,
           );
         }
-        return actions;
+        return actions.length ? actions : t('common.empty');
       },
     },
   ];
@@ -222,6 +236,7 @@ const RoleList: React.FC = () => {
     <>
       <PageContainer title={false}>
         <ProTable<SystemRole>
+          cardBordered
           headerTitle={
             has('system.role.create') && (
               <CreateButton

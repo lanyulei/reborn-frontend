@@ -2,7 +2,7 @@ import { Link } from '@umijs/max';
 import { Button, Card, Result } from 'antd';
 
 export default () => (
-  <Card variant="borderless">
+  <Card variant="outlined">
     <Result
       status="500"
       title="500"

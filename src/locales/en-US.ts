@@ -1,3 +1,4 @@
+import cmdb from './en-US/cmdb';
 import common from './en-US/common';
 import component from './en-US/component';
 import enumMessages from './en-US/enum';
@@ -27,4 +28,5 @@ export default {
   ...enumMessages,
   ...system,
   ...notify,
+  ...cmdb,
 };

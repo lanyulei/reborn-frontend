@@ -5,7 +5,7 @@ import React from 'react';
 const Exception404: React.FC = () => {
   const intl = useIntl();
   return (
-    <Card variant="borderless">
+    <Card variant="outlined">
       <Result
         status="404"
         title="404"

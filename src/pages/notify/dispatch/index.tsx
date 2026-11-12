@@ -52,6 +52,7 @@ const DispatchList: React.FC = () => {
       dataIndex: 'recipient',
       copyable: true,
       ellipsis: true,
+      width: 200,
       search: false,
     },
     {
@@ -78,6 +79,7 @@ const DispatchList: React.FC = () => {
       title: t('pages.notify.dispatch.column.lastError'),
       dataIndex: 'lastError',
       ellipsis: true,
+      width: 240,
       search: false,
       render: (_, record) => record.lastError || t('common.empty'),
     },
@@ -108,6 +110,7 @@ const DispatchList: React.FC = () => {
 
   return (
     <ProTable<NotifyDispatch>
+      cardBordered
       rowKey="id"
       actionRef={actionRef}
       formRef={formRef}

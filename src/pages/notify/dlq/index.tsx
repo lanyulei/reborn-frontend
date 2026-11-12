@@ -75,6 +75,7 @@ const DeadLetterList: React.FC = () => {
       dataIndex: 'recipient',
       copyable: true,
       ellipsis: true,
+      width: 200,
       search: false,
     },
     {
@@ -87,6 +88,7 @@ const DeadLetterList: React.FC = () => {
       title: t('pages.notify.common.failReason'),
       dataIndex: 'lastError',
       ellipsis: true,
+      width: 240,
       search: false,
       render: (_, record) => record.lastError || t('common.empty'),
     },
@@ -153,6 +155,7 @@ const DeadLetterList: React.FC = () => {
 
   return (
     <ProTable<NotifyDeadLetter>
+      cardBordered
       rowKey="id"
       actionRef={actionRef}
       formRef={formRef}

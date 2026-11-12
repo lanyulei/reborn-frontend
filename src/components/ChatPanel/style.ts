@@ -211,6 +211,10 @@ export const useStyles = createStyles(({ css, token }) => ({
     max-width: 100%;
     background: ${token.colorWarningBg};
     border: 1px solid ${token.colorWarningBorder};
+    /* 全局样式加深了卡片边框色（global.less），提高优先级保住警示色 */
+    &&& {
+      border-color: ${token.colorWarningBorder};
+    }
     border-radius: ${token.borderRadiusLG}px;
     box-shadow: ${token.boxShadowTertiary};
 

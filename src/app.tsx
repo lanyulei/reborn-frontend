@@ -128,6 +128,7 @@ export const layout: RunTimeLayoutConfig = ({
       ].filter(Boolean);
     },
     avatarProps: {
+      src: initialState?.currentUser?.avatar || undefined,
       title:
         initialState?.currentUser?.nickname ||
         initialState?.currentUser?.username,

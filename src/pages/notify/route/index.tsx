@@ -456,6 +456,7 @@ const RouteList: React.FC = () => {
   return (
     <>
       <ProTable<NotifyRoute>
+        cardBordered
         headerTitle={
           has('notify.route.create') && (
             <CreateButton

@@ -322,6 +322,7 @@ const ProducerList: React.FC = () => {
     <>
       <PageContainer title={false}>
         <ProTable<NotifyProducer>
+          cardBordered
           headerTitle={
             has('notify.producer.create') && (
               <CreateButton

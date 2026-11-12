@@ -19,6 +19,8 @@ export interface SystemRole {
   status: RoleStatus;
   /** 可管理的通知 biz 列表；空 = 不限。用户可管范围 = 启用角色 scope 并集，任一角色不限即不限 */
   bizScope?: string[];
+  /** 内置角色（迁移预置）：不可删除，编辑/授权仅超管；新建用户自动绑定且不可解绑 */
+  builtin?: boolean;
   createTime?: string;
   updateTime?: string;
 }
@@ -84,6 +86,8 @@ export interface SystemUser {
   gender: Gender;
   isAdmin: boolean;
   status: UserStatus;
+  /** 头像地址；空 = 未设置 */
+  avatar?: string;
   createTime?: string;
   updateTime?: string;
 }

@@ -406,6 +406,7 @@ const SubscriptionList: React.FC = () => {
     <>
       <PageContainer title={false}>
         <ProTable<NotifySubscription>
+          cardBordered
           headerTitle={
             has('notify.subscription.upsert') && (
               <CreateButton

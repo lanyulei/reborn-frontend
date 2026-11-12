@@ -10,6 +10,10 @@ import { useCallback } from 'react';
 /** 菜单权限码：与后端目录常量一一对应 */
 export type MenuPermissionCode =
   | 'assistant'
+  | 'cmdb.model'
+  | 'cmdb.ci'
+  | 'cmdb.sync'
+  | 'cmdb.audit'
   | 'system.user'
   | 'system.role'
   | 'system.login_log'
@@ -57,7 +61,26 @@ export type ElementPermissionCode =
   | 'notify.producer.edit'
   | 'notify.producer.rotate'
   | 'notify.producer.delete'
-  | 'notify.dlq.replay';
+  | 'notify.dlq.replay'
+  | 'cmdb.model.create'
+  | 'cmdb.model.edit'
+  | 'cmdb.model.delete'
+  | 'cmdb.model.field'
+  | 'cmdb.model.relation_type'
+  | 'cmdb.model.view'
+  | 'cmdb.model.scope'
+  | 'cmdb.ci.create'
+  | 'cmdb.ci.edit'
+  | 'cmdb.ci.transition'
+  | 'cmdb.ci.delete'
+  | 'cmdb.ci.link'
+  | 'cmdb.ci.import'
+  | 'cmdb.ci.export'
+  | 'cmdb.sync.create'
+  | 'cmdb.sync.edit'
+  | 'cmdb.sync.delete'
+  | 'cmdb.sync.trigger'
+  | 'cmdb.sync.webhook';
 
 /** 菜单权限定义 */
 export interface MenuPermissionDef {
@@ -96,6 +119,10 @@ export const MENU_PERMISSIONS: MenuPermissionDef[] = [
   { code: 'notify.dispatch', labelKey: 'menu.notify.dispatch', parentKey: 'menu.notify' },
   { code: 'notify.delivery_log', labelKey: 'menu.notify.delivery-log', parentKey: 'menu.notify' },
   { code: 'notify.dlq', labelKey: 'menu.notify.dlq', parentKey: 'menu.notify' },
+  { code: 'cmdb.model', labelKey: 'menu.cmdb.model', parentKey: 'menu.cmdb' },
+  { code: 'cmdb.ci', labelKey: 'menu.cmdb.ci', parentKey: 'menu.cmdb' },
+  { code: 'cmdb.sync', labelKey: 'menu.cmdb.sync', parentKey: 'menu.cmdb' },
+  { code: 'cmdb.audit', labelKey: 'menu.cmdb.audit', parentKey: 'menu.cmdb' },
 ];
 
 /** 全量元素权限目录 */
@@ -131,6 +158,25 @@ export const ELEMENT_PERMISSIONS: ElementPermissionDef[] = [
   { code: 'notify.producer.rotate', labelKey: 'permission.notify.producer.rotate', parentCode: 'notify.producer' },
   { code: 'notify.producer.delete', labelKey: 'permission.notify.producer.delete', parentCode: 'notify.producer' },
   { code: 'notify.dlq.replay', labelKey: 'permission.notify.dlq.replay', parentCode: 'notify.dlq' },
+  { code: 'cmdb.model.create', labelKey: 'permission.cmdb.model.create', parentCode: 'cmdb.model' },
+  { code: 'cmdb.model.edit', labelKey: 'permission.cmdb.model.edit', parentCode: 'cmdb.model' },
+  { code: 'cmdb.model.delete', labelKey: 'permission.cmdb.model.delete', parentCode: 'cmdb.model' },
+  { code: 'cmdb.model.field', labelKey: 'permission.cmdb.model.field', parentCode: 'cmdb.model' },
+  { code: 'cmdb.model.relation_type', labelKey: 'permission.cmdb.model.relation_type', parentCode: 'cmdb.model' },
+  { code: 'cmdb.model.view', labelKey: 'permission.cmdb.model.view', parentCode: 'cmdb.model' },
+  { code: 'cmdb.model.scope', labelKey: 'permission.cmdb.model.scope', parentCode: 'cmdb.model' },
+  { code: 'cmdb.ci.create', labelKey: 'permission.cmdb.ci.create', parentCode: 'cmdb.ci' },
+  { code: 'cmdb.ci.edit', labelKey: 'permission.cmdb.ci.edit', parentCode: 'cmdb.ci' },
+  { code: 'cmdb.ci.transition', labelKey: 'permission.cmdb.ci.transition', parentCode: 'cmdb.ci' },
+  { code: 'cmdb.ci.delete', labelKey: 'permission.cmdb.ci.delete', parentCode: 'cmdb.ci' },
+  { code: 'cmdb.ci.link', labelKey: 'permission.cmdb.ci.link', parentCode: 'cmdb.ci' },
+  { code: 'cmdb.ci.import', labelKey: 'permission.cmdb.ci.import', parentCode: 'cmdb.ci' },
+  { code: 'cmdb.ci.export', labelKey: 'permission.cmdb.ci.export', parentCode: 'cmdb.ci' },
+  { code: 'cmdb.sync.create', labelKey: 'permission.cmdb.sync.create', parentCode: 'cmdb.sync' },
+  { code: 'cmdb.sync.edit', labelKey: 'permission.cmdb.sync.edit', parentCode: 'cmdb.sync' },
+  { code: 'cmdb.sync.delete', labelKey: 'permission.cmdb.sync.delete', parentCode: 'cmdb.sync' },
+  { code: 'cmdb.sync.trigger', labelKey: 'permission.cmdb.sync.trigger', parentCode: 'cmdb.sync' },
+  { code: 'cmdb.sync.webhook', labelKey: 'permission.cmdb.sync.webhook', parentCode: 'cmdb.sync' },
 ];
 
 /** 全量合法权限码集合（菜单码 + 元素码，保存授权时过滤勾选值） */

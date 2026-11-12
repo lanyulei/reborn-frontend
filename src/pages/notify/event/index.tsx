@@ -50,6 +50,7 @@ const EventList: React.FC = () => {
       title: t('pages.notify.event.column.title'),
       dataIndex: 'title',
       ellipsis: true,
+      width: 200,
       search: false,
     },
     {
@@ -118,6 +119,7 @@ const EventList: React.FC = () => {
 
   return (
     <ProTable<NotifyEvent>
+      cardBordered
       rowKey="id"
       search={{ labelWidth: 'auto' }}
       columns={columns}

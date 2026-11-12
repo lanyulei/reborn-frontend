@@ -147,7 +147,11 @@ export default defineConfig({
   antd: {
     appConfig: {},
     configProvider: {
-      variant: 'filled',
+      variant: 'outlined',
+      // 全局表格缺省：内容超出容器宽度时横向滚动（而非被裁切隐藏）。
+      // ProTable 不自带 scroll，antd Table 以 `scroll ?? table.scroll` 取用；
+      // 个别页面按需显式覆盖（如登录日志的自适应列、导入预览的定高）。
+      table: { scroll: { x: 'max-content' } },
       theme: {
         token: {
           fontFamily: 'AlibabaSans, sans-serif',

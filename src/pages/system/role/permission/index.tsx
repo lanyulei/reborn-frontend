@@ -1,6 +1,6 @@
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { Link, useIntl, useParams } from '@umijs/max';
+import { Link, useAccess, useIntl, useParams } from '@umijs/max';
 import type { TabsProps } from 'antd';
 import {
   App,
@@ -51,8 +51,11 @@ const RolePermission: React.FC = () => {
   const intl = useIntl();
   const t = useT();
   const { token } = theme.useToken();
+  const { canAdmin: isAdmin } = useAccess();
 
   const [role, setRole] = useState<SystemRole | null>(null);
+  // 内置角色的授权仅超管可改：非超管只读浏览（无保存、控件禁用、顶部提示）
+  const readOnly = role?.builtin === true && !isAdmin;
   const [loading, setLoading] = useState(true);
   const [menuChecked, setMenuChecked] = useState<string[]>([]);
   const [elemChecked, setElemChecked] = useState<string[]>([]);
@@ -112,26 +115,34 @@ const RolePermission: React.FC = () => {
     load();
   }, [roleId]);
 
-  // 左侧菜单树：父级分组 › 菜单两级，标题复用侧边栏 menu.* 词条随语言切换
+  // 左侧菜单树：父级分组 › 菜单两级，标题复用侧边栏 menu.* 词条随语言切换；
+  // 只读态禁用勾选框但保留节点点选（仍可切换右侧详情浏览）
   const permTreeData = useMemo(() => {
     const groups = new Map<
       string,
-      { key: string; title: string; children: { key: string; title: string }[] }
+      {
+        key: string;
+        title: string;
+        disableCheckbox: boolean;
+        children: { key: string; title: string; disableCheckbox: boolean }[];
+      }
     >();
     for (const menu of MENU_PERMISSIONS) {
       const group = groups.get(menu.parentKey) ?? {
         key: menu.parentKey,
         title: intl.formatMessage({ id: menu.parentKey }),
+        disableCheckbox: readOnly,
         children: [],
       };
       group.children.push({
         key: menu.code,
         title: intl.formatMessage({ id: menu.labelKey }),
+        disableCheckbox: readOnly,
       });
       groups.set(menu.parentKey, group);
     }
     return [...groups.values()];
-  }, [intl]);
+  }, [intl, readOnly]);
 
   // 右侧详情数据源：所选菜单的元素权限
   const menuElements = useMemo(
@@ -351,6 +362,7 @@ const RolePermission: React.FC = () => {
             {t('pages.system.permission.desc.elements')}
           </Typography.Paragraph>
           <Checkbox.Group
+            disabled={readOnly}
             style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
             options={menuElements.map((elem) => ({
               value: elem.code,
@@ -400,6 +412,7 @@ const RolePermission: React.FC = () => {
             {t('pages.system.permission.desc.apis')}
           </Typography.Paragraph>
           <Checkbox.Group
+            disabled={readOnly}
             style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
             options={menuOperations.map((op) => ({
               value: op.code,
@@ -465,6 +478,11 @@ const RolePermission: React.FC = () => {
 
   return (
     <PageContainer title={false} breadcrumb={{ items: breadcrumbItems }}>
+      {readOnly && (
+        <Typography.Paragraph type="secondary">
+          {t('pages.system.permission.readonly')}
+        </Typography.Paragraph>
+      )}
       <div style={{ display: 'flex', gap: 16 }}>
         <ProCard
           style={{ width: 280 }}
@@ -480,18 +498,20 @@ const RolePermission: React.FC = () => {
           headerBordered
           loading={loading}
           extra={
-            <a
-              onClick={() => {
-                // 二次确认，避免误触覆盖权限
-                modal.confirm({
-                  title: t('pages.system.permission.save.title'),
-                  content: t('pages.system.permission.save.content'),
-                  onOk: save,
-                });
-              }}
-            >
-              {t('common.action.save')}
-            </a>
+            readOnly ? null : (
+              <a
+                onClick={() => {
+                  // 二次确认，避免误触覆盖权限
+                  modal.confirm({
+                    title: t('pages.system.permission.save.title'),
+                    content: t('pages.system.permission.save.content'),
+                    onOk: save,
+                  });
+                }}
+              >
+                {t('common.action.save')}
+              </a>
+            )
           }
         >
           <Tree
@@ -528,6 +548,7 @@ const RolePermission: React.FC = () => {
             flex: 1,
             minWidth: 0,
             background: token.colorBgContainer,
+            border: `${token.lineWidth}px solid color-mix(in srgb, ${token.colorBorder} 25%, ${token.colorBorderSecondary})`,
             borderRadius: token.borderRadiusLG,
             padding: '12px 16px 16px',
           }}

@@ -58,3 +58,22 @@ export async function logout(): Promise<void> {
 export async function getLoginProfile(): Promise<LoginProfile> {
   return authRequest<LoginProfile>('/api/v1/me', { method: 'GET' });
 }
+
+/**
+ * UploadMyAvatar 上传当前登录用户头像（自助接口）；文件转 base64 走 protojson
+ * bytes 契约，返回带内容指纹的访问地址（已写入用户 avatar 字段）。
+ */
+export async function uploadMyAvatar(file: File): Promise<{ url: string }> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+  const mime = dataUrl.slice(5, dataUrl.indexOf(';'));
+  const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  return authRequest<{ url: string }>('/api/v1/me/avatar', {
+    method: 'POST',
+    data: { data: b64, mime },
+  });
+}

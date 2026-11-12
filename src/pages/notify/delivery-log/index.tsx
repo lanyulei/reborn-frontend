@@ -68,6 +68,7 @@ const DeliveryLogList: React.FC = () => {
       dataIndex: 'providerMsgId',
       copyable: true,
       ellipsis: true,
+      width: 180,
       search: false,
       render: (_, record) => record.providerMsgId || t('common.empty'),
     },
@@ -75,6 +76,7 @@ const DeliveryLogList: React.FC = () => {
       title: t('pages.notify.common.failReason'),
       dataIndex: 'error',
       ellipsis: true,
+      width: 240,
       search: false,
       render: (_, record) => record.error || t('common.empty'),
     },
@@ -93,6 +95,7 @@ const DeliveryLogList: React.FC = () => {
 
   return (
     <ProTable<NotifyDeliveryLog>
+      cardBordered
       rowKey="id"
       actionRef={actionRef}
       formRef={formRef}

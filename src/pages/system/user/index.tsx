@@ -60,6 +60,8 @@ const UserList: React.FC = () => {
   const [editRow, setEditRow] = useState<SystemUser | null>(null);
   const [resetRow, setResetRow] = useState<SystemUser | null>(null);
   const [roleRow, setRoleRow] = useState<SystemUser | null>(null);
+  // 内置角色 ID（角色绑定弹窗加载选项时填充）：提交时并入，保证不可解绑
+  const [builtinRoleIds, setBuiltinRoleIds] = useState<string[]>([]);
 
   const reload = () => actionRef.current?.reload();
 
@@ -267,6 +269,7 @@ const UserList: React.FC = () => {
     <>
       <PageContainer title={false}>
         <ProTable<SystemUser>
+          cardBordered
           headerTitle={
             has('system.user.create') && (
               <CreateButton
@@ -509,7 +512,7 @@ const UserList: React.FC = () => {
         </ModalForm>
       )}
 
-      {/* 角色绑定 */}
+      {/* 角色绑定：内置角色（默认角色）锁定——选项禁用、已选标签无叉号、提交并入；后端同样兜底保留 */}
       {roleRow && (
         <ModalForm
           key={`bind-roles-${roleRow.id}`}
@@ -525,10 +528,16 @@ const UserList: React.FC = () => {
           params={{ userId: roleRow.id }}
           request={async ({ userId }) => {
             const bound = await listUserRoles(userId);
+            // 回显即含内置角色（历史数据缺失时由选项加载后补入，见 onFinish 并集）
             return { roleIds: bound.items.map((role) => role.id) };
           }}
           onFinish={async (values) => {
-            await bindUserRoles(roleRow.id, values.roleIds ?? []);
+            const selected: string[] = values.roleIds ?? [];
+            const merged = [
+              ...selected,
+              ...builtinRoleIds.filter((id) => !selected.includes(id)),
+            ];
+            await bindUserRoles(roleRow.id, merged);
             message.success(t('pages.system.user.roles.success'));
             reload();
             return true;
@@ -537,18 +546,29 @@ const UserList: React.FC = () => {
           <ProFormSelect
             name="roleIds"
             label={t('pages.system.user.roles.label')}
+            tooltip={t('pages.system.user.roles.builtinHint')}
             fieldProps={{
               mode: 'multiple',
               placeholder: t('pages.system.user.roles.placeholder'),
             }}
             request={async () => {
               const all = await listRoles({ page: 1, pageSize: 100 });
+              setBuiltinRoleIds(
+                all.items.filter((role) => role.builtin).map((role) => role.id),
+              );
               return all.items.map((role) => ({
-                label: t('pages.system.user.roles.option', {
-                  name: role.name,
-                  code: role.code,
-                }),
+                label: role.builtin
+                  ? t('pages.system.user.roles.optionBuiltin', {
+                      name: role.name,
+                      code: role.code,
+                    })
+                  : t('pages.system.user.roles.option', {
+                      name: role.name,
+                      code: role.code,
+                    }),
                 value: role.id,
+                // 禁用选项：下拉不可取消勾选，已选标签不渲染关闭图标
+                disabled: role.builtin === true,
               }));
             }}
           />
