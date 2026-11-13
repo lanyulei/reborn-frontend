@@ -182,6 +182,7 @@ const RoleList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
+      fixed: 'right',
       width: 160,
       hideInTable: !hasAnyAction,
       render: (_, record) => {
@@ -252,6 +253,7 @@ const RoleList: React.FC = () => {
           actionRef={actionRef}
           search={{ labelWidth: 'auto' }}
           columns={columns}
+          scroll={{ x: 'max-content' }}
           request={async (params) => {
             const result = await listRoles({
               page: params.current,

@@ -24,11 +24,16 @@ import {
   Spin,
   Typography,
 } from 'antd';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { JsonView } from '@/pages/notify/components/JsonView';
 import type { AssistantToolStatus } from '@/services/assistant/typings';
 import { type Translate, useT } from '@/utils/i18n';
-import type { AssistantChatMessage, ChatStep, ConversationGroup } from './data';
+import type {
+  AssistantChatMessage,
+  ChatMessage,
+  ChatStep,
+  ConversationGroup,
+} from './data';
 import { useStyles } from './style';
 import { useAssistantChat } from './useAssistantChat';
 
@@ -230,77 +235,96 @@ const ChatPanel: React.FC = () => {
     chat.send(content);
   };
 
-  const bubbleItems = useMemo<BubbleItemType[]>(
-    () =>
-      chat.messages.map((msg) => {
-        if (msg.role === 'user') {
-          return { key: msg.id, role: 'user', content: msg.content };
-        }
-        const pendingStep = msg.pendingConfirm
-          ? msg.steps.find((s) => s.id === msg.pendingConfirm)
-          : undefined;
-        const content = msg.error && !msg.content ? msg.error : msg.content;
-        const loading =
-          msg.streaming &&
-          !msg.content &&
-          msg.steps.length === 0 &&
-          !msg.reasoning;
-        const confirmCard =
-          pendingStep && !msg.streaming ? (
-            <Card
-              key={`${msg.id}-confirm`}
-              size="small"
-              className={styles.confirmCard}
-            >
-              <Space vertical size="small" style={{ width: '100%' }}>
-                <div className={styles.confirmTitle}>
-                  <ExclamationCircleFilled />
-                  <span>{pendingStep.title || pendingStep.tool}</span>
-                </div>
-                <Typography.Text type="secondary">
-                  {t('component.chat.confirm.title')}
-                </Typography.Text>
-                <JsonView value={pendingStep.input} maxHeight={160} />
-                <Space>
-                  <Button
-                    type="primary"
-                    disabled={chat.isRequesting}
-                    onClick={() => chat.confirm(msg.id, pendingStep.id, true)}
-                  >
-                    {t('component.chat.confirm.approve')}
-                  </Button>
-                  <Button
-                    danger
-                    disabled={chat.isRequesting}
-                    onClick={() => chat.confirm(msg.id, pendingStep.id, false)}
-                  >
-                    {t('component.chat.confirm.reject')}
-                  </Button>
-                </Space>
+  // 按消息对象缓存气泡项：流式输出时只有正在生成的那条消息对象会被替换，
+  // 其余消息沿用缓存，避免每个片段都把整个列表（含确认卡等 JSX）重建一遍。
+  // 其余依赖（确认回调 / 请求态 / 样式 / 语言）变化时整体作废。
+  const bubbleCache = useRef<{
+    deps: unknown[];
+    items: WeakMap<ChatMessage, BubbleItemType>;
+  }>({ deps: [], items: new WeakMap() });
+
+  const bubbleItems = useMemo<BubbleItemType[]>(() => {
+    const deps = [chat.confirm, chat.isRequesting, styles, t];
+    if (deps.some((d, i) => d !== bubbleCache.current.deps[i])) {
+      bubbleCache.current = { deps, items: new WeakMap() };
+    }
+    const cache = bubbleCache.current.items;
+    const build = (msg: ChatMessage): BubbleItemType => {
+      if (msg.role === 'user') {
+        return { key: msg.id, role: 'user', content: msg.content };
+      }
+      const pendingStep = msg.pendingConfirm
+        ? msg.steps.find((s) => s.id === msg.pendingConfirm)
+        : undefined;
+      const content = msg.error && !msg.content ? msg.error : msg.content;
+      const loading =
+        msg.streaming &&
+        !msg.content &&
+        msg.steps.length === 0 &&
+        !msg.reasoning;
+      const confirmCard =
+        pendingStep && !msg.streaming ? (
+          <Card
+            key={`${msg.id}-confirm`}
+            size="small"
+            className={styles.confirmCard}
+          >
+            <Space vertical size="small" style={{ width: '100%' }}>
+              <div className={styles.confirmTitle}>
+                <ExclamationCircleFilled />
+                <span>{pendingStep.title || pendingStep.tool}</span>
+              </div>
+              <Typography.Text type="secondary">
+                {t('component.chat.confirm.title')}
+              </Typography.Text>
+              <JsonView value={pendingStep.input} maxHeight={160} />
+              <Space>
+                <Button
+                  type="primary"
+                  disabled={chat.isRequesting}
+                  onClick={() => chat.confirm(msg.id, pendingStep.id, true)}
+                >
+                  {t('component.chat.confirm.approve')}
+                </Button>
+                <Button
+                  danger
+                  disabled={chat.isRequesting}
+                  onClick={() => chat.confirm(msg.id, pendingStep.id, false)}
+                >
+                  {t('component.chat.confirm.reject')}
+                </Button>
               </Space>
-            </Card>
-          ) : undefined;
-        const item: BubbleItemType = {
-          key: msg.id,
-          role: 'ai',
-          content,
-          loading,
-          status: msg.streaming ? 'updating' : 'success',
-          header: <AssistantHeader msg={msg} t={t} />,
-        };
-        if (!content && !loading) {
-          // 正文为空（仅有思考/工具步骤或待确认操作）：去掉气泡壳与内边距；
-          // 确认卡直接占据正文位置，避免空正文 + footer 外边距造成的大段留白
-          item.variant = 'borderless';
-          item.styles = { content: { padding: 0, minHeight: 0 } };
-          if (confirmCard) item.content = confirmCard;
-        } else if (confirmCard) {
-          item.footer = confirmCard;
-        }
-        return item;
-      }),
-    [chat.confirm, chat.isRequesting, chat.messages, styles, t],
-  );
+            </Space>
+          </Card>
+        ) : undefined;
+      const item: BubbleItemType = {
+        key: msg.id,
+        role: 'ai',
+        content,
+        loading,
+        status: msg.streaming ? 'updating' : 'success',
+        header: <AssistantHeader msg={msg} t={t} />,
+      };
+      if (!content && !loading) {
+        // 正文为空（仅有思考/工具步骤或待确认操作）：去掉气泡壳与内边距；
+        // 确认卡直接占据正文位置，避免空正文 + footer 外边距造成的大段留白
+        item.variant = 'borderless';
+        item.styles = { content: { padding: 0, minHeight: 0 } };
+        if (confirmCard) item.content = confirmCard;
+      } else if (confirmCard) {
+        item.footer = confirmCard;
+      }
+      return item;
+    };
+    return chat.messages.map((msg) => {
+      let item = cache.get(msg);
+      if (!item) {
+        item = build(msg);
+        cache.set(msg, item);
+      }
+      return item;
+    });
+  }, [chat.confirm, chat.isRequesting, chat.messages, styles, t]);
 
   const hasMessages = chat.messages.length > 0;
 

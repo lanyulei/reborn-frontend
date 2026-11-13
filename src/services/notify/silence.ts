@@ -10,6 +10,10 @@ import type { NotifySilence, SilenceWindow } from './typings';
 
 /** SilenceSpecPayload 静默规则载荷（创建/更新共用，整组替换） */
 export interface SilenceSpecPayload {
+  /** 可读名称（≤64，列表展示）；整组替换语义下不传 / 空串 = 清除 */
+  name?: string;
+  /** 说明（≤255）；不传 / 空串 = 清除 */
+  description?: string;
   /** 事件匹配模式：精确 / 前缀通配（'monitor.alert.*'）/ 全匹配（'*'），与路由同式 */
   eventPattern: string;
   /** 严重级上限（1-4），该级及以下的事件才可被静默，未指定默认 2 */

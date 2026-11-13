@@ -65,10 +65,12 @@ export interface ListSourcesParams {
 
 export async function listSources(
   params: ListSourcesParams,
+  /** silent：辅助性查询（如 id→名称映射）无权限时不弹错误 */
+  options?: { silent?: boolean },
 ): Promise<{ items: SyncSource[]; total: string }> {
   return authRequest<{ items: SyncSource[]; total: string }>(
     '/api/v1/cmdb/sync/source',
-    { method: 'GET', params },
+    { method: 'GET', params, silent: options?.silent },
   );
 }
 

@@ -93,7 +93,7 @@ export const CIForm: React.FC<{
       }
       width={760}
       grid
-      rowProps={{ gutter: 24 }}
+      rowProps={{ gutter: 16 }}
       colProps={{ span: 12 }}
       open={open}
       onOpenChange={onOpenChange}

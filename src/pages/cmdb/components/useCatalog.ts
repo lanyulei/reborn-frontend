@@ -12,7 +12,7 @@ import {
   listModelGroups,
   setFavorite,
 } from '@/services/cmdb/insight';
-import { listModels } from '@/services/cmdb/model';
+import { listAllModels } from '@/services/cmdb/model';
 import { getMyScope, type MyScope } from '@/services/cmdb/scope';
 import type {
   CmdbModel,
@@ -40,6 +40,8 @@ export interface UseCatalogResult {
   favorites: string[] | null;
   toggleFavorite: (modelCode: string) => void;
   reload: () => void;
+  /** 仅刷新模型实例数（比 reload 轻：只发模型请求） */
+  refreshCounts: () => void;
 }
 
 export function useCatalog(): UseCatalogResult {
@@ -62,9 +64,9 @@ export function useCatalog(): UseCatalogResult {
     (async () => {
       setLoading(true);
       try {
-        // pageSize 100 与现有各页一致；超出部分由后端分页兜底
+        // 模型翻页取全；显式 reload（tick > 0）时跳过短缓存拿最新数据
         const [modelsRes, scopeRes, groupsRes, favRes] = await Promise.all([
-          listModels({ page: 1, pageSize: 100 }),
+          listAllModels({ fresh: tick > 0 }),
           getMyScope().catch(() => null),
           listModelGroups().catch(() => null),
           listFavorites().catch(() => null),
@@ -158,6 +160,13 @@ export function useCatalog(): UseCatalogResult {
 
   const reload = useCallback(() => setTick((n) => n + 1), []);
 
+  // 只刷新模型（实例数）：行操作后用它，不必连同范围 / 分组 / 收藏一起重拉
+  const refreshCounts = useCallback(() => {
+    listAllModels({ fresh: true })
+      .then((res) => setAllModels(res.items))
+      .catch(() => undefined);
+  }, []);
+
   return {
     loading,
     allModels,
@@ -167,5 +176,6 @@ export function useCatalog(): UseCatalogResult {
     favorites,
     toggleFavorite,
     reload,
+    refreshCounts,
   };
 }

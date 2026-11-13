@@ -59,6 +59,8 @@ export interface CmdbField {
   required?: boolean;
   unique?: boolean;
   enumValues?: string[];
+  /** 枚举展示值（实际值 → 展示值）；未配置的项显示实际值 */
+  enumLabels?: Record<string, string>;
   refModel?: string;
   rule?: CmdbFieldRule;
   owner: CmdbFieldOwner;

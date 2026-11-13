@@ -65,6 +65,32 @@ import { useAttrColumns } from '../components/schema';
 import { useCmdbStyles } from '../components/styles';
 import { useCatalog } from '../components/useCatalog';
 
+/** 批量操作并发上限（逐条请求；避免一次选中数百行时同时打出数百个请求） */
+const BATCH_CONCURRENCY = 5;
+
+/** 限并发的 allSettled：结果顺序与入参一致 */
+async function settleLimited<T, R>(
+  items: T[],
+  run: (item: T) => Promise<R>,
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      try {
+        results[i] = { status: 'fulfilled', value: await run(items[i]) };
+      } catch (reason) {
+        results[i] = { status: 'rejected', reason };
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(BATCH_CONCURRENCY, items.length) }, worker),
+  );
+  return results;
+}
+
 /** 可做等值筛选的字段类型（后端按 attrs ->> code 文本比较，均成立） */
 const FILTERABLE_TYPES = ['string', 'ip', 'enum', 'int', 'float', 'bool'];
 
@@ -77,13 +103,7 @@ const CIListPage: React.FC = () => {
   const formRef = useRef<ProFormInstance | undefined>(undefined);
   const statusEnum = useValueEnum(CMDB_CI_STATUS_META);
   const statusText = useEnumText(CMDB_CI_STATUS_META);
-  const {
-    loading,
-    models,
-    groups,
-    favorites,
-    reload: reloadCatalog,
-  } = useCatalog();
+  const { loading, models, groups, favorites, refreshCounts } = useCatalog();
   const [searchParams] = useSearchParams();
   const [modelKeyword, setModelKeyword] = useState('');
   const [activeCode, setActiveCode] = useState<string | undefined>(
@@ -106,7 +126,7 @@ const CIListPage: React.FC = () => {
   // 列表与左侧模型实例数一并刷新
   const reload = () => {
     actionRef.current?.reload();
-    reloadCatalog();
+    refreshCounts();
   };
 
   // 目录只列启用模型；URL 指定的模型不可见（无权限 / 停用）时回退首个
@@ -126,18 +146,25 @@ const CIListPage: React.FC = () => {
   }, [loading, enabled, activeCode, selectModel]);
 
   // 切换类型：拉取字段定义，表格列与筛选条件随之变化
-  const loadFields = useCallback(async (code: string) => {
-    const detail = await getModel(code);
-    setFields(detail.fields);
-    setRelTypes(detail.relationTypes);
-  }, []);
+  // 快速切换模型时只采纳当前模型的响应（否则旧模型的字段会驱动新模型的列与表单）
   useEffect(() => {
     if (!activeCode) return;
+    let cancelled = false;
     setFields([]);
-    void loadFields(activeCode);
-  }, [activeCode, loadFields]);
+    setRelTypes([]);
+    getModel(activeCode)
+      .then((detail) => {
+        if (cancelled) return;
+        setFields(detail.fields);
+        setRelTypes(detail.relationTypes);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCode]);
 
-  // 导出当前类型（随当前筛选）为 CSV/JSON 并触发下载
+  // 导出当前类型（随当前筛选，与列表一致）为 CSV/JSON 并触发下载
   const onExport = async (format: 'csv' | 'json' = 'csv') => {
     if (!activeModel) return;
     const values = formRef.current?.getFieldsValue?.() ?? {};
@@ -145,9 +172,7 @@ const CIListPage: React.FC = () => {
     try {
       const blob = await exportCIs({
         modelCode: activeModel.code,
-        keyword: values.keyword || undefined,
-        status: values.status || undefined,
-        env: values.env || undefined,
+        ...buildFilters(values),
         format,
       });
       const url = URL.createObjectURL(blob);
@@ -247,6 +272,37 @@ const CIListPage: React.FC = () => {
     return { relType, relDirection: relDirection as CmdbDirection };
   };
 
+  // 搜索表单值 → 列表 / 导出共用的筛选条件（属性等值 attr_<code> → attrs.<code>；关联条件）
+  const buildFilters = (params: Record<string, unknown>) => {
+    const rel = splitRelation(params.relation as string | undefined);
+    const mode = (params.relMode as string | undefined) ?? 'any';
+    const attrs: Record<string, unknown> = {};
+    for (const f of fields) {
+      const value = params[`attr_${f.code}`];
+      if (value !== undefined && value !== null && value !== '') {
+        attrs[f.code] = value;
+      }
+    }
+    return {
+      keyword: (params.keyword as string) || undefined,
+      status: (params.status as CmdbCIStatus) || undefined,
+      env: (params.env as string) || undefined,
+      tag: (params.tag as string) || undefined,
+      attrs: Object.keys(attrs).length > 0 ? attrs : undefined,
+      ...(rel
+        ? {
+            relType: rel.relType,
+            relDirection: rel.relDirection,
+            relNone: mode === 'none' || undefined,
+            relTargetId:
+              mode === 'target'
+                ? (params.relTargetId as string | undefined) || undefined
+                : undefined,
+          }
+        : {}),
+    };
+  };
+
   // 属性等值筛选列（按字段类型选择控件；提交时收集为 attrs）
   const attrFilterColumns = useMemo<ProColumns<CmdbCI>[]>(
     () =>
@@ -260,7 +316,10 @@ const CIListPage: React.FC = () => {
             ? {
                 valueType: 'select' as const,
                 valueEnum: Object.fromEntries(
-                  (f.enumValues ?? []).map((v) => [v, { text: v }]),
+                  (f.enumValues ?? []).map((v) => [
+                    v,
+                    { text: f.enumLabels?.[v] ?? v },
+                  ]),
                 ),
               }
             : {}),
@@ -294,8 +353,8 @@ const CIListPage: React.FC = () => {
       content: t('pages.cmdb.ci.batch.delete.description'),
       okButtonProps: { danger: true },
       onOk: async () => {
-        const results = await Promise.allSettled(
-          selectedIds.map((id) => deleteCI(id)),
+        const results = await settleLimited(selectedIds, (id) =>
+          deleteCI(id, { silent: true }),
         );
         reportBatch(results);
       },
@@ -308,8 +367,8 @@ const CIListPage: React.FC = () => {
         status: statusText(status),
       }),
       onOk: async () => {
-        const results = await Promise.allSettled(
-          selectedRows.map((r) => transitionCI(r.id, r.version, status)),
+        const results = await settleLimited(selectedRows, (r) =>
+          transitionCI(r.id, r.version, status, { silent: true }),
         );
         reportBatch(results);
       },
@@ -586,39 +645,11 @@ const CIListPage: React.FC = () => {
               scroll={{ x: 'max-content' }}
               columns={columns}
               request={async (params) => {
-                const rel = splitRelation(
-                  params.relation as string | undefined,
-                );
-                const mode = (params.relMode as string | undefined) ?? 'any';
-                // 属性等值条件：attr_<code> → attrs.<code>
-                const attrs: Record<string, unknown> = {};
-                for (const f of fields) {
-                  const value = params[`attr_${f.code}`];
-                  if (value !== undefined && value !== null && value !== '') {
-                    attrs[f.code] = value;
-                  }
-                }
                 const result = await listCIs({
                   page: params.current,
                   pageSize: params.pageSize,
                   modelCode: activeModel.code,
-                  keyword: params.keyword || undefined,
-                  status: params.status as CmdbCIStatus | undefined,
-                  env: params.env || undefined,
-                  tag: params.tag || undefined,
-                  attrs: Object.keys(attrs).length > 0 ? attrs : undefined,
-                  ...(rel
-                    ? {
-                        relType: rel.relType,
-                        relDirection: rel.relDirection,
-                        relNone: mode === 'none' || undefined,
-                        relTargetId:
-                          mode === 'target'
-                            ? (params.relTargetId as string | undefined) ||
-                              undefined
-                            : undefined,
-                      }
-                    : {}),
+                  ...buildFilters(params),
                 });
                 return toTableResult(result);
               }}

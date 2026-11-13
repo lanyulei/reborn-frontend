@@ -22,6 +22,7 @@ import {
 import type {
   NotifyTemplate,
   NotifyTemplateChannelType,
+  NotifyTemplateFormat,
 } from '@/services/notify/typings';
 import { usePermissions } from '@/services/system/permissions';
 import {
@@ -38,6 +39,18 @@ import {
   useBizIdColumn,
 } from '../components/bizScope';
 
+/** 输出格式（格式名是协议值，不翻译）：渠道按能力降级，见表单提示 */
+const FORMAT_LABELS: Record<string, string> = {
+  text: 'Text',
+  markdown: 'Markdown',
+  html: 'HTML',
+  card: 'Card',
+};
+const FORMAT_OPTIONS = Object.entries(FORMAT_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}));
+
 /** 两列栅格：半行 / 整行 */
 const HALF = { span: 12 };
 const FULL = { span: 24 };
@@ -49,6 +62,8 @@ interface TemplateFormValues {
   channelType: NotifyTemplateChannelType;
   subject: string;
   body: string;
+  /** 输出格式（缺省 text） */
+  format?: NotifyTemplateFormat;
   enabled?: boolean;
 }
 
@@ -123,6 +138,13 @@ const TemplateList: React.FC = () => {
       search: false,
     },
     {
+      title: t('pages.notify.template.column.format'),
+      dataIndex: 'format',
+      width: 100,
+      search: false,
+      renderText: (value?: string) => FORMAT_LABELS[value || 'text'] ?? value,
+    },
+    {
       title: t('pages.notify.template.column.version'),
       dataIndex: 'version',
       width: 80,
@@ -144,6 +166,7 @@ const TemplateList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
+      fixed: 'right',
       width: 100,
       hideInTable: !hasAnyAction,
       render: (_, record) => {
@@ -241,6 +264,14 @@ const TemplateList: React.FC = () => {
           rules.max(32768),
         ]}
       />
+      <ProFormSelect
+        name="format"
+        label={t('pages.notify.template.column.format')}
+        colProps={HALF}
+        tooltip={t('pages.notify.template.form.format.tooltip')}
+        allowClear={false}
+        options={FORMAT_OPTIONS}
+      />
       <ProFormSwitch
         name="enabled"
         label={t('common.column.enabled')}
@@ -268,6 +299,7 @@ const TemplateList: React.FC = () => {
         actionRef={actionRef}
         search={{ labelWidth: 'auto' }}
         columns={columns}
+        scroll={{ x: 'max-content' }}
         request={async (params) => {
           const result = await listTemplates({
             page: params.current,
@@ -296,6 +328,7 @@ const TemplateList: React.FC = () => {
         modalProps={{ destroyOnHidden: true }}
         initialValues={{
           enabled: true,
+          format: 'text',
           bizId: scope.restricted ? scope.defaultBizId : undefined,
         }}
         submitter={submitter.create}
@@ -306,6 +339,7 @@ const TemplateList: React.FC = () => {
             channelType: values.channelType,
             subject: values.subject,
             body: values.body,
+            format: values.format ?? 'text',
             enabled: values.enabled ?? true,
           });
           message.success(t('common.msg.created'));
@@ -340,6 +374,7 @@ const TemplateList: React.FC = () => {
               channelType: template.channelType,
               subject: template.subject,
               body: template.body,
+              format: template.format || 'text',
               enabled: template.enabled,
             };
           }}
@@ -350,6 +385,7 @@ const TemplateList: React.FC = () => {
               channelType: values.channelType,
               subject: values.subject,
               body: values.body,
+              format: values.format ?? 'text',
               enabled: values.enabled ?? true,
             });
             message.success(t('common.msg.saved'));

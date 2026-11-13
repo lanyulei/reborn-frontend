@@ -70,6 +70,7 @@ export const ModelFormModal: React.FC<{
       }
       width={560}
       grid
+      rowProps={{ gutter: 16 }}
       open={open}
       onOpenChange={onOpenChange}
       modalProps={{ destroyOnHidden: true }}
@@ -111,8 +112,8 @@ export const ModelFormModal: React.FC<{
         return true;
       }}
     >
-      {/* 类型编码 + 类型名称 同一行 */}
-      <ProForm.Group>
+      {/* 类型编码 + 类型名称 同一行（Group 不继承表单级 rowProps，需自带 gutter） */}
+      <ProForm.Group rowProps={{ gutter: 16 }}>
         <ProFormText
           name="code"
           colProps={{ span: 12 }}
@@ -142,7 +143,7 @@ export const ModelFormModal: React.FC<{
         />
       </ProForm.Group>
       {/* 编辑态：分类 + 状态 同一行 */}
-      <ProForm.Group>
+      <ProForm.Group rowProps={{ gutter: 16 }}>
         <ProFormSelect
           name="category"
           colProps={editing ? { span: 12 } : undefined}

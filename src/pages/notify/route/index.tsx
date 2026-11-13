@@ -33,13 +33,21 @@ import {
 } from '@/services/notify/route';
 import type { NotifyRoute } from '@/services/notify/typings';
 import { usePermissions } from '@/services/system/permissions';
-import { useFormRules, useSubmitter, useT, useValueEnum } from '@/utils/i18n';
+import {
+  useFormRules,
+  useOptions,
+  useSubmitter,
+  useT,
+  useValueEnum,
+} from '@/utils/i18n';
 import { parseBoolParam, toTableResult } from '@/utils/table';
 import {
   BizIdFormField,
   BizIdReadonlyField,
   useBizIdColumn,
 } from '../components/bizScope';
+
+const SEVERITY_ORDER = [1, 2, 3, 4] as const;
 
 /** 两列栅格：半行 / 整行 */
 const HALF = { span: 12 };
@@ -48,6 +56,8 @@ const FULL = { span: 24 };
 /** 路由表单值（扁平结构；提交时组装为 spec 整组替换语义；biz 仅创建） */
 interface RouteFormValues {
   bizId?: string;
+  name?: string;
+  description?: string;
   eventPattern: string;
   severityMin?: number;
   /** 标签匹配键值对列表（提交转 map） */
@@ -85,6 +95,9 @@ const tagsMapToList = (map?: Record<string, string>) =>
 const buildRouteSpec = (values: RouteFormValues): RouteSpecPayload => {
   const tagMatch = tagsListToMap(values.tags);
   return {
+    // 名称 / 说明恒携带：spec 整组替换，留空即清除
+    name: values.name?.trim() ?? '',
+    description: values.description?.trim() ?? '',
     eventPattern: values.eventPattern,
     ...(values.severityMin != null && { severityMin: values.severityMin }),
     ...(tagMatch && { tagMatch }),
@@ -122,6 +135,8 @@ const RouteList: React.FC = () => {
   const submitter = useSubmitter();
   const enabledEnum = useValueEnum(ENABLED_META);
   const severityEnum = useValueEnum(NOTIFY_SEVERITY_META);
+  // 表单用数值选项：valueEnum 的键是字符串，编辑回显的数值匹配不到标签
+  const severityOptions = useOptions(NOTIFY_SEVERITY_META, SEVERITY_ORDER);
   const bizIdColumn = useBizIdColumn<NotifyRoute>(scope);
   const {
     channels,
@@ -141,15 +156,27 @@ const RouteList: React.FC = () => {
       title: t('common.column.keyword'),
       dataIndex: 'keyword',
       hideInTable: true,
-      fieldProps: { placeholder: t('pages.notify.common.eventPattern') },
+      fieldProps: { placeholder: t('pages.notify.common.keyword.placeholder') },
     },
     bizIdColumn,
+    {
+      title: t('pages.notify.common.name'),
+      dataIndex: 'name',
+      ellipsis: true,
+      search: false,
+      render: (_, record) =>
+        record.name ? (
+          <span title={record.description || undefined}>{record.name}</span>
+        ) : (
+          t('common.empty')
+        ),
+    },
     {
       title: t('pages.notify.common.eventPattern'),
       dataIndex: 'eventPattern',
       copyable: true,
       ellipsis: true,
-      // 模糊搜索由「关键字」字段覆盖（后端 keyword 匹配 event_pattern）
+      // 模糊搜索由「关键字」字段覆盖（后端 keyword 匹配 name / event_pattern）
       search: false,
     },
     {
@@ -211,6 +238,7 @@ const RouteList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
+      fixed: 'right',
       width: 100,
       hideInTable: !hasAnyAction,
       render: (_, record) => {
@@ -269,12 +297,25 @@ const RouteList: React.FC = () => {
           },
         ]}
       />
+      <ProFormText
+        name="name"
+        label={t('pages.notify.common.name')}
+        colProps={HALF}
+        placeholder={t('pages.notify.common.name.placeholder')}
+        rules={[rules.max(64)]}
+      />
+      <ProFormText
+        name="description"
+        label={t('pages.notify.common.description')}
+        colProps={HALF}
+        rules={[rules.max(255)]}
+      />
       <ProFormSelect
         name="severityMin"
         label={t('pages.notify.route.column.severityMin')}
         colProps={HALF}
         tooltip={t('pages.notify.route.form.severityMin.tooltip')}
-        valueEnum={severityEnum}
+        options={severityOptions}
         allowClear
         placeholder={t('pages.notify.route.form.severityMin.placeholder')}
       />
@@ -298,9 +339,10 @@ const RouteList: React.FC = () => {
           creatorButtonText: t('pages.notify.route.form.tags.add'),
         }}
       >
-        <ProForm.Group>
+        <ProForm.Group colProps={FULL} rowProps={{ gutter: 16 }}>
           <ProFormText
             name="tagKey"
+            colProps={HALF}
             label={t('pages.notify.route.form.tags.key')}
             rules={[
               rules.required(t('pages.notify.route.form.tags.key')),
@@ -309,6 +351,7 @@ const RouteList: React.FC = () => {
           />
           <ProFormText
             name="tagValue"
+            colProps={HALF}
             label={t('pages.notify.route.form.tags.value')}
             rules={[
               rules.required(t('pages.notify.route.form.tags.value')),
@@ -472,6 +515,7 @@ const RouteList: React.FC = () => {
         actionRef={actionRef}
         search={{ labelWidth: 'auto' }}
         columns={columns}
+        scroll={{ x: 'max-content' }}
         request={async (params) => {
           const result = await listRoutes({
             page: params.current,
@@ -519,7 +563,7 @@ const RouteList: React.FC = () => {
         <DrawerForm<RouteFormValues>
           key={`edit-route-${editRow.id}`}
           title={t('pages.notify.route.edit.title', {
-            name: editRow.eventPattern,
+            name: editRow.name || editRow.eventPattern,
           })}
           width={720}
           grid
@@ -533,6 +577,8 @@ const RouteList: React.FC = () => {
           request={async ({ id }) => {
             const { route } = await getRoute(id);
             return {
+              name: route.name,
+              description: route.description,
               eventPattern: route.eventPattern,
               severityMin: route.severityMin,
               tags: tagsMapToList(route.tagMatch),

@@ -5,7 +5,7 @@
  */
 import { createStyles } from 'antd-style';
 
-export const useCmdbStyles = createStyles(({ token, css }) => ({
+export const useCmdbStyles = createStyles(({ token, css, isDarkMode }) => ({
   /** 详情页概要头：图标 + 标题 + 元信息 + 右侧操作 */
   summaryHeader: css`
     display: flex;
@@ -116,6 +116,12 @@ export const useCmdbStyles = createStyles(({ token, css }) => ({
     &:hover {
       color: ${token.colorPrimaryHover};
     }
+  `,
+  /** 表格外框：仅最外层边框（单元格无线）；浅色 #f0f0f0，暗色回落主题边框色 */
+  tableWrap: css`
+    overflow: hidden;
+    border: 1px solid ${isDarkMode ? token.colorBorderSecondary : '#e4e4e4'};
+    border-radius: ${token.borderRadiusLG}px;
   `,
   /** 空分组占位：与模型卡片同格（一个网格位），内含铺满的新建按钮 */
   emptyGroup: css`

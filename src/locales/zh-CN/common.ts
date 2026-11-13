@@ -3,6 +3,7 @@ export default {
   'common.action.create': '新建',
   'common.action.edit': '编辑',
   'common.action.delete': '删除',
+  'common.action.more': '更多',
   'common.action.save': '保存',
   'common.action.cancel': '取消',
   'common.action.confirm': '确定',

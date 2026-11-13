@@ -177,7 +177,8 @@ const ProducerList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
-      width: 150,
+      fixed: 'right',
+      width: 160,
       hideInTable: !hasAnyAction,
       render: (_, record) => {
         const actions: React.ReactNode[] = [];
@@ -338,6 +339,7 @@ const ProducerList: React.FC = () => {
           actionRef={actionRef}
           search={{ labelWidth: 'auto' }}
           columns={columns}
+          scroll={{ x: 'max-content' }}
           request={async (params) => {
             const result = await listProducers({
               page: params.current,
@@ -353,6 +355,8 @@ const ProducerList: React.FC = () => {
 
       {/* 新建来源（抽屉）：响应返回一次性接入令牌；biz（令牌范围）创建后不可改 */}
       <DrawerForm<ProducerFormValues>
+        // 保持 Dayjs 原值：默认 string 会转成字符串，提交时 .format / .toISOString 抛错
+        dateFormatter={false}
         key="create-producer"
         title={t('pages.notify.producer.create.title')}
         width={720}
@@ -385,6 +389,8 @@ const ProducerList: React.FC = () => {
       {/* 编辑来源（抽屉）：spec 整组替换（留空过期时间即清除）；打开时拉取详情；业务只读占位 */}
       {editRow && (
         <DrawerForm<ProducerFormValues>
+          // 保持 Dayjs 原值：默认 string 会转成字符串，提交时 .format / .toISOString 抛错
+          dateFormatter={false}
           key={`edit-producer-${editRow.id}`}
           title={t('pages.notify.producer.edit.title', { name: editRow.name })}
           width={720}

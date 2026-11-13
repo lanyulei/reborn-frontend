@@ -106,7 +106,8 @@ const DeadLetterList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
-      width: 200,
+      fixed: 'right',
+      width: 220,
       hideInTable: !hasAnyAction,
       render: (_, record) => {
         const actions: React.ReactNode[] = [];
@@ -161,6 +162,7 @@ const DeadLetterList: React.FC = () => {
       formRef={formRef}
       search={{ labelWidth: 'auto' }}
       columns={columns}
+      scroll={{ x: 'max-content' }}
       request={async (params) => {
         if (channelFilter.guard(params)) {
           return { data: [], total: 0, success: true };

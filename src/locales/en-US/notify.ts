@@ -13,6 +13,11 @@ export default {
   'pages.notify.common.biz.filterPlaceholder': 'Business id (exact)',
   'pages.notify.common.bizIdRule':
     '1-64 lowercase letters, digits, underscores or hyphens',
+  'pages.notify.common.name': 'Name',
+  'pages.notify.common.name.placeholder':
+    'Optional, up to 64 chars, shown in the list',
+  'pages.notify.common.description': 'Description',
+  'pages.notify.common.keyword.placeholder': 'Name / event pattern',
   'pages.notify.common.eventPattern': 'Event pattern',
   'pages.notify.common.eventPattern.rule':
     'Exact / prefix wildcard (monitor.alert.*) / match all (*)',
@@ -92,6 +97,18 @@ export default {
     'When on, saving disables signing (the input above is ignored)',
   'pages.notify.channel.form.qps': 'Rate limit QPS',
   'pages.notify.channel.form.burst': 'Burst limit',
+  'pages.notify.channel.form.cardUrl': 'Card link',
+  'pages.notify.channel.form.cardUrl.tooltip':
+    'Used when the template format is card; must be https. If empty, DingTalk/WeCom fall back to Markdown and Feishu cards have no button',
+  'pages.notify.channel.form.cardUrl.rule': 'Must start with https://',
+  'pages.notify.channel.form.cardButton': 'Card button text',
+  'pages.notify.channel.form.cardButton.placeholder':
+    'Defaults to "View details"',
+  'pages.notify.channel.form.cardButton.needUrl': 'Fill in the card link first',
+  'pages.notify.channel.form.perMinute': 'Per-minute quota',
+  'pages.notify.channel.form.perMinute.tooltip':
+    'Applies when QPS is 0; if both are 0 the channel-type default is used (DingTalk/WeCom 20/min, Feishu 100/min)',
+  'pages.notify.channel.form.perMinute.placeholder': '0 = type default',
   'pages.notify.channel.test.title': 'Send test event: {name}',
   'pages.notify.channel.test.defaultTitle': 'Notify channel connectivity test',
   'pages.notify.channel.test.submit': 'Send',
@@ -204,6 +221,9 @@ export default {
   'pages.notify.template.column.eventType': 'Event type',
   'pages.notify.template.column.channelType': 'Channel type',
   'pages.notify.template.column.subject': 'Subject template',
+  'pages.notify.template.column.format': 'Output format',
+  'pages.notify.template.form.format.tooltip':
+    'Email only honours HTML (others are sent as plain text); chat robots: card → card message, Markdown/HTML → Markdown, text → text; webhooks pass it through',
   'pages.notify.template.column.version': 'Version',
   'pages.notify.template.delete.title': 'Delete template',
   'pages.notify.template.delete.description':

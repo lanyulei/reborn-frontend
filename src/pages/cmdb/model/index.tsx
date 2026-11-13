@@ -39,7 +39,7 @@ import {
 import {
   createRelationType,
   deleteRelationType,
-  listModels,
+  listAllModels,
   listRelationTypes,
   updateRelationType,
 } from '@/services/cmdb/model';
@@ -87,7 +87,7 @@ interface RelationTypeFormValues {
 const useModelOptions = (withAny: boolean) => {
   const t = useT();
   return async () => {
-    const result = await listModels({ page: 1, pageSize: 100 });
+    const result = await listAllModels();
     const options = result.items.map((m) => ({
       label: `${m.name} (${m.code})`,
       value: m.code,
@@ -370,9 +370,9 @@ const ModelsTab: React.FC = () => {
       >
         <ProFormText
           name="code"
-          label={t('pages.cmdb.model.column.code')}
+          label={t('pages.cmdb.model.group.code')}
           rules={[
-            rules.required(t('pages.cmdb.model.column.code')),
+            rules.required(t('pages.cmdb.model.group.code')),
             {
               pattern: CODE_PATTERN,
               message: t('pages.cmdb.model.form.code.pattern'),
@@ -487,6 +487,7 @@ const RelationTypesTab: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
+      fixed: 'right',
       width: 120,
       hideInTable: !canEdit,
       render: (_, r) => [
@@ -507,10 +508,12 @@ const RelationTypesTab: React.FC = () => {
     },
   ];
 
+  /** 新建/编辑共用字段：名称 + 正/反向称谓 / 删除策略 + 描述（长文本独占一行） */
   const nameItems = (
     <>
       <ProFormText
         name="name"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.relationType.column.name')}
         rules={[
           rules.required(t('pages.cmdb.relationType.column.name')),
@@ -519,6 +522,7 @@ const RelationTypesTab: React.FC = () => {
       />
       <ProFormText
         name="forwardName"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.relationType.column.forwardName')}
         tooltip={t('pages.cmdb.relationType.form.forwardName.tooltip')}
         rules={[
@@ -528,6 +532,7 @@ const RelationTypesTab: React.FC = () => {
       />
       <ProFormText
         name="backwardName"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.relationType.column.backwardName')}
         tooltip={t('pages.cmdb.relationType.form.backwardName.tooltip')}
         rules={[
@@ -541,12 +546,14 @@ const RelationTypesTab: React.FC = () => {
     <>
       <ProFormSelect
         name="onDelete"
+        colProps={{ span: 12 }}
         label={t('pages.cmdb.relationType.column.onDelete')}
         options={onDeleteOptions}
         allowClear={false}
       />
       <ProFormTextArea
         name="description"
+        colProps={{ span: 24 }}
         label={t('pages.cmdb.model.column.description')}
         rules={[rules.max(256)]}
       />
@@ -562,6 +569,7 @@ const RelationTypesTab: React.FC = () => {
         search={false}
         columns={columns}
         pagination={false}
+        scroll={{ x: 'max-content' }}
         headerTitle={
           canEdit && (
             <CreateButton onClick={() => setCreateOpen(true)}>
@@ -578,6 +586,8 @@ const RelationTypesTab: React.FC = () => {
         key="create-relation-type"
         title={t('pages.cmdb.relationType.create.title')}
         width={560}
+        grid
+        rowProps={{ gutter: 16 }}
         open={createOpen}
         onOpenChange={setCreateOpen}
         modalProps={{ destroyOnHidden: true }}
@@ -595,6 +605,7 @@ const RelationTypesTab: React.FC = () => {
       >
         <ProFormText
           name="code"
+          colProps={{ span: 12 }}
           label={t('pages.cmdb.relationType.column.code')}
           rules={[
             rules.required(t('pages.cmdb.relationType.column.code')),
@@ -607,6 +618,7 @@ const RelationTypesTab: React.FC = () => {
         {nameItems}
         <ProFormSelect
           name="srcModel"
+          colProps={{ span: 12 }}
           label={t('pages.cmdb.relationType.column.srcModel')}
           request={modelOptions}
           showSearch
@@ -614,6 +626,7 @@ const RelationTypesTab: React.FC = () => {
         />
         <ProFormSelect
           name="dstModel"
+          colProps={{ span: 12 }}
           label={t('pages.cmdb.relationType.column.dstModel')}
           request={modelOptions}
           showSearch
@@ -621,6 +634,7 @@ const RelationTypesTab: React.FC = () => {
         />
         <ProFormSelect
           name="cardinality"
+          colProps={{ span: 12 }}
           label={t('pages.cmdb.relationType.column.cardinality')}
           tooltip={t('pages.cmdb.relationType.form.cardinality.tooltip')}
           options={cardinalityOptions}
@@ -635,6 +649,8 @@ const RelationTypesTab: React.FC = () => {
             name: editRow.name,
           })}
           width={560}
+          grid
+          rowProps={{ gutter: 16 }}
           open={!!editRow}
           onOpenChange={(open) => {
             if (!open) setEditRow(null);
@@ -657,22 +673,26 @@ const RelationTypesTab: React.FC = () => {
         >
           <ProFormText
             name="code"
+            colProps={{ span: 12 }}
             label={t('pages.cmdb.relationType.column.code')}
             disabled
           />
           {nameItems}
           <ProFormText
             name="srcModel"
+            colProps={{ span: 12 }}
             label={t('pages.cmdb.relationType.column.srcModel')}
             disabled
           />
           <ProFormText
             name="dstModel"
+            colProps={{ span: 12 }}
             label={t('pages.cmdb.relationType.column.dstModel')}
             disabled
           />
           <ProFormText
             name="cardinality"
+            colProps={{ span: 12 }}
             label={t('pages.cmdb.relationType.column.cardinality')}
             disabled
           />

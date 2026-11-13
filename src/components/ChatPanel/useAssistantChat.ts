@@ -24,6 +24,7 @@ import type {
 } from '@/services/assistant/typings';
 import { getErrorMessage } from '@/services/system/request';
 import { useT } from '@/utils/i18n';
+import { fetchAllPages } from '@/utils/paging';
 import type {
   AssistantChatMessage,
   ChatMessage,
@@ -135,17 +136,18 @@ export const useAssistantChat = () => {
   /** 拉取会话列表；当前为草稿时保留草稿项置顶 */
   const reloadConversations = useCallback(async () => {
     try {
-      const result = await listConversations({ page: 1, pageSize: 100 });
-      const items = result.items.map(toItem);
+      // 翻页取全（会话超过一页时不再被截断）
+      const all = await fetchAllPages((page, pageSize) =>
+        listConversations({ page, pageSize }),
+      );
+      const items = all.map(toItem);
       setConversations(
         activeRef.current === DRAFT_KEY ? [draftItem(), ...items] : items,
       );
-    } catch (error) {
-      message.error(
-        getErrorMessage(error, t('component.chat.error.loadFailed')),
-      );
+    } catch {
+      // authRequest 已按后端 message 提示，不重复弹
     }
-  }, [draftItem, message, t]);
+  }, [draftItem]);
 
   useEffect(() => {
     void reloadConversations();
@@ -173,10 +175,8 @@ export const useAssistantChat = () => {
       try {
         const result = await listMessages(key);
         if (activeRef.current === key) setMessages(fromHistory(result.items));
-      } catch (error) {
-        message.error(
-          getErrorMessage(error, t('component.chat.error.loadFailed')),
-        );
+      } catch {
+        // authRequest 已按后端 message 提示，不重复弹
       } finally {
         setHistoryLoading(false);
       }

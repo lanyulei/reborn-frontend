@@ -221,6 +221,7 @@ const SubscriptionList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
+      fixed: 'right',
       width: 100,
       hideInTable: !hasAnyAction,
       render: (_, record) => {
@@ -422,6 +423,7 @@ const SubscriptionList: React.FC = () => {
           actionRef={actionRef}
           search={{ labelWidth: 'auto' }}
           columns={columns}
+          scroll={{ x: 'max-content' }}
           request={async (params) => {
             const result = await listSubscriptions({
               page: params.current,

@@ -2,6 +2,7 @@
  * 模型详情：标题条（返回）+ 概要头（图标 / 名称 / 元信息栅格 / 操作）+
  * 四个标签：模型字段（按详情布局分组的字段卡片）| 模型关联（表格）| 唯一校验 | 详情布局。
  */
+import { PlusOutlined } from '@ant-design/icons';
 import {
   ModalForm,
   PageContainer,
@@ -16,7 +17,6 @@ import {
   Collapse,
   Dropdown,
   Empty,
-  Input,
   Space,
   Spin,
   Tabs,
@@ -25,14 +25,14 @@ import {
 } from 'antd';
 import { createStyles } from 'antd-style';
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
 import {
   deleteModel,
   deprecateField,
   getModel,
   getModelView,
-  listModels,
+  listAllModels,
   updateModel,
   updateModelView,
   type ViewSection,
@@ -110,13 +110,14 @@ const useStyles = createStyles(({ token, css }) => ({
     text-overflow: ellipsis;
     white-space: nowrap;
   `,
+  /** 字段标记（唯一 / 同步只读 / 已废弃）：紧贴边框内侧（右上角），不压边框线 */
   fieldMarks: css`
     position: absolute;
-    top: -1px;
-    right: -1px;
+    top: 0;
+    right: 0;
     display: flex;
     overflow: hidden;
-    border-radius: 0 ${token.borderRadiusLG}px 0 ${token.borderRadius}px;
+    border-radius: 0 ${token.borderRadiusLG}px 0 ${token.borderRadiusSM}px;
   `,
   fieldMark: css`
     padding: 0 6px;
@@ -171,49 +172,6 @@ interface FieldGroup {
   sectionIndex: number;
 }
 
-/** 新建字段分组：展开内联输入，确认后追加到详情布局 */
-const AddGroupButton: React.FC<{ onAdd: (title: string) => void }> = ({
-  onAdd,
-}) => {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const submit = () => {
-    setOpen(false);
-    onAdd(title.trim() || t('pages.cmdb.modelDetail.fields.defaultGroup'));
-  };
-  return (
-    <Space>
-      <Button
-        onClick={() => {
-          setTitle('');
-          setOpen(true);
-        }}
-      >
-        {t('pages.cmdb.modelDetail.fields.addGroup')}
-      </Button>
-      {open && (
-        <Space>
-          <Input
-            style={{ width: 180 }}
-            placeholder={t('pages.cmdb.view.section.title')}
-            value={title}
-            maxLength={64}
-            onChange={(e) => setTitle(e.target.value)}
-            onPressEnter={submit}
-          />
-          <Button type="primary" onClick={submit}>
-            {t('common.action.confirm')}
-          </Button>
-          <Button onClick={() => setOpen(false)}>
-            {t('common.action.cancel')}
-          </Button>
-        </Space>
-      )}
-    </Space>
-  );
-};
-
 const ModelDetailPage: React.FC = () => {
   const { code } = useParams<{ code: string }>();
   const t = useT();
@@ -234,6 +192,7 @@ const ModelDetailPage: React.FC = () => {
   const [sections, setSections] = useState<ViewSection[]>([]);
   const [modelNames, setModelNames] = useState<Record<string, string>>({});
   const [editOpen, setEditOpen] = useState(false);
+  const [groupCreateOpen, setGroupCreateOpen] = useState(false);
   const [renameGroup, setRenameGroup] = useState<{
     index: number;
     title: string;
@@ -241,24 +200,34 @@ const ModelDetailPage: React.FC = () => {
   const [fieldModal, setFieldModal] = useState<{
     open: boolean;
     field: CmdbField | null;
-  }>({ open: false, field: null });
+    /** 新建预设 / 编辑当前所在的分组（分区下标，-1 = 其他） */
+    group: number;
+  }>({ open: false, field: null, group: -1 });
 
+  // 首次加载才整页转圈；之后的刷新（保存字段 / 布局后）静默进行，
+  // 否则整页卸载会把当前标签跳回「模型字段」并重置折叠状态
+  const loadedRef = useRef(false);
+  // 详情布局是否已被显式配置过（false = 后端返回的是缺省布局：全部字段一组）
+  const configuredRef = useRef(false);
   const load = useCallback(async () => {
     if (!code) return;
-    setLoading(true);
+    if (!loadedRef.current) setLoading(true);
     try {
       const [detail, view, modelsRes] = await Promise.all([
         getModel(code),
         getModelView(code),
-        listModels({ page: 1, pageSize: 100 }),
+        listAllModels(),
       ]);
       setModel(detail.model);
       setFields(detail.fields);
       setRelationTypes(detail.relationTypes);
       setSections(view.sections);
+      configuredRef.current = view.configured;
       setModelNames(
         Object.fromEntries(modelsRes.items.map((m) => [m.code, m.name])),
       );
+      loadedRef.current = true;
+      return view.sections;
     } finally {
       setLoading(false);
     }
@@ -296,6 +265,17 @@ const ModelDetailPage: React.FC = () => {
     }
     return grouped;
   }, [sections, fields, t]);
+
+  /** 字段分组下拉（详情布局 attrs 分区）；无布局管理权限时不展示 */
+  const fieldGroupOptions = useMemo(
+    () =>
+      has('cmdb.model.view')
+        ? fieldGroups
+            .filter((g) => g.sectionIndex >= 0)
+            .map((g) => ({ label: g.title, value: g.sectionIndex }))
+        : [],
+    [fieldGroups, has],
+  );
 
   const uniqueFields = useMemo(
     () => fields.filter((f) => f.unique && !f.deprecated),
@@ -337,6 +317,31 @@ const ModelDetailPage: React.FC = () => {
     const { sections: saved } = await updateModelView(code, next);
     setSections(saved);
     message.success(t('common.msg.created'));
+  };
+
+  /** 字段保存后按所选分组落位布局：移出原分区并加入目标分区（-1 = 其他） */
+  const onFieldSaved = async (fieldCode: string, group: number) => {
+    if (!code) return;
+    const fresh = (await load()) ?? [];
+    // 布局尚未配置且没有指定分组：缺省布局本就包含新字段，不落库。
+    // 否则会把「去掉该字段的缺省布局」持久化下来，等于替用户悄悄配置了布局
+    if (!configuredRef.current && group === -1) return;
+    const next = fresh.map((s, i) => {
+      if (s.type !== 'attrs') return s;
+      const inIt = (s.fields ?? []).includes(fieldCode);
+      if (i === group) {
+        return inIt ? s : { ...s, fields: [...(s.fields ?? []), fieldCode] };
+      }
+      return inIt
+        ? { ...s, fields: (s.fields ?? []).filter((c) => c !== fieldCode) }
+        : s;
+    });
+    if (JSON.stringify(next) === JSON.stringify(fresh)) return;
+    // 落位要写详情布局：无布局权限时跳过（字段本身已保存，归入「其他」）
+    if (!has('cmdb.model.view')) return;
+    const { sections: saved } = await updateModelView(code, next);
+    setSections(saved);
+    configuredRef.current = true;
   };
 
   /** 删除字段分组：仅移除布局分组，组内字段自动归入「其他」 */
@@ -423,11 +428,14 @@ const ModelDetailPage: React.FC = () => {
             )}
           </span>
         </div>
+        {/* 概要操作：编辑（白）/ 停用（黄）/ 删除（红）；启用非破坏性，回白色 */}
         <Space className={pageStyles.summaryActions}>
           {has('cmdb.model.edit') && (
             <>
-              <a onClick={() => setEditOpen(true)}>{t('common.action.edit')}</a>
-              <a
+              <Button onClick={() => setEditOpen(true)}>
+                {t('common.action.edit')}
+              </Button>
+              <Button
                 onClick={() => {
                   // 停用需二次确认；启用直接执行
                   if (model.status === 1) {
@@ -444,19 +452,28 @@ const ModelDetailPage: React.FC = () => {
                 {model.status === 1
                   ? t('pages.cmdb.model.action.disable')
                   : t('pages.cmdb.model.action.enable')}
-              </a>
+              </Button>
             </>
           )}
           {has('cmdb.model.delete') && !model.builtin && (
-            <DeleteConfirmLink
-              title={t('pages.cmdb.model.delete.title')}
-              description={t('pages.cmdb.model.delete.description')}
-              onConfirm={async () => {
-                await deleteModel(model.code);
-                message.success(t('common.msg.deleted'));
-                history.push('/cmdb/model');
+            <Button
+              color="danger"
+              variant="outlined"
+              onClick={() => {
+                // 删除需二次确认（与停用一致的对话框格式）
+                modal.confirm({
+                  title: t('pages.cmdb.model.delete.title'),
+                  content: t('pages.cmdb.model.delete.description'),
+                  onOk: async () => {
+                    await deleteModel(model.code);
+                    message.success(t('common.msg.deleted'));
+                    history.push('/cmdb/model');
+                  },
+                });
               }}
-            />
+            >
+              {t('common.action.delete')}
+            </Button>
           )}
         </Space>
       </div>
@@ -476,16 +493,16 @@ const ModelDetailPage: React.FC = () => {
                     {canField && (
                       <CreateButton
                         onClick={() =>
-                          setFieldModal({ open: true, field: null })
+                          setFieldModal({ open: true, field: null, group: -1 })
                         }
                       >
                         {t('pages.cmdb.modelDetail.fields.add')}
                       </CreateButton>
                     )}
                     {canView && (
-                      <AddGroupButton
-                        onAdd={(title) => void onAddGroup(title)}
-                      />
+                      <Button onClick={() => setGroupCreateOpen(true)}>
+                        {t('pages.cmdb.modelDetail.fields.addGroup')}
+                      </Button>
                     )}
                   </div>
                 )}
@@ -554,11 +571,27 @@ const ModelDetailPage: React.FC = () => {
                       ),
                       children:
                         g.fields.length === 0 ? (
-                          <div
-                            className={pageStyles.emptyGroup}
-                            style={{ marginBottom: 12 }}
-                          >
-                            {t('pages.cmdb.modelDetail.fields.groupEmpty')}
+                          // 与模型管理空分组一致：网格位内放「新建字段」文本链接，预设该分组
+                          <div className={pageStyles.cardGrid}>
+                            <div className={pageStyles.emptyGroup}>
+                              {canField ? (
+                                <a
+                                  className={pageStyles.emptyGroupLink}
+                                  onClick={() =>
+                                    setFieldModal({
+                                      open: true,
+                                      field: null,
+                                      group: g.sectionIndex,
+                                    })
+                                  }
+                                >
+                                  <PlusOutlined />
+                                  {t('pages.cmdb.modelDetail.fields.add')}
+                                </a>
+                              ) : (
+                                t('pages.cmdb.modelDetail.fields.groupEmpty')
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <div className={pageStyles.cardGrid}>
@@ -626,7 +659,16 @@ const ModelDetailPage: React.FC = () => {
                                   >
                                     <a
                                       onClick={() =>
-                                        setFieldModal({ open: true, field: f })
+                                        setFieldModal({
+                                          open: true,
+                                          field: f,
+                                          group:
+                                            fieldGroups.find((g) =>
+                                              g.fields.some(
+                                                (x) => x.id === f.id,
+                                              ),
+                                            )?.sectionIndex ?? -1,
+                                        })
                                       }
                                     >
                                       {t('common.action.edit')}
@@ -664,59 +706,62 @@ const ModelDetailPage: React.FC = () => {
             key: 'relations',
             label: t('pages.cmdb.modelDetail.tab.relations'),
             children: (
-              <ProTable<CmdbRelationType>
-                cardBordered
-                rowKey="code"
-                search={false}
-                options={false}
-                pagination={false}
-                dataSource={myRelations}
-                columns={[
-                  {
-                    title: t('pages.cmdb.relationType.column.code'),
-                    dataIndex: 'code',
-                    copyable: true,
-                  },
-                  {
-                    title: t('pages.cmdb.relationType.column.name'),
-                    dataIndex: 'name',
-                  },
-                  {
-                    title: t('pages.cmdb.relationType.column.srcModel'),
-                    dataIndex: 'srcModel',
-                    render: (_, r) => modelName(r.srcModel),
-                  },
-                  {
-                    title: t('pages.cmdb.relationType.column.forwardName'),
-                    dataIndex: 'forwardName',
-                  },
-                  {
-                    title: t('pages.cmdb.relationType.column.dstModel'),
-                    dataIndex: 'dstModel',
-                    render: (_, r) => modelName(r.dstModel),
-                  },
-                  {
-                    title: t('pages.cmdb.relationType.column.backwardName'),
-                    dataIndex: 'backwardName',
-                  },
-                  {
-                    title: t('pages.cmdb.relationType.column.cardinality'),
-                    dataIndex: 'cardinality',
-                    render: (_, r) => (
-                      <Tag>{cardinalityText(r.cardinality)}</Tag>
-                    ),
-                  },
-                  {
-                    title: t('pages.cmdb.relationType.column.onDelete'),
-                    dataIndex: 'onDelete',
-                    render: (_, r) => onDeleteText(r.onDelete),
-                  },
-                  {
-                    title: t('pages.cmdb.relationType.column.relationCount'),
-                    dataIndex: 'relationCount',
-                  },
-                ]}
-              />
+              // 仅补表格最外层边框（单元格不加线）
+              <div className={pageStyles.tableWrap}>
+                <ProTable<CmdbRelationType>
+                  cardBordered
+                  rowKey="code"
+                  search={false}
+                  options={false}
+                  pagination={false}
+                  dataSource={myRelations}
+                  columns={[
+                    {
+                      title: t('pages.cmdb.relationType.column.code'),
+                      dataIndex: 'code',
+                      copyable: true,
+                    },
+                    {
+                      title: t('pages.cmdb.relationType.column.name'),
+                      dataIndex: 'name',
+                    },
+                    {
+                      title: t('pages.cmdb.relationType.column.srcModel'),
+                      dataIndex: 'srcModel',
+                      render: (_, r) => modelName(r.srcModel),
+                    },
+                    {
+                      title: t('pages.cmdb.relationType.column.forwardName'),
+                      dataIndex: 'forwardName',
+                    },
+                    {
+                      title: t('pages.cmdb.relationType.column.dstModel'),
+                      dataIndex: 'dstModel',
+                      render: (_, r) => modelName(r.dstModel),
+                    },
+                    {
+                      title: t('pages.cmdb.relationType.column.backwardName'),
+                      dataIndex: 'backwardName',
+                    },
+                    {
+                      title: t('pages.cmdb.relationType.column.cardinality'),
+                      dataIndex: 'cardinality',
+                      render: (_, r) => (
+                        <Tag>{cardinalityText(r.cardinality)}</Tag>
+                      ),
+                    },
+                    {
+                      title: t('pages.cmdb.relationType.column.onDelete'),
+                      dataIndex: 'onDelete',
+                      render: (_, r) => onDeleteText(r.onDelete),
+                    },
+                    {
+                      title: t('pages.cmdb.relationType.column.relationCount'),
+                      dataIndex: 'relationCount',
+                    },
+                  ]}
+                />
+              </div>
             ),
           },
           {
@@ -756,6 +801,7 @@ const ModelDetailPage: React.FC = () => {
                 model={model}
                 fields={fields}
                 relationTypes={relationTypes}
+                sectionsKey={JSON.stringify(sections)}
                 onChanged={() => void load()}
               />
             ),
@@ -770,6 +816,27 @@ const ModelDetailPage: React.FC = () => {
         model={model}
         onSuccess={(saved) => setModel(saved)}
       />
+      <ModalForm<{ title: string }>
+        key="create-field-group"
+        title={t('pages.cmdb.modelDetail.fields.addGroup')}
+        width={480}
+        open={groupCreateOpen}
+        onOpenChange={setGroupCreateOpen}
+        modalProps={{ destroyOnHidden: true }}
+        onFinish={async (values) => {
+          await onAddGroup(
+            values.title.trim() ||
+              t('pages.cmdb.modelDetail.fields.defaultGroup'),
+          );
+          return true;
+        }}
+      >
+        <ProFormText
+          name="title"
+          label={t('pages.cmdb.view.section.title')}
+          rules={[{ required: true }, { max: 64 }]}
+        />
+      </ModalForm>
       {renameGroup && (
         <ModalForm<{ title: string }>
           key={`rename-field-group-${renameGroup.index}`}
@@ -804,7 +871,9 @@ const ModelDetailPage: React.FC = () => {
         onOpenChange={(open) => setFieldModal((s) => ({ ...s, open }))}
         modelCode={model.code}
         field={fieldModal.field ?? undefined}
-        onSuccess={() => void load()}
+        groupOptions={fieldGroupOptions}
+        initialGroup={fieldModal.group}
+        onSuccess={onFieldSaved}
       />
     </PageContainer>
   );

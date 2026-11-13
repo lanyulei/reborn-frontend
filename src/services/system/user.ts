@@ -46,10 +46,13 @@ export interface UpdateUserParams {
 /** ListUsers 分页查询用户，page_size 上限 100 */
 export async function listUsers(
   params: ListUsersParams,
+  /** silent：辅助性查询（如 id→名称映射）无权限时不弹错误 */
+  options?: { silent?: boolean },
 ): Promise<PagedResult<SystemUser>> {
   return authRequest<PagedResult<SystemUser>>('/api/v1/system/user', {
     method: 'GET',
     params,
+    silent: options?.silent,
   });
 }
 

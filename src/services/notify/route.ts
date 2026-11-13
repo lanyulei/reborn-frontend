@@ -10,6 +10,10 @@ import type { NotifyRoute, RouteRecipient } from './typings';
 
 /** RouteSpecPayload 路由规则载荷（创建/更新共用，整组替换）；数值调优项可选 */
 export interface RouteSpecPayload {
+  /** 可读名称（≤64，列表展示）；整组替换语义下不传 / 空串 = 清除 */
+  name?: string;
+  /** 说明（≤255）；不传 / 空串 = 清除 */
+  description?: string;
   /** 事件匹配模式：精确 / 前缀通配（'monitor.alert.*'）/ 全匹配（'*'） */
   eventPattern: string;
   /** 严重级下限（1-4），未指定默认 1 */
@@ -31,6 +35,8 @@ export interface RouteSpecPayload {
 }
 
 export interface ListRoutesParams extends PageQuery {
+  /** 关键字：模糊匹配 name / event_pattern */
+  keyword?: string;
   /** 启用状态过滤 */
   enabled?: boolean;
   /** 业务过滤；biz 受限用户必填（否则 NOTIFY_BIZ_REQUIRED） */

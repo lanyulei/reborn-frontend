@@ -2,6 +2,7 @@ import type { Settings as LayoutSettings } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
+import { Button, Result } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import React from 'react';
@@ -25,6 +26,8 @@ import type {
   SystemRole,
   SystemUser,
 } from '@/services/system/typings';
+import { clearTokens } from '@/utils/auth';
+import { t } from '@/utils/i18n';
 import defaultSettings from '../config/defaultSettings';
 import Exception403 from './pages/exception/403';
 import { errorConfig } from './requestErrorConfig';
@@ -46,17 +49,29 @@ export async function getInitialState(): Promise<{
   /** 通知 biz 不受限（超管或任一启用角色 scope 为空） */
   bizUnrestricted?: boolean;
   loading?: boolean;
+  /** 登录态拉取遇到暂时性故障（网络 / 5xx）：不是未登录，展示可重试的错误页 */
+  profileError?: boolean;
   fetchUserInfo?: () => Promise<LoginProfile | undefined>;
   settingDrawerOpen?: boolean;
 }> {
+  let profileError = false;
   const fetchUserInfo = async () => {
     try {
-      return await getLoginProfile();
-    } catch (_error) {
-      const { pathname, search, hash } = history.location;
-      history.replace(
-        `${loginPath}?redirect=${encodeURIComponent(pathname + search + hash)}`,
-      );
+      return await getLoginProfile({ silent: true });
+    } catch (error) {
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      // 仅 4xx（未登录 / 令牌失效 / 账号停用）回登录页；网络错误与 5xx 是暂时性
+      // 故障，令牌仍可能有效——留在当前页给出重试，而不是把用户踢去登录
+      if (status !== undefined && status >= 400 && status < 500) {
+        clearTokens();
+        const { pathname, search, hash } = history.location;
+        history.replace(
+          `${loginPath}?redirect=${encodeURIComponent(pathname + search + hash)}`,
+        );
+      } else {
+        profileError = true;
+      }
     }
     return undefined;
   };
@@ -86,6 +101,7 @@ export async function getInitialState(): Promise<{
       elements: profile?.elements ?? [],
       bizScope: profile?.bizScope ?? [],
       bizUnrestricted: profile?.bizUnrestricted,
+      profileError,
       settings,
       systemConfig,
       settingDrawerOpen: false,
@@ -98,6 +114,19 @@ export async function getInitialState(): Promise<{
     settingDrawerOpen: false,
   };
 }
+
+/** 登录信息加载失败（暂时性故障）：保留令牌，给出重新加载入口 */
+const ProfileLoadFailed: React.FC = () => (
+  <Result
+    status="warning"
+    title={t('app.profile.loadFailed')}
+    extra={
+      <Button type="primary" onClick={() => window.location.reload()}>
+        {t('app.profile.retry')}
+      </Button>
+    }
+  />
+);
 
 // ProLayout 支持的api https://procomponents.ant.design/components/layout
 export const layout: RunTimeLayoutConfig = ({
@@ -142,8 +171,12 @@ export const layout: RunTimeLayoutConfig = ({
     footerRender: () => <Footer />,
     onPageChange: () => {
       const { location } = history;
-      // 如果没有登录，重定向到 login
-      if (!initialState?.currentUser && location.pathname !== loginPath) {
+      // 如果没有登录，重定向到 login（暂时性故障除外：见 profileError）
+      if (
+        !initialState?.currentUser &&
+        !initialState?.profileError &&
+        location.pathname !== loginPath
+      ) {
         history.replace(
           `${loginPath}?redirect=${encodeURIComponent(location.pathname + location.search + location.hash)}`,
         );
@@ -174,10 +207,17 @@ export const layout: RunTimeLayoutConfig = ({
     ErrorBoundary,
     menuHeaderRender: undefined,
     // 路由 access 拒绝时的 403 兜底页
-    unAccessible: <Exception403 />,
+    // 登录信息加载失败时没有权限数据，带 access 的路由会被判为无权限：
+    // 此时展示可重试的错误页，而不是误导性的 403
+    unAccessible: initialState?.profileError ? (
+      <ProfileLoadFailed />
+    ) : (
+      <Exception403 />
+    ),
     // 增加一个 loading 的状态
     childrenRender: (children) => {
       // if (initialState?.loading) return <PageLoading />;
+      if (initialState?.profileError) return <ProfileLoadFailed />;
       return (
         <>
           {children}

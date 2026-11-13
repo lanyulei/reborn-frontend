@@ -44,6 +44,10 @@ export interface WebhookChannelConfig {
 export interface RobotChannelConfig {
   /** 需要 @ 提醒的手机号列表，最多 20 项、每项 5-32 位 */
   atMobiles?: string[];
+  /** 卡片消息（模板 format=card）跳转链接，须 https；为空时钉钉/企微降级 markdown，飞书卡片无按钮 */
+  cardUrl?: string;
+  /** 卡片按钮文字（≤32，缺省"查看详情"）；须同时配置 cardUrl */
+  cardButton?: string;
 }
 
 /** NotifyRateLimit 令牌桶限流参数；qps=0/burst=0 表示不限（适配器层仍受通道默认配额约束） */
@@ -52,6 +56,8 @@ export interface NotifyRateLimit {
   qps: string;
   /** 令牌桶容量（突发上限），int64 字符串 */
   burst: string;
+  /** 每分钟配额（qps=0 时生效），int64 字符串；皆 0 时按渠道类型缺省（钉钉/企微 20、飞书 100） */
+  perMinute?: string;
 }
 
 /** NotifyChannel 渠道实体（出参；secret 只写不读，任何响应恒不返回） */
@@ -91,6 +97,9 @@ export type NotifyTemplateChannelType =
   | 'wecom'
   | 'feishu';
 
+/** 模板输出格式 */
+export type NotifyTemplateFormat = 'text' | 'markdown' | 'html' | 'card';
+
 /** NotifyTemplate 通知模板实体：按 biz × event_type × channel_type 三维覆盖（'*' 通配） */
 export interface NotifyTemplate {
   /** 模板唯一标识（UUIDv7） */
@@ -107,6 +116,8 @@ export interface NotifyTemplate {
   body: string;
   /** 模板版本号，创建为 1，每次更新 +1 */
   version: number;
+  /** 输出格式（空按 text）：email 仅 html 生效；群机器人 card→卡片、markdown/html→markdown、text→文本；webhook 透传 */
+  format?: NotifyTemplateFormat;
   /** 启用状态；停用后解析链跳过 */
   enabled: boolean;
   createTime?: string;
@@ -127,6 +138,10 @@ export interface NotifyRoute {
   id: string;
   /** 业务租户标识；路由匹配与渠道绑定按 biz 隔离 */
   bizId: string;
+  /** 可读名称（空 = 未命名） */
+  name?: string;
+  /** 说明 */
+  description?: string;
   /** 事件匹配模式：精确 / 前缀通配（'monitor.alert.*'）/ 全匹配（'*'） */
   eventPattern: NotifyEventPattern;
   /** 严重级下限（1-4） */
@@ -167,6 +182,10 @@ export interface NotifySilence {
   id: string;
   /** 业务租户标识；静默匹配按 biz 隔离 */
   bizId: string;
+  /** 可读名称（空 = 未命名） */
+  name?: string;
+  /** 说明 */
+  description?: string;
   /** 事件匹配模式 */
   eventPattern: NotifyEventPattern;
   /** 严重级上限（1-4），该级及以下的事件才可被静默 */

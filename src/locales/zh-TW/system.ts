@@ -187,6 +187,8 @@ export default {
   // 請求錯誤（requestErrorConfig / request.ts）
   'app.request.httpFailed': '請求失敗（HTTP {status}）',
   'app.request.retry': '請求失敗，請重試',
+  'app.profile.loadFailed': '登入資訊載入失敗，請稍後重試',
+  'app.profile.retry': '重新載入',
   'app.request.noResponse': 'None response! Please retry.',
   'app.request.error': 'Request error, please retry.',
 };

@@ -3,7 +3,7 @@
  * 采集与对账由独立的数据面进程（backend/cmdb）执行；本页只写配置与任务、读结果。
  * 凭据只写不读：新建必填，编辑留空 = 保留。
  */
-import { PlayCircleOutlined } from '@ant-design/icons';
+import { DownOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   ModalForm,
@@ -21,6 +21,8 @@ import {
   App,
   Badge,
   Drawer,
+  Dropdown,
+  type MenuProps,
   Space,
   Tag,
   Tooltip,
@@ -28,7 +30,7 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
-import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
+import { CreateButton } from '@/components/TableActions';
 import { JsonView } from '@/pages/notify/components/JsonView';
 import {
   type CmdbProvider,
@@ -193,6 +195,13 @@ const ProviderFields: React.FC<{
             ]}
           />
           <ProFormText
+            name="endpoint"
+            label={t('pages.cmdb.sync.form.endpoint')}
+            colProps={HALF}
+            tooltip={t('pages.cmdb.sync.form.endpoint.tooltip')}
+            rules={[rules.max(512)]}
+          />
+          <ProFormText
             name={provider === 'aws' ? 'access_key_id' : 'secret_id'}
             label={provider === 'aws' ? 'Access Key ID' : 'SecretId'}
             colProps={HALF}
@@ -200,13 +209,6 @@ const ProviderFields: React.FC<{
               rules.required(provider === 'aws' ? 'Access Key ID' : 'SecretId'),
               rules.max(128),
             ]}
-          />
-          <ProFormText
-            name="endpoint"
-            label={t('pages.cmdb.sync.form.endpoint')}
-            colProps={HALF}
-            tooltip={t('pages.cmdb.sync.form.endpoint.tooltip')}
-            rules={[rules.max(512)]}
           />
         </>
       ) : provider === 'aliyun' ? (
@@ -222,18 +224,18 @@ const ProviderFields: React.FC<{
             ]}
           />
           <ProFormText
-            name="access_key_id"
-            label="AccessKey ID"
-            colProps={HALF}
-            rules={[rules.required('AccessKey ID'), rules.max(128)]}
-          />
-          <ProFormText
             name="endpoint"
             label={t('pages.cmdb.sync.form.endpoint')}
             colProps={HALF}
             placeholder="https://ecs.aliyuncs.com"
             tooltip={t('pages.cmdb.sync.form.endpoint.tooltip')}
             rules={[rules.max(512)]}
+          />
+          <ProFormText
+            name="access_key_id"
+            label="AccessKey ID"
+            colProps={HALF}
+            rules={[rules.required('AccessKey ID'), rules.max(128)]}
           />
         </>
       ) : (
@@ -433,7 +435,7 @@ const RunsDrawer: React.FC<{
 
 const SyncSourcePage: React.FC = () => {
   const t = useT();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const has = usePermissions();
   const rules = useFormRules();
   const submitter = useSubmitter();
@@ -485,10 +487,16 @@ const SyncSourcePage: React.FC = () => {
       title: t('pages.cmdb.sync.column.target'),
       search: false,
       ellipsis: true,
-      render: (_, r) =>
-        r.provider === 'aliyun'
-          ? `${r.config.region_id ?? ''} · ${r.config.access_key_id ?? ''}`
-          : `${r.config.url ?? ''}`,
+      render: (_, r) => {
+        const c = r.config as Record<string, string | undefined>;
+        // vmware 用地址；云厂商用「地域 · 账号标识」（各家字段名不同）
+        if (c.url) return c.url;
+        const region = c.region_id ?? c.region;
+        const account = c.access_key_id ?? c.secret_id;
+        return (
+          [region, account].filter(Boolean).join(' · ') || t('common.empty')
+        );
+      },
     },
     {
       title: t('pages.cmdb.sync.form.env'),
@@ -544,14 +552,32 @@ const SyncSourcePage: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
-      width: 260,
+      fixed: 'right',
+      width: 170,
       hideInTable: !hasAnyAction,
       render: (_, r) => {
-        const actions: React.ReactNode[] = [
-          <a key="runs" onClick={() => setRunsRow(r)}>
-            {t('pages.cmdb.sync.action.runs')}
-          </a>,
+        // 高频的「立即同步」外露，其余收进「更多」（同用户管理页）
+        const items: MenuProps['items'] = [
+          { key: 'runs', label: t('pages.cmdb.sync.action.runs') },
         ];
+        if (has('cmdb.sync.webhook')) {
+          items.push({
+            key: 'webhook',
+            label: `${t('pages.cmdb.sync.action.webhook')}${r.webhookEnabled ? ' ✓' : ''}`,
+          });
+        }
+        if (has('cmdb.sync.edit')) {
+          items.push({ key: 'edit', label: t('common.action.edit') });
+        }
+        if (has('cmdb.sync.delete')) {
+          items.push({ type: 'divider' });
+          items.push({
+            key: 'delete',
+            label: t('common.action.delete'),
+            danger: true,
+          });
+        }
+        const actions: React.ReactNode[] = [];
         if (has('cmdb.sync.trigger')) {
           actions.push(
             <a
@@ -570,35 +596,38 @@ const SyncSourcePage: React.FC = () => {
             </a>,
           );
         }
-        if (has('cmdb.sync.webhook')) {
-          actions.push(
-            <a key="webhook" onClick={() => setWebhookRow(r)}>
-              {t('pages.cmdb.sync.action.webhook')}
-              {r.webhookEnabled ? ' ✓' : ''}
-            </a>,
-          );
-        }
-        if (has('cmdb.sync.edit')) {
-          actions.push(
-            <a key="edit" onClick={() => setEditRow(r)}>
-              {t('common.action.edit')}
-            </a>,
-          );
-        }
-        if (has('cmdb.sync.delete')) {
-          actions.push(
-            <DeleteConfirmLink
-              key="delete"
-              title={t('pages.cmdb.sync.delete.title')}
-              description={t('pages.cmdb.sync.delete.description')}
-              onConfirm={async () => {
-                await deleteSource(r.id);
-                message.success(t('common.msg.deleted'));
-                reload();
-              }}
-            />,
-          );
-        }
+        actions.push(
+          <Dropdown
+            key="more"
+            menu={{
+              items,
+              onClick: ({ key }) => {
+                if (key === 'runs') {
+                  setRunsRow(r);
+                } else if (key === 'webhook') {
+                  setWebhookRow(r);
+                } else if (key === 'edit') {
+                  setEditRow(r);
+                } else if (key === 'delete') {
+                  modal.confirm({
+                    title: t('pages.cmdb.sync.delete.title'),
+                    content: t('pages.cmdb.sync.delete.description'),
+                    okButtonProps: { danger: true },
+                    onOk: async () => {
+                      await deleteSource(r.id);
+                      message.success(t('common.msg.deleted'));
+                      reload();
+                    },
+                  });
+                }
+              },
+            }}
+          >
+            <a>
+              {t('common.action.more')} <DownOutlined />
+            </a>
+          </Dropdown>,
+        );
         return actions;
       },
     },

@@ -1,4 +1,4 @@
-import { getIntl } from '@umijs/max';
+import { getIntl, history } from '@umijs/max';
 import { Button, Card, Result } from 'antd';
 import React from 'react';
 
@@ -99,14 +99,21 @@ export default class ErrorBoundary extends React.Component<
     return { hasError: true, error };
   }
 
+  private unlisten?: () => void;
+
   componentDidMount() {
     window.addEventListener('online', this.handleOnline);
     window.addEventListener('offline', this.handleOffline);
+    // 路由切换时退出错误态：否则一个页面出错后，点菜单去别的页面仍停在错误页
+    this.unlisten = history.listen(() => {
+      if (this.state.hasError) this.handleRetry();
+    });
   }
 
   componentWillUnmount() {
     window.removeEventListener('online', this.handleOnline);
     window.removeEventListener('offline', this.handleOffline);
+    this.unlisten?.();
   }
 
   handleOnline = () => {

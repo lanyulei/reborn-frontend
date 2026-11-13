@@ -11,7 +11,7 @@ import {
   ProFormText,
   ProFormTextArea,
 } from '@ant-design/pro-components';
-import { Tag, Typography } from 'antd';
+import { Tag, Tooltip, Typography } from 'antd';
 import dayjs from 'dayjs';
 import type React from 'react';
 import { Fragment, useMemo } from 'react';
@@ -46,8 +46,19 @@ export const renderAttrValue = (
           {JSON.stringify(value)}
         </Typography.Text>
       );
-    case 'enum':
-      return <Tag>{String(value)}</Tag>;
+    case 'enum': {
+      const v = String(value);
+      const label = field.enumLabels?.[v];
+      // 配了展示值显示展示值，悬停提示实际值
+      if (label) {
+        return (
+          <Tooltip title={v}>
+            <Tag>{label}</Tag>
+          </Tooltip>
+        );
+      }
+      return <Tag>{v}</Tag>;
+    }
     default:
       return String(value);
   }
@@ -118,6 +129,19 @@ export const formToAttrs = (
   return out;
 };
 
+/**
+ * 字段正则 → 表单校验规则。后端是 Go（RE2）语法，个别写法（如 (?i)）不是合法的
+ * JS 正则：构造失败时跳过前端校验（后端仍会校验），不让表单渲染崩溃。
+ */
+const patternRule = (pattern?: string): { pattern: RegExp }[] => {
+  if (!pattern) return [];
+  try {
+    return [{ pattern: new RegExp(pattern) }];
+  } catch {
+    return [];
+  }
+};
+
 /** 表单项：name 统一为 ['attrs', code]，按字段类型选择控件 */
 export const AttrFormItems: React.FC<{
   fields: CmdbField[];
@@ -166,7 +190,7 @@ export const AttrFormItems: React.FC<{
                   <ProFormSelect
                     {...common}
                     options={(f.enumValues ?? []).map((v) => ({
-                      label: v,
+                      label: f.enumLabels?.[v] ?? v,
                       value: v,
                     }))}
                   />
@@ -239,9 +263,7 @@ export const AttrFormItems: React.FC<{
                     rules={[
                       ...rules,
                       ...(f.rule?.maxLen ? [{ max: f.rule.maxLen }] : []),
-                      ...(f.rule?.pattern
-                        ? [{ pattern: new RegExp(f.rule.pattern) }]
-                        : []),
+                      ...patternRule(f.rule?.pattern),
                     ]}
                   />
                 );

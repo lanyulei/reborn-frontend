@@ -2,6 +2,7 @@ import { ModalForm, ProFormText } from '@ant-design/pro-components';
 import { useModel } from '@umijs/max';
 import { App, Button, Flex, Listy, Typography } from 'antd';
 import React, { useState } from 'react';
+import { redirectToLogin } from '@/services/system/request';
 import { resetUserPassword } from '@/services/system/user';
 import { encodeSensitive } from '@/utils/encoding';
 import { useFormRules, useT } from '@/utils/i18n';
@@ -109,6 +110,9 @@ const SecurityView: React.FC = () => {
             encodeSensitive(values.password),
           );
           message.success(t('pages.account.security.changePassword.success'));
+          // 改密后后端吊销全部会话：本地令牌已作废，直接回登录页重新登录，
+          // 而不是等访问令牌过期时被突然踢出
+          redirectToLogin();
           return true;
         }}
       >

@@ -24,8 +24,10 @@ export default [
     access: 'canCmdb',
     routes: [
       {
+        // 按权限落到第一个可访问的子页（见 src/pages/cmdb/index.tsx）
         path: '/cmdb',
-        redirect: '/cmdb/search',
+        component: './cmdb',
+        hideInMenu: true,
       },
       {
         // 全局搜索：默认落地；独立页面，跨模型检索资源（关键字进 URL ?q=）

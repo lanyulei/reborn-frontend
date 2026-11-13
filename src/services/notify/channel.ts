@@ -60,10 +60,13 @@ export interface UpdateChannelParams {
 /** ListChannels 分页查询渠道，page_size 上限 100 */
 export async function listChannels(
   params: ListChannelsParams,
+  /** silent：辅助性查询（下拉选项）无权限时不弹错误 */
+  options?: { silent?: boolean },
 ): Promise<PagedResult<NotifyChannel>> {
   return authRequest<PagedResult<NotifyChannel>>('/api/v1/notify/channel', {
     method: 'GET',
     params,
+    silent: options?.silent,
   });
 }
 

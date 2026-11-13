@@ -72,11 +72,10 @@ const SystemConfigPage: React.FC = () => {
       setLogoUrl(url);
       message.success(t('pages.system.config.logo.uploaded'));
     } catch (error) {
-      message.error(
-        error instanceof Error
-          ? error.message
-          : t('pages.system.config.logo.uploadFailed'),
-      );
+      // 请求失败时 authRequest 已按后端 message 提示；这里只补本地读文件失败的提示
+      if (!(error as { response?: unknown })?.response) {
+        message.error(t('pages.system.config.logo.uploadFailed'));
+      }
     } finally {
       setUploading(false);
       // 允许连续重选同一文件（change 只在同值变化时触发）

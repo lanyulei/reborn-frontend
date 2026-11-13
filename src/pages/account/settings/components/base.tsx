@@ -80,10 +80,12 @@ const BaseView: React.FC = () => {
     const body: UpdateUserParams = {
       nickname: values.nickname,
       gender: values.gender,
-      isAdmin: currentUser.isAdmin,
     };
-    if (values.email) body.email = values.email;
-    if (values.phone) body.phone = values.phone;
+    // 清空也要提交：空串 = 清除（仅在与原值不同时发送）
+    const email = values.email ?? '';
+    const phone = values.phone ?? '';
+    if (email !== (currentUser.email ?? '')) body.email = email;
+    if (phone !== (currentUser.phone ?? '')) body.phone = phone;
     await updateUser(currentUser.id, body);
     message.success(t('pages.account.base.success'));
     // 同步全局 currentUser，右上角昵称等展示即时生效

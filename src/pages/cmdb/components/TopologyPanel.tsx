@@ -30,6 +30,8 @@ export const TopologyPanel: React.FC<{ ciId: string }> = ({ ciId }) => {
   const [depth, setDepth] = useState<number>(2);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<TopologyResult | null>(null);
+  // svg 是否已渲染（与下方 JSX 的条件一致）
+  const svgShown = !loading && !!data && data.nodes.length > 1;
   // 视口（viewBox 中心 + 半宽）与拖拽状态
   const svgRef = useRef<SVGSVGElement>(null);
   const extentRef = useRef(RING_RADIUS);
@@ -60,7 +62,8 @@ export const TopologyPanel: React.FC<{ ciId: string }> = ({ ciId }) => {
     };
     svg.addEventListener('wheel', onWheel, { passive: false });
     return () => svg.removeEventListener('wheel', onWheel);
-  }, [zoomBy]);
+    // svg 只在加载完成且有数据时才渲染：随其出现 / 消失重新挂载监听
+  }, [zoomBy, svgShown]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragRef.current = { x: e.clientX, y: e.clientY };

@@ -61,8 +61,8 @@ export default {
   'pages.cmdb.model.create.title': 'New model',
   'pages.cmdb.model.edit.title': 'Edit model: {name}',
   'pages.cmdb.model.search.placeholder': 'Code / name',
-  'pages.cmdb.model.column.code': 'Code',
-  'pages.cmdb.model.column.name': 'Name',
+  'pages.cmdb.model.column.code': 'Model code',
+  'pages.cmdb.model.column.name': 'Model name',
   'pages.cmdb.model.column.category': 'Category',
   'pages.cmdb.model.column.ciCount': 'Resources',
   'pages.cmdb.model.column.description': 'Description',
@@ -99,14 +99,22 @@ export default {
   'pages.cmdb.field.form.code.pattern':
     'Start with a lowercase letter; lowercase letters, digits, underscore; 1-64 chars',
   'pages.cmdb.field.form.enumValues': 'Enum values',
-  'pages.cmdb.field.form.enumValues.placeholder': 'Type and press Enter to add',
+  'pages.cmdb.field.form.enumValues.tooltip':
+    'Stored and filtered values are always the actual values; labels are display-only',
+  'pages.cmdb.field.form.enumValues.add': 'Add option',
+  'pages.cmdb.field.form.enumValues.value': 'Value',
+  'pages.cmdb.field.form.enumValues.label': 'Label',
+  'pages.cmdb.field.form.enumValues.label.tip':
+    'When set, the label is shown instead; otherwise the value itself',
   'pages.cmdb.field.form.refModel': 'Referenced model',
   'pages.cmdb.field.form.pattern': 'Pattern',
+  'pages.cmdb.field.form.pattern.invalid': 'Invalid regular expression',
   'pages.cmdb.field.form.min': 'Min',
   'pages.cmdb.field.form.max': 'Max',
   'pages.cmdb.field.form.minLen': 'Min length',
   'pages.cmdb.field.form.maxLen': 'Max length',
   'pages.cmdb.field.form.description': 'Hint',
+  'pages.cmdb.field.form.group': 'Field group',
   'pages.cmdb.field.tag.deprecated': 'Deprecated',
   'pages.cmdb.field.deprecate.title': 'Deprecate field',
   'pages.cmdb.field.deprecate.description':
@@ -189,6 +197,8 @@ export default {
   'pages.cmdb.detail.history.column.diff': 'Changes',
   'pages.cmdb.detail.history.column.time': 'Time',
   'pages.cmdb.detail.notFound': 'Resource not found or deleted',
+  'pages.cmdb.detail.loadFailed': 'Failed to load. Please retry.',
+  'pages.cmdb.detail.retry': 'Retry',
 
   'permission.cmdb.ci.import': 'Import resources',
   'permission.cmdb.ci.export': 'Export resources',
@@ -204,6 +214,8 @@ export default {
     'Dry run: {created} to create, {updated} to update, {skipped} unchanged, {failed} errors',
   'pages.cmdb.import.result':
     'Imported: {created} created, {updated} updated, {skipped} unchanged, {failed} failed',
+  'pages.cmdb.import.relationFailed':
+    '; {n} rows were saved but their relations failed',
   'pages.cmdb.import.confirm': 'Confirm import',
   'pages.cmdb.import.column.row': 'Row',
   'pages.cmdb.import.column.name': 'Name',
@@ -351,6 +363,8 @@ export default {
     'The following related resources will be retired as well:',
   'pages.cmdb.detail.transition.cascade.more': ' and {n} more',
   'pages.cmdb.detail.source.manual': 'Manual',
+  'pages.cmdb.detail.source.assistant': 'Assistant',
+  'pages.cmdb.detail.source.sync': 'Sync · {name}',
   'pages.cmdb.detail.source.deleted': 'Source deleted',
   'pages.cmdb.detail.lastSyncedAt': 'Last synced',
   'pages.cmdb.sync.action.webhook': 'Webhook',
@@ -401,6 +415,7 @@ export default {
   'pages.cmdb.model.group.create.title': 'New group',
   'pages.cmdb.model.group.rename': 'Rename group',
   'pages.cmdb.model.group.name': 'Group name',
+  'pages.cmdb.model.group.code': 'Group code',
   'pages.cmdb.model.group.manage': 'Group settings',
   'pages.cmdb.model.group.delete.title': 'Delete group',
   'pages.cmdb.model.group.delete.description':

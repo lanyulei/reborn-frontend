@@ -201,6 +201,8 @@ export default {
   // Request errors (requestErrorConfig / request.ts)
   'app.request.httpFailed': 'Request failed (HTTP {status})',
   'app.request.retry': 'Request failed, please retry',
+  'app.profile.loadFailed': 'Failed to load your session. Please try again.',
+  'app.profile.retry': 'Reload',
   'app.request.noResponse': 'None response! Please retry.',
   'app.request.error': 'Request error, please retry.',
 };

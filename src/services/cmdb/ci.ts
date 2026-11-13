@@ -1,7 +1,8 @@
 /**
  * CmdbCIService 资源：列表 / 详情 / 创建 / 更新（乐观锁）/ 状态流转 / 删除 / 历史。
  */
-import { authRequest } from '@/services/system/request';
+import { message } from 'antd';
+import { authRequest, getErrorMessage } from '@/services/system/request';
 import type { PagedResult } from '@/services/system/typings';
 import type {
   CmdbCI,
@@ -100,16 +101,23 @@ export async function transitionCI(
   id: string,
   version: string,
   status: CmdbCIStatus,
+  /** silent：批量操作逐条失败不各弹一次，由调用方汇总提示 */
+  options?: { silent?: boolean },
 ): Promise<{ ci: CmdbCI }> {
   return authRequest<{ ci: CmdbCI }>(`/api/v1/cmdb/ci/${id}:transition`, {
     method: 'POST',
     data: { version, status },
+    silent: options?.silent,
   });
 }
 
-export async function deleteCI(id: string): Promise<void> {
+export async function deleteCI(
+  id: string,
+  options?: { silent?: boolean },
+): Promise<void> {
   await authRequest<Record<string, never>>(`/api/v1/cmdb/ci/${id}`, {
     method: 'DELETE',
+    silent: options?.silent,
   });
 }
 
@@ -164,19 +172,53 @@ export async function importCIs(
 }
 
 /** ExportCIs 下载 CSV（最多 10000 行） */
-export async function exportCIs(params: {
-  modelCode: string;
-  keyword?: string;
-  status?: CmdbCIStatus;
-  env?: string;
-  /** csv（缺省）/ json */
-  format?: 'csv' | 'json';
-}): Promise<Blob> {
-  return authRequest<Blob>('/api/v1/cmdb/ci:export', {
-    method: 'GET',
-    params,
-    responseType: 'blob',
-  });
+export async function exportCIs(
+  params: Pick<
+    ListCIsParams,
+    | 'keyword'
+    | 'status'
+    | 'env'
+    | 'tag'
+    | 'attrs'
+    | 'relType'
+    | 'relDirection'
+    | 'relTargetId'
+    | 'relNone'
+  > & {
+    modelCode: string;
+    /** csv（缺省）/ json */
+    format?: 'csv' | 'json';
+  },
+): Promise<Blob> {
+  const { attrs, ...rest } = params;
+  // 与 listCIs 相同：attrs 等值过滤展开为 attrs.<code>=<value>
+  const flat: Record<string, unknown> = { ...rest };
+  for (const [key, value] of Object.entries(attrs ?? {})) {
+    if (value !== undefined && value !== null && value !== '') {
+      flat[`attrs.${key}`] = value;
+    }
+  }
+  try {
+    return await authRequest<Blob>('/api/v1/cmdb/ci:export', {
+      method: 'GET',
+      params: flat,
+      responseType: 'blob',
+      silent: true,
+    });
+  } catch (error) {
+    // responseType=blob 时错误体也是 Blob：解析出后端 message 再提示
+    const data = (error as { response?: { data?: unknown } })?.response?.data;
+    let text = '';
+    if (data instanceof Blob) {
+      try {
+        text = (JSON.parse(await data.text()) as { message?: string }).message ?? '';
+      } catch {
+        // 非 JSON 错误体：用通用文案
+      }
+    }
+    message.error(text || getErrorMessage(error));
+    throw error;
+  }
 }
 
 export async function listCIHistory(

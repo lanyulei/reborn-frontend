@@ -10,6 +10,7 @@ import { NOTIFY_CHANNEL_TYPE_META } from '@/constants';
 import { useEnumText, useT } from '@/utils/i18n';
 import { listChannels } from './channel';
 import type { NotifyChannel } from './typings';
+import { fetchAllPages } from '@/utils/paging';
 
 /** 后端缺省业务租户标识（请求不带 biz_id 时服务端落到此值） */
 export const DEFAULT_BIZ_ID = 'default';
@@ -69,12 +70,17 @@ export const useChannelOptions = () => {
 
   useEffect(() => {
     let disposed = false;
+    // 翻页取全（渠道超过一页时不再被截断）；无权限时静默降级为空
+    const all = (bizId?: string) =>
+      fetchAllPages((page, pageSize) =>
+        listChannels({ page, pageSize, bizId }, { silent: true }),
+      );
     const queries = restricted
-      ? bizKey.split(',').map((bizId) => listChannels({ page: 1, pageSize: 100, bizId }))
-      : [listChannels({ page: 1, pageSize: 100 })];
+      ? bizKey.split(',').map((bizId) => all(bizId))
+      : [all()];
     Promise.all(queries)
       .then((results) => {
-        if (!disposed) setChannels(results.flatMap((result) => result.items ?? []));
+        if (!disposed) setChannels(results.flat());
       })
       .catch(() => {
         if (!disposed) setChannels([]);

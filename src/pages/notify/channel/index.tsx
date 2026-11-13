@@ -70,6 +70,8 @@ interface ChannelFormValues {
   qps?: number;
   /** 令牌桶：容量（突发上限），0 = 不限 */
   burst?: number;
+  /** 每分钟配额（qps=0 时生效），0 = 按渠道类型缺省 */
+  perMinute?: number;
   // email（type=EMAIL）
   host?: string;
   port?: number;
@@ -82,6 +84,10 @@ interface ChannelFormValues {
   timeoutS?: number;
   // robot（type=DINGTALK/WECOM/FEISHU）
   atMobiles?: string[];
+  /** 卡片消息（模板 format=card）跳转链接，须 https */
+  cardUrl?: string;
+  /** 卡片按钮文字（须同时配置 cardUrl） */
+  cardButton?: string;
 }
 
 /** 表单 headers 键值对列表 → API map（过滤未填名称的行） */
@@ -133,16 +139,25 @@ const buildChannelConfig = (values: ChannelFormValues) => {
     };
   }
   const atMobiles = values.atMobiles?.filter(Boolean) ?? [];
-  return { robot: atMobiles.length ? { atMobiles } : {} };
+  const cardUrl = values.cardUrl?.trim();
+  const cardButton = values.cardButton?.trim();
+  return {
+    robot: {
+      ...(atMobiles.length && { atMobiles }),
+      ...(cardUrl && { cardUrl }),
+      ...(cardUrl && cardButton && { cardButton }),
+    },
+  };
 };
 
 /** 限流参数（任一填写即携带；int64 转字符串，0 = 不限） */
 const buildRateLimit = (values: ChannelFormValues) =>
-  values.qps != null || values.burst != null
+  values.qps != null || values.burst != null || values.perMinute != null
     ? {
         rateLimit: {
           qps: String(values.qps ?? 0),
           burst: String(values.burst ?? 0),
+          perMinute: String(values.perMinute ?? 0),
         },
       }
     : {};
@@ -239,9 +254,10 @@ const ChannelConfigFields: React.FC<{
               creatorButtonText: t('pages.notify.channel.form.headers.add'),
             }}
           >
-            <ProForm.Group>
+            <ProForm.Group colProps={FULL} rowProps={{ gutter: 16 }}>
               <ProFormText
                 name="headerKey"
+                colProps={HALF}
                 label={t('pages.notify.channel.form.headers.key')}
                 rules={[
                   rules.required(t('pages.notify.channel.form.headers.key')),
@@ -250,6 +266,7 @@ const ChannelConfigFields: React.FC<{
               />
               <ProFormText
                 name="headerValue"
+                colProps={HALF}
                 label={t('pages.notify.channel.form.headers.value')}
                 rules={[rules.max(512)]}
               />
@@ -274,36 +291,76 @@ const ChannelConfigFields: React.FC<{
         </>
       )}
       {meta.kind === 'robot' && (
-        <ProFormSelect
-          name="atMobiles"
-          label={t('pages.notify.channel.form.atMobiles')}
-          colProps={FULL}
-          tooltip={t('pages.notify.channel.form.atMobiles.tooltip')}
-          fieldProps={{
-            mode: 'tags',
-            open: false,
-            tokenSeparators: [',', ' '],
-            placeholder: t('pages.notify.channel.form.atMobiles.placeholder'),
-          }}
-          rules={[
-            {
-              validator: (_, value?: string[]) => {
-                const list = value ?? [];
-                if (list.length > 20) {
-                  return Promise.reject(
-                    new Error(t('pages.notify.channel.form.atMobiles.max')),
-                  );
-                }
-                if (list.some((item) => item.length < 5 || item.length > 32)) {
-                  return Promise.reject(
-                    new Error(t('pages.notify.channel.form.atMobiles.length')),
-                  );
-                }
-                return Promise.resolve();
+        <>
+          <ProFormSelect
+            name="atMobiles"
+            label={t('pages.notify.channel.form.atMobiles')}
+            colProps={FULL}
+            tooltip={t('pages.notify.channel.form.atMobiles.tooltip')}
+            fieldProps={{
+              mode: 'tags',
+              open: false,
+              tokenSeparators: [',', ' '],
+              placeholder: t('pages.notify.channel.form.atMobiles.placeholder'),
+            }}
+            rules={[
+              {
+                validator: (_, value?: string[]) => {
+                  const list = value ?? [];
+                  if (list.length > 20) {
+                    return Promise.reject(
+                      new Error(t('pages.notify.channel.form.atMobiles.max')),
+                    );
+                  }
+                  if (
+                    list.some((item) => item.length < 5 || item.length > 32)
+                  ) {
+                    return Promise.reject(
+                      new Error(
+                        t('pages.notify.channel.form.atMobiles.length'),
+                      ),
+                    );
+                  }
+                  return Promise.resolve();
+                },
               },
-            },
-          ]}
-        />
+            ]}
+          />
+          <ProFormText
+            name="cardUrl"
+            label={t('pages.notify.channel.form.cardUrl')}
+            colProps={HALF}
+            tooltip={t('pages.notify.channel.form.cardUrl.tooltip')}
+            placeholder="https://"
+            rules={[
+              rules.max(2048),
+              {
+                pattern: /^https:\/\//,
+                message: t('pages.notify.channel.form.cardUrl.rule'),
+              },
+            ]}
+          />
+          <ProFormText
+            name="cardButton"
+            label={t('pages.notify.channel.form.cardButton')}
+            colProps={HALF}
+            dependencies={['cardUrl']}
+            placeholder={t('pages.notify.channel.form.cardButton.placeholder')}
+            rules={[
+              rules.max(32),
+              ({ getFieldValue }) => ({
+                validator: (_, value?: string) =>
+                  value?.trim() && !getFieldValue('cardUrl')?.trim()
+                    ? Promise.reject(
+                        new Error(
+                          t('pages.notify.channel.form.cardButton.needUrl'),
+                        ),
+                      )
+                    : Promise.resolve(),
+              }),
+            ]}
+          />
+        </>
       )}
       <ProFormText.Password
         name="secret"
@@ -468,6 +525,7 @@ const ChannelList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
+      fixed: 'right',
       width: 140,
       hideInTable: !hasAnyAction,
       render: (_, record) => {
@@ -536,6 +594,15 @@ const ChannelList: React.FC = () => {
         min={0}
         fieldProps={{ precision: 0 }}
       />
+      <ProFormDigit
+        name="perMinute"
+        label={t('pages.notify.channel.form.perMinute')}
+        colProps={HALF}
+        tooltip={t('pages.notify.channel.form.perMinute.tooltip')}
+        placeholder={t('pages.notify.channel.form.perMinute.placeholder')}
+        min={0}
+        fieldProps={{ precision: 0 }}
+      />
     </>
   );
 
@@ -559,6 +626,7 @@ const ChannelList: React.FC = () => {
           actionRef={actionRef}
           search={{ labelWidth: 'auto' }}
           columns={columns}
+          scroll={{ x: 'max-content' }}
           request={async (params) => {
             const result = await listChannels({
               page: params.current,
@@ -674,10 +742,13 @@ const ChannelList: React.FC = () => {
             }
             if (channel.robot) {
               values.atMobiles = channel.robot.atMobiles ?? [];
+              values.cardUrl = channel.robot.cardUrl;
+              values.cardButton = channel.robot.cardButton;
             }
             if (channel.rateLimit) {
               values.qps = Number(channel.rateLimit.qps);
               values.burst = Number(channel.rateLimit.burst);
+              values.perMinute = Number(channel.rateLimit.perMinute ?? 0);
             }
             return values;
           }}

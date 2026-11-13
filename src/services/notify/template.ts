@@ -6,7 +6,11 @@
  */
 import type { PagedResult, PageQuery } from '@/services/system/typings';
 import { authRequest } from '@/services/system/request';
-import type { NotifyTemplate, NotifyTemplateChannelType } from './typings';
+import type {
+  NotifyTemplate,
+  NotifyTemplateChannelType,
+  NotifyTemplateFormat,
+} from './typings';
 
 export interface ListTemplatesParams extends PageQuery {
   /** 事件类型精确过滤（含 '*'） */
@@ -30,6 +34,8 @@ export interface CreateTemplateParams {
   subject: string;
   /** 正文模板（Go template），1-32768 位 */
   body: string;
+  /** 输出格式，缺省 text */
+  format?: NotifyTemplateFormat;
   /** 未指定默认启用 */
   enabled?: boolean;
 }
@@ -40,6 +46,7 @@ export interface UpdateTemplateParams {
   channelType?: NotifyTemplateChannelType;
   subject?: string;
   body?: string;
+  format?: NotifyTemplateFormat;
   enabled?: boolean;
 }
 

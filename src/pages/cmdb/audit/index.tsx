@@ -7,11 +7,12 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import { history } from '@umijs/max';
+import dayjs from 'dayjs';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { listHistory } from '@/services/cmdb/ci';
 import { listSchemaAudit } from '@/services/cmdb/insight';
-import { getModel, listModels } from '@/services/cmdb/model';
+import { getModel, listAllModels } from '@/services/cmdb/model';
 import type {
   CmdbField,
   CmdbHistory,
@@ -28,6 +29,8 @@ import {
   CMDB_SCHEMA_TARGET_META,
   CMDB_SCHEMA_TARGET_ORDER,
 } from '../components/meta';
+import { useSourceText } from '../components/useSourceText';
+import { useUserNames } from '../components/useUserNames';
 
 /** 模型 code → 名称 / 字段定义的页内缓存（实例 diff 渲染用） */
 const useModelMeta = () => {
@@ -37,7 +40,7 @@ const useModelMeta = () => {
 
   useEffect(() => {
     let cancelled = false;
-    listModels({ page: 1, pageSize: 100 })
+    listAllModels()
       .then((result) => {
         if (!cancelled)
           setNames(
@@ -56,7 +59,8 @@ const useModelMeta = () => {
     if (missing.length === 0) return;
     await Promise.all(
       missing.map((code) =>
-        getModel(code)
+        // 历史行所属模型可能已删除：静默降级为无字段定义（diff 按原键展示）
+        getModel(code, { silent: true })
           .then((d) => fieldsRef.current.set(code, d.fields))
           .catch(() => fieldsRef.current.set(code, null)),
       ),
@@ -71,6 +75,8 @@ const useModelMeta = () => {
 const InstanceAuditTab: React.FC = () => {
   const t = useT();
   const actionEnum = useValueEnum(CMDB_ACTION_META);
+  const userNames = useUserNames();
+  const sourceText = useSourceText();
   const { names, ensureFields, fieldsOf, fieldsVersion } = useModelMeta();
 
   const columns: ProColumns<CmdbHistory>[] = [
@@ -104,7 +110,7 @@ const InstanceAuditTab: React.FC = () => {
       width: 140,
       valueType: 'select',
       request: async () => {
-        const result = await listModels({ page: 1, pageSize: 100 });
+        const result = await listAllModels();
         return result.items.map((m) => ({ label: m.name, value: m.code }));
       },
       render: (_, r) => names[r.modelCode ?? ''] ?? r.modelCode ?? '—',
@@ -121,6 +127,7 @@ const InstanceAuditTab: React.FC = () => {
       width: 160,
       ellipsis: true,
       copyable: true,
+      renderText: (val) => userNames[val ?? ''] || val,
     },
     {
       title: t('pages.cmdb.detail.history.column.source'),
@@ -128,6 +135,7 @@ const InstanceAuditTab: React.FC = () => {
       width: 120,
       search: false,
       ellipsis: true,
+      renderText: (val) => sourceText(val),
     },
     {
       title: t('pages.cmdb.detail.history.column.diff'),
@@ -170,8 +178,8 @@ const InstanceAuditTab: React.FC = () => {
           action: (params.action as CmdbHistory['action']) || undefined,
           operator: params.operator || undefined,
           keyword: params.ciName || undefined,
-          from: range?.[0] ? new Date(range[0]).toISOString() : undefined,
-          to: range?.[1] ? new Date(range[1]).toISOString() : undefined,
+          from: range?.[0] ? dayjs(range[0]).toISOString() : undefined,
+          to: range?.[1] ? dayjs(range[1]).toISOString() : undefined,
         });
         await ensureFields(
           [...new Set(result.items.map((i) => i.modelCode ?? ''))].filter(
@@ -188,6 +196,7 @@ const SchemaAuditTab: React.FC = () => {
   const t = useT();
   const actionEnum = useValueEnum(CMDB_SCHEMA_ACTION_META);
   const targetText = useEnumText(CMDB_SCHEMA_TARGET_META);
+  const userNames = useUserNames();
   const targetOptions = useOptions(
     CMDB_SCHEMA_TARGET_META,
     CMDB_SCHEMA_TARGET_ORDER,
@@ -230,7 +239,7 @@ const SchemaAuditTab: React.FC = () => {
       width: 140,
       valueType: 'select',
       request: async () => {
-        const result = await listModels({ page: 1, pageSize: 100 });
+        const result = await listAllModels();
         return result.items.map((m) => ({ label: m.name, value: m.code }));
       },
       render: (_, r) =>
@@ -248,6 +257,7 @@ const SchemaAuditTab: React.FC = () => {
       width: 160,
       ellipsis: true,
       copyable: true,
+      renderText: (val) => userNames[val ?? ''] || val,
     },
     {
       title: t('pages.cmdb.detail.history.column.diff'),
@@ -290,8 +300,8 @@ const SchemaAuditTab: React.FC = () => {
             (params.action as 'create' | 'update' | 'delete') || undefined,
           operator: params.operator || undefined,
           keyword: params.keyword || undefined,
-          from: range?.[0] ? new Date(range[0]).toISOString() : undefined,
-          to: range?.[1] ? new Date(range[1]).toISOString() : undefined,
+          from: range?.[0] ? dayjs(range[0]).toISOString() : undefined,
+          to: range?.[1] ? dayjs(range[1]).toISOString() : undefined,
         });
         return toTableResult(result);
       }}

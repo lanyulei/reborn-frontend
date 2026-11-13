@@ -97,6 +97,33 @@ ol {
   margin-inline-start: 4px;
 }
 
+// 表格操作列：ProTable 对 valueType="option" 且 render 返回数组的列，会自动包一层
+// 行内样式 flex 容器（gap: 8px，无类名）。操作项间距全局统一 12px，并禁止操作项内
+// 文字换行（间距加大后防止挤压换行）；行内样式优先级高于普通选择器，须 !important；
+// 仅匹配表格体内单元格的直接子级
+.ant-pro-table .ant-table-tbody .ant-table-cell > div[style*='gap: 8px'] {
+  gap: 12px !important;
+
+  & > * {
+    white-space: nowrap;
+  }
+}
+
+// 表格所有列统一只显示一行：超出省略，悬停显示完整内容（悬停提示见 global.tsx）。
+// 展开行内容不受限；固定列不加 overflow（会裁掉固定列阴影），只保证不换行。
+// max-width 只在 auto 布局（scroll.x = max-content）下生效，用于给无宽度约束的列封顶；
+// fixed 布局下列宽由 column.width 决定
+.ant-table-wrapper .ant-table-thead > tr > th.ant-table-cell,
+.ant-table-wrapper .ant-table-tbody > tr:not(.ant-table-expanded-row) > td.ant-table-cell {
+  white-space: nowrap;
+
+  &:not(.ant-table-cell-fix) {
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 // 白底内容卡片（antd Card / ProCard，含 ProTable 的搜索栏与表格卡片）的外边框统一加深一档：
 // 默认 colorBorderSecondary 在灰色页面底上偏淡，取它与 colorBorder 的中间色（CSS 变量，跟随明暗主题）
 body .ant-card.ant-card-bordered,

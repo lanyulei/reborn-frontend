@@ -9,7 +9,7 @@ import { Alert, Card, Col, Row, Segmented, Spin } from 'antd';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { getOverview } from '@/services/cmdb/insight';
-import { listModels, listRelationTypes } from '@/services/cmdb/model';
+import { listAllModels, listRelationTypes } from '@/services/cmdb/model';
 import type { CmdbCIStatus, CmdbOverview } from '@/services/cmdb/typings';
 import { useEnumText, useT } from '@/utils/i18n';
 import {
@@ -44,7 +44,7 @@ const StatsPage: React.FC = () => {
         // 概览接口不可用（旧后端 / 未授权）：用模型目录与关联类型拼出基础统计
         try {
           const [modelsRes, relRes] = await Promise.all([
-            listModels({ page: 1, pageSize: 100 }),
+            listAllModels(),
             listRelationTypes(),
           ]);
           if (cancelled) return;

@@ -94,9 +94,14 @@ export const ViewEditor: React.FC<{
   model: CmdbModel;
   fields: CmdbField[];
   relationTypes: CmdbRelationType[];
+  /**
+   * 父级当前布局的签名：在「模型字段」页增删改分组后变化，编辑器据此重新拉取，
+   * 避免拿着旧布局保存、覆盖掉那边的分组改动。
+   */
+  sectionsKey?: string;
   /** 保存成功后通知父级（刷新布局相关状态） */
   onChanged?: () => void;
-}> = ({ model, fields, relationTypes, onChanged }) => {
+}> = ({ model, fields, relationTypes, sectionsKey, onChanged }) => {
   const t = useT();
   const has = usePermissions();
   const { message } = App.useApp();
@@ -130,7 +135,8 @@ export const ViewEditor: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [model.code]);
+    // sectionsKey 仅作重新拉取的触发器
+  }, [model.code, sectionsKey]);
 
   // 按需拉取关联面板对端类型的字段
   const neededTargets = useMemo(

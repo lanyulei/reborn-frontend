@@ -42,6 +42,7 @@ import {
   useT,
   useValueEnum,
 } from '@/utils/i18n';
+import { fetchAllPages } from '@/utils/paging';
 import { toTableResult } from '@/utils/table';
 
 const UserList: React.FC = () => {
@@ -175,7 +176,8 @@ const UserList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
-      width: 100,
+      fixed: 'right',
+      width: 110,
       hideInTable: !hasAnyAction,
       render: (_, record) => {
         // 元素权限显隐：无对应权限码的操作不渲染
@@ -285,6 +287,7 @@ const UserList: React.FC = () => {
           actionRef={actionRef}
           search={{ labelWidth: 'auto' }}
           columns={columns}
+          scroll={{ x: 'max-content' }}
           request={async (params) => {
             const result = await listUsers({
               page: params.current,
@@ -433,10 +436,15 @@ const UserList: React.FC = () => {
             const body: Record<string, unknown> = {
               nickname: values.nickname,
               gender: values.gender,
-              isAdmin: values.isAdmin ?? false,
             };
-            if (values.email) body.email = values.email;
-            if (values.phone) body.phone = values.phone;
+            // isAdmin 仅在变化时提交：后端见到该字段即要求超管，且会吊销目标用户会话
+            const nextAdmin = values.isAdmin ?? false;
+            if (nextAdmin !== editRow.isAdmin) body.isAdmin = nextAdmin;
+            // 清空也要提交：空串 = 清除（仅在与原值不同时发送）
+            const email = values.email ?? '';
+            const phone = values.phone ?? '';
+            if (email !== (editRow.email ?? '')) body.email = email;
+            if (phone !== (editRow.phone ?? '')) body.phone = phone;
             await updateUser(editRow.id, body);
             message.success(t('common.msg.saved'));
             reload();
@@ -552,11 +560,14 @@ const UserList: React.FC = () => {
               placeholder: t('pages.system.user.roles.placeholder'),
             }}
             request={async () => {
-              const all = await listRoles({ page: 1, pageSize: 100 });
-              setBuiltinRoleIds(
-                all.items.filter((role) => role.builtin).map((role) => role.id),
+              // 翻页取全：角色超过一页时不再被截断
+              const roles = await fetchAllPages((page, pageSize) =>
+                listRoles({ page, pageSize }),
               );
-              return all.items.map((role) => ({
+              setBuiltinRoleIds(
+                roles.filter((role) => role.builtin).map((role) => role.id),
+              );
+              return roles.map((role) => ({
                 label: role.builtin
                   ? t('pages.system.user.roles.optionBuiltin', {
                       name: role.name,

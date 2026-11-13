@@ -3,6 +3,7 @@ export default {
   'common.action.create': 'Create',
   'common.action.edit': 'Edit',
   'common.action.delete': 'Delete',
+  'common.action.more': 'More',
   'common.action.save': 'Save',
   'common.action.cancel': 'Cancel',
   'common.action.confirm': 'OK',

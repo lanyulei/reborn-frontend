@@ -18,6 +18,11 @@ import { t } from '@/utils/i18n';
 interface AuthRequestOptions extends RequestOptions {
   /** 内部标记：已重试过，避免循环 */
   retried?: boolean;
+  /**
+   * 静默：失败不弹全局错误提示，由调用方自行降级（如无权限的辅助性查询）。
+   * 401 的刷新 / 跳转登录逻辑不受影响。
+   */
+  silent?: boolean;
 }
 
 /**
@@ -38,12 +43,18 @@ export function getErrorMessage(error: unknown, fallback = t('app.request.retry'
   );
 }
 
-/** 刷新令牌单飞：并发 401 只触发一次刷新 */
-let refreshPromise: Promise<boolean> | null = null;
+/**
+ * 刷新结果：ok 已持有新令牌；invalid 刷新令牌确已失效（需重新登录）；
+ * error 网络 / 服务端暂时性故障（令牌可能仍有效，不应登出）。
+ */
+type RefreshResult = 'ok' | 'invalid' | 'error';
 
-async function doRefresh(): Promise<boolean> {
+/** 刷新令牌单飞：并发 401 只触发一次刷新 */
+let refreshPromise: Promise<RefreshResult> | null = null;
+
+async function doRefresh(): Promise<RefreshResult> {
   const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
+  if (!refreshToken) return 'invalid';
   try {
     const result = await request<{
       accessToken: string;
@@ -55,10 +66,25 @@ async function doRefresh(): Promise<boolean> {
       skipErrorHandler: true,
     });
     setTokens(result.accessToken, result.refreshToken, result.expiresIn);
-    return true;
-  } catch {
-    return false;
+    return 'ok';
+  } catch (error) {
+    // 另一个标签页已先一步轮换了令牌：本地存储里已是新令牌，直接沿用
+    const current = getRefreshToken();
+    if (current && current !== refreshToken) return 'ok';
+    const status = (error as { response?: { status?: number } })?.response
+      ?.status;
+    // 仅 4xx（令牌无效 / 已吊销）视为需要重新登录；网络错误与 5xx 保留令牌
+    return status !== undefined && status >= 400 && status < 500
+      ? 'invalid'
+      : 'error';
   }
+}
+
+function refreshOnce(): Promise<RefreshResult> {
+  refreshPromise ??= doRefresh().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
 }
 
 export function redirectToLogin(): void {
@@ -83,17 +109,16 @@ export async function ensureFreshToken(): Promise<boolean> {
     getAccessToken() !== null &&
     (expiresAt === null || expiresAt - Date.now() > REFRESH_AHEAD_MS);
   if (fresh) return true;
-  refreshPromise ??= doRefresh().finally(() => {
-    refreshPromise = null;
-  });
-  return refreshPromise;
+  const result = await refreshOnce();
+  // 暂时性故障不视为未登录：仍持有令牌就继续（真过期由调用方的 401 分支处理）
+  return result === 'ok' || (result === 'error' && getAccessToken() !== null);
 }
 
 export async function authRequest<T>(
   url: string,
   options: AuthRequestOptions = {},
 ): Promise<T> {
-  const { retried, ...rest } = options;
+  const { retried, silent, ...rest } = options;
   try {
     return await request<T>(url, { ...rest, skipErrorHandler: true });
   } catch (error: unknown) {
@@ -104,17 +129,19 @@ export async function authRequest<T>(
         redirectToLogin();
         throw error;
       }
-      refreshPromise ??= doRefresh().finally(() => {
-        refreshPromise = null;
-      });
-      const refreshed = await refreshPromise;
-      if (refreshed) {
+      const refreshed = await refreshOnce();
+      if (refreshed === 'ok') {
         return authRequest<T>(url, { ...options, retried: true });
       }
-      redirectToLogin();
+      if (refreshed === 'invalid') {
+        redirectToLogin();
+        throw error;
+      }
+      // 刷新遇到暂时性故障：不登出，按普通失败提示
+      if (!silent) message.error(t('app.request.retry'));
       throw error;
     }
-    message.error(getErrorMessage(error));
+    if (!silent) message.error(getErrorMessage(error));
     throw error;
   }
 }

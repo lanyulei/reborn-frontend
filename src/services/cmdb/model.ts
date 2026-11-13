@@ -2,6 +2,7 @@
  * CmdbModelService 资源模型：资源类型 / 类型字段 / 关系类型。
  */
 import { authRequest } from '@/services/system/request';
+import { fetchAllPages } from '@/utils/paging';
 import type { PagedResult } from '@/services/system/typings';
 import type {
   CmdbCardinality,
@@ -33,15 +34,54 @@ export async function listModels(
   });
 }
 
+/**
+ * 全部模型（翻页取全）。同一时刻的并发调用共享一次请求，并做 5 秒短缓存——
+ * 一个页面里常有多处同时要模型清单（目录、名称映射、下拉选项）。
+ * `fresh` 跳过缓存（实例数等刚变化时用）；模型增删改后缓存自动失效。
+ */
+let allModelsCache: { at: number; promise: Promise<CmdbModel[]> } | null = null;
+const ALL_MODELS_TTL_MS = 5000;
+
+export function invalidateModelsCache(): void {
+  allModelsCache = null;
+}
+
+export async function listAllModels(options?: {
+  fresh?: boolean;
+}): Promise<{ items: CmdbModel[] }> {
+  const now = Date.now();
+  if (
+    options?.fresh ||
+    !allModelsCache ||
+    now - allModelsCache.at > ALL_MODELS_TTL_MS
+  ) {
+    const promise = fetchAllPages<CmdbModel>((page, pageSize) =>
+      listModels({ page, pageSize }),
+    );
+    const entry = { at: now, promise };
+    allModelsCache = entry;
+    // 失败不缓存，下次调用重试
+    promise.catch(() => {
+      if (allModelsCache === entry) allModelsCache = null;
+    });
+  }
+  return { items: await allModelsCache.promise };
+}
+
 export interface ModelDetail {
   model: CmdbModel;
   fields: CmdbField[];
   relationTypes: CmdbRelationType[];
 }
 
-export async function getModel(code: string): Promise<ModelDetail> {
+export async function getModel(
+  code: string,
+  /** silent：辅助性查询（如为历史行取字段定义，模型可能已删除）失败不弹错误 */
+  options?: { silent?: boolean },
+): Promise<ModelDetail> {
   return authRequest<ModelDetail>(`/api/v1/cmdb/model/${code}`, {
     method: 'GET',
+    silent: options?.silent,
   });
 }
 
@@ -56,6 +96,7 @@ export interface CreateModelParams {
 export async function createModel(
   body: CreateModelParams,
 ): Promise<{ model: CmdbModel }> {
+  invalidateModelsCache();
   return authRequest<{ model: CmdbModel }>('/api/v1/cmdb/model', {
     method: 'POST',
     data: body,
@@ -74,6 +115,7 @@ export async function updateModel(
   code: string,
   body: UpdateModelParams,
 ): Promise<{ model: CmdbModel }> {
+  invalidateModelsCache();
   return authRequest<{ model: CmdbModel }>(`/api/v1/cmdb/model/${code}`, {
     method: 'PUT',
     data: body,
@@ -81,6 +123,7 @@ export async function updateModel(
 }
 
 export async function deleteModel(code: string): Promise<void> {
+  invalidateModelsCache();
   await authRequest<Record<string, never>>(`/api/v1/cmdb/model/${code}`, {
     method: 'DELETE',
   });
@@ -93,6 +136,7 @@ export interface FieldParams {
   required?: boolean;
   unique?: boolean;
   enumValues?: string[];
+  enumLabels?: Record<string, string>;
   refModel?: string;
   rule?: CmdbFieldRule;
   owner?: CmdbFieldOwner;

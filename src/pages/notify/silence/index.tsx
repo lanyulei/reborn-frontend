@@ -28,7 +28,13 @@ import {
 } from '@/services/notify/silence';
 import type { NotifySilence } from '@/services/notify/typings';
 import { usePermissions } from '@/services/system/permissions';
-import { useFormRules, useSubmitter, useT, useValueEnum } from '@/utils/i18n';
+import {
+  useFormRules,
+  useOptions,
+  useSubmitter,
+  useT,
+  useValueEnum,
+} from '@/utils/i18n';
 import { parseBoolParam, toTableResult } from '@/utils/table';
 import {
   BizIdFormField,
@@ -36,12 +42,16 @@ import {
   useBizIdColumn,
 } from '../components/bizScope';
 
+const SEVERITY_ORDER = [1, 2, 3, 4] as const;
+
 /** 两列栅格：半行 */
 const HALF = { span: 12 };
 
 /** 静默表单值（时间窗开关在提交时折叠为可选 time_window；biz 仅创建） */
 interface SilenceFormValues {
   bizId?: string;
+  name?: string;
+  description?: string;
   eventPattern: string;
   severityMax?: number;
   /** 是否限制时间窗（关 = 全程静默；更新时语义为清除窗口） */
@@ -54,6 +64,9 @@ interface SilenceFormValues {
 
 /** 表单值 → 静默规则载荷（未开时间窗则不携带，整组替换语义下即清除） */
 const buildSilenceSpec = (values: SilenceFormValues): SilenceSpecPayload => ({
+  // 名称 / 说明恒携带：spec 整组替换，留空即清除
+  name: values.name?.trim() ?? '',
+  description: values.description?.trim() ?? '',
   eventPattern: values.eventPattern,
   ...(values.severityMax != null && { severityMax: values.severityMax }),
   ...(values.windowEnabled && {
@@ -80,6 +93,8 @@ const SilenceList: React.FC = () => {
   const submitter = useSubmitter();
   const enabledEnum = useValueEnum(ENABLED_META);
   const severityEnum = useValueEnum(NOTIFY_SEVERITY_META);
+  // 表单用数值选项：valueEnum 的键是字符串，编辑回显的数值匹配不到标签
+  const severityOptions = useOptions(NOTIFY_SEVERITY_META, SEVERITY_ORDER);
   const bizIdColumn = useBizIdColumn<NotifySilence>(scope);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -105,15 +120,27 @@ const SilenceList: React.FC = () => {
       title: t('common.column.keyword'),
       dataIndex: 'keyword',
       hideInTable: true,
-      fieldProps: { placeholder: t('pages.notify.common.eventPattern') },
+      fieldProps: { placeholder: t('pages.notify.common.keyword.placeholder') },
     },
     bizIdColumn,
+    {
+      title: t('pages.notify.common.name'),
+      dataIndex: 'name',
+      ellipsis: true,
+      search: false,
+      render: (_, record) =>
+        record.name ? (
+          <span title={record.description || undefined}>{record.name}</span>
+        ) : (
+          t('common.empty')
+        ),
+    },
     {
       title: t('pages.notify.common.eventPattern'),
       dataIndex: 'eventPattern',
       copyable: true,
       ellipsis: true,
-      // 模糊搜索由「关键字」字段覆盖（后端 keyword 匹配 event_pattern）
+      // 模糊搜索由「关键字」字段覆盖（后端 keyword 匹配 name / event_pattern）
       search: false,
     },
     {
@@ -146,6 +173,7 @@ const SilenceList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
+      fixed: 'right',
       width: 100,
       hideInTable: !hasAnyAction,
       render: (_, record) => {
@@ -201,12 +229,25 @@ const SilenceList: React.FC = () => {
           },
         ]}
       />
+      <ProFormText
+        name="name"
+        label={t('pages.notify.common.name')}
+        colProps={HALF}
+        placeholder={t('pages.notify.common.name.placeholder')}
+        rules={[rules.max(64)]}
+      />
+      <ProFormText
+        name="description"
+        label={t('pages.notify.common.description')}
+        colProps={HALF}
+        rules={[rules.max(255)]}
+      />
       <ProFormSelect
         name="severityMax"
         label={t('pages.notify.silence.column.severityMax')}
         colProps={HALF}
         tooltip={t('pages.notify.silence.form.severityMax.tooltip')}
-        valueEnum={severityEnum}
+        options={severityOptions}
         allowClear
         placeholder={t('pages.notify.silence.form.severityMax.placeholder')}
       />
@@ -310,6 +351,7 @@ const SilenceList: React.FC = () => {
         actionRef={actionRef}
         search={{ labelWidth: 'auto' }}
         columns={columns}
+        scroll={{ x: 'max-content' }}
         request={async (params) => {
           const result = await listSilences({
             page: params.current,
@@ -324,6 +366,8 @@ const SilenceList: React.FC = () => {
 
       {/* 新建静默规则（抽屉）：spec 一次成型；biz 创建后不可改 */}
       <DrawerForm<SilenceFormValues>
+        // 保持 Dayjs 原值：默认 string 会转成字符串，提交时 .format / .toISOString 抛错
+        dateFormatter={false}
         key="create-silence"
         title={t('pages.notify.silence.create.title')}
         width={720}
@@ -356,9 +400,11 @@ const SilenceList: React.FC = () => {
       {/* 编辑静默规则（抽屉）：spec 整组替换，enabled 独立启停；打开时拉取详情；业务只读占位 */}
       {editRow && (
         <DrawerForm<SilenceFormValues>
+          // 保持 Dayjs 原值：默认 string 会转成字符串，提交时 .format / .toISOString 抛错
+          dateFormatter={false}
           key={`edit-silence-${editRow.id}`}
           title={t('pages.notify.silence.edit.title', {
-            name: editRow.eventPattern,
+            name: editRow.name || editRow.eventPattern,
           })}
           width={720}
           grid
@@ -372,6 +418,8 @@ const SilenceList: React.FC = () => {
           request={async ({ id }) => {
             const { silence } = await getSilence(id);
             return {
+              name: silence.name,
+              description: silence.description,
               eventPattern: silence.eventPattern,
               severityMax: silence.severityMax,
               windowEnabled: !!silence.timeWindow,

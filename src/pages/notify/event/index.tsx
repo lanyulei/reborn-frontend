@@ -106,6 +106,7 @@ const EventList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
+      fixed: 'right',
       width: 100,
       // 下钻：事件 → 该事件的全部发送任务（需发送任务页权限）
       hideInTable: !access.canNotifyDispatch,
@@ -123,6 +124,7 @@ const EventList: React.FC = () => {
       rowKey="id"
       search={{ labelWidth: 'auto' }}
       columns={columns}
+      scroll={{ x: 'max-content' }}
       request={async (params) => {
         const result = await listEvents({
           page: params.current,

@@ -55,8 +55,14 @@ export async function logout(): Promise<void> {
 }
 
 /** GetLoginProfile 查询当前登录用户信息与角色 */
-export async function getLoginProfile(): Promise<LoginProfile> {
-  return authRequest<LoginProfile>('/api/v1/me', { method: 'GET' });
+export async function getLoginProfile(options?: {
+  /** silent：启动时由 getInitialState 自行处理失败（跳登录 / 重试页），不弹提示 */
+  silent?: boolean;
+}): Promise<LoginProfile> {
+  return authRequest<LoginProfile>('/api/v1/me', {
+    method: 'GET',
+    silent: options?.silent,
+  });
 }
 
 /**

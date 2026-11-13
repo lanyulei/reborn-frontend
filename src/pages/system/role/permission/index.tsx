@@ -57,6 +57,8 @@ const RolePermission: React.FC = () => {
   // 内置角色的授权仅超管可改：非超管只读浏览（无保存、控件禁用、顶部提示）
   const readOnly = role?.builtin === true && !isAdmin;
   const [loading, setLoading] = useState(true);
+  // 仅当授权成功加载后才允许保存：全量覆盖语义下，加载中 / 失败时保存会清空权限
+  const [loaded, setLoaded] = useState(false);
   const [menuChecked, setMenuChecked] = useState<string[]>([]);
   const [elemChecked, setElemChecked] = useState<string[]>([]);
   /** 接口勾选（= 保存的 apis 全量；含结构自动勾选与手动勾选） */
@@ -75,6 +77,7 @@ const RolePermission: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      setLoaded(false);
       try {
         const [{ role: detail }, grants, catRes] = await Promise.all([
           getRole(roleId),
@@ -108,6 +111,7 @@ const RolePermission: React.FC = () => {
         // 默认选中第一个已授权菜单，无授权时取目录首项
         const firstMenu = menuCodes[0] as MenuPermissionCode | undefined;
         if (firstMenu) setSelectedMenu(firstMenu);
+        setLoaded(true);
       } finally {
         setLoading(false);
       }
@@ -320,7 +324,7 @@ const RolePermission: React.FC = () => {
   // 接口勾选即真实授权全量保存——后端接口校验只认 apis，不随菜单/标签级联；
   // 执行中的 loading 由确认框的确定按钮承担
   const save = async () => {
-    if (!roleId) return;
+    if (!roleId || !loaded) return;
     const menus = new Set<string>(
       menuChecked.filter((code) => MENU_PERMISSION_CODES.has(code)),
     );
@@ -498,7 +502,7 @@ const RolePermission: React.FC = () => {
           headerBordered
           loading={loading}
           extra={
-            readOnly ? null : (
+            readOnly || !loaded ? null : (
               <a
                 onClick={() => {
                   // 二次确认，避免误触覆盖权限

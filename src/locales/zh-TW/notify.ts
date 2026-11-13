@@ -11,6 +11,10 @@ export default {
   'pages.notify.common.biz.placeholder': '留空 = default',
   'pages.notify.common.biz.filterPlaceholder': '業務標識（精確）',
   'pages.notify.common.bizIdRule': '1-64 位小寫字母/數字/底線/連字號',
+  'pages.notify.common.name': '名稱',
+  'pages.notify.common.name.placeholder': '選填，≤64 位，列表展示用',
+  'pages.notify.common.description': '說明',
+  'pages.notify.common.keyword.placeholder': '名稱 / 事件匹配模式',
   'pages.notify.common.eventPattern': '事件匹配模式',
   'pages.notify.common.eventPattern.rule':
     '精確 / 前綴萬用（monitor.alert.*）/ 全匹配（*）',
@@ -83,6 +87,17 @@ export default {
     '開啟後儲存將停用加簽（忽略上方輸入）',
   'pages.notify.channel.form.qps': '限流 QPS',
   'pages.notify.channel.form.burst': '突發上限',
+  'pages.notify.channel.form.cardUrl': '卡片跳轉連結',
+  'pages.notify.channel.form.cardUrl.tooltip':
+    '範本格式為卡片時生效，須 https；留空時釘釘/企微降級為 Markdown，飛書卡片無按鈕',
+  'pages.notify.channel.form.cardUrl.rule': '須以 https:// 開頭',
+  'pages.notify.channel.form.cardButton': '卡片按鈕文字',
+  'pages.notify.channel.form.cardButton.placeholder': '預設「查看詳情」',
+  'pages.notify.channel.form.cardButton.needUrl': '請先填寫卡片跳轉連結',
+  'pages.notify.channel.form.perMinute': '每分鐘配額',
+  'pages.notify.channel.form.perMinute.tooltip':
+    'QPS 為 0 時生效；都為 0 則按渠道類型預設（釘釘/企微 20 則/分鐘，飛書 100 則/分鐘）',
+  'pages.notify.channel.form.perMinute.placeholder': '0 = 按類型預設',
   'pages.notify.channel.test.title': '發送測試事件：{name}',
   'pages.notify.channel.test.defaultTitle': '通知頻道連通性測試',
   'pages.notify.channel.test.submit': '發送',
@@ -193,6 +208,9 @@ export default {
   'pages.notify.template.column.eventType': '事件類型',
   'pages.notify.template.column.channelType': '頻道類型',
   'pages.notify.template.column.subject': '標題範本',
+  'pages.notify.template.column.format': '輸出格式',
+  'pages.notify.template.form.format.tooltip':
+    '郵件僅 HTML 生效（其餘按純文字）；群機器人：卡片 → 卡片訊息、Markdown/HTML → Markdown、文字 → 文字；Webhook 原樣透傳',
   'pages.notify.template.column.version': '版本',
   'pages.notify.template.delete.title': '刪除範本',
   'pages.notify.template.delete.description':

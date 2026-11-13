@@ -185,6 +185,8 @@ export default {
   // 请求错误（requestErrorConfig / request.ts）
   'app.request.httpFailed': '请求失败（HTTP {status}）',
   'app.request.retry': '请求失败，请重试',
+  'app.profile.loadFailed': '登录信息加载失败，请稍后重试',
+  'app.profile.retry': '重新加载',
   'app.request.noResponse': 'None response! Please retry.',
   'app.request.error': 'Request error, please retry.',
 };

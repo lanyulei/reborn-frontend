@@ -11,6 +11,10 @@ export default {
   'pages.notify.common.biz.placeholder': '留空 = default',
   'pages.notify.common.biz.filterPlaceholder': '业务标识（精确）',
   'pages.notify.common.bizIdRule': '1-64 位小写字母/数字/下划线/连字符',
+  'pages.notify.common.name': '名称',
+  'pages.notify.common.name.placeholder': '可选，≤64 位，列表展示用',
+  'pages.notify.common.description': '说明',
+  'pages.notify.common.keyword.placeholder': '名称 / 事件匹配模式',
   'pages.notify.common.eventPattern': '事件匹配模式',
   'pages.notify.common.eventPattern.rule':
     '精确 / 前缀通配（monitor.alert.*）/ 全匹配（*）',
@@ -82,6 +86,17 @@ export default {
     '开启后保存将停用加签（忽略上方输入）',
   'pages.notify.channel.form.qps': '限流 QPS',
   'pages.notify.channel.form.burst': '突发上限',
+  'pages.notify.channel.form.cardUrl': '卡片跳转链接',
+  'pages.notify.channel.form.cardUrl.tooltip':
+    '模板格式为卡片时生效，须 https；留空时钉钉/企微降级为 Markdown，飞书卡片无按钮',
+  'pages.notify.channel.form.cardUrl.rule': '须以 https:// 开头',
+  'pages.notify.channel.form.cardButton': '卡片按钮文字',
+  'pages.notify.channel.form.cardButton.placeholder': '缺省“查看详情”',
+  'pages.notify.channel.form.cardButton.needUrl': '请先填写卡片跳转链接',
+  'pages.notify.channel.form.perMinute': '每分钟配额',
+  'pages.notify.channel.form.perMinute.tooltip':
+    'QPS 为 0 时生效；都为 0 则按渠道类型缺省（钉钉/企微 20 条/分钟，飞书 100 条/分钟）',
+  'pages.notify.channel.form.perMinute.placeholder': '0 = 按类型缺省',
   'pages.notify.channel.test.title': '发送测试事件：{name}',
   'pages.notify.channel.test.defaultTitle': '通知渠道连通性测试',
   'pages.notify.channel.test.submit': '发送',
@@ -192,6 +207,9 @@ export default {
   'pages.notify.template.column.eventType': '事件类型',
   'pages.notify.template.column.channelType': '渠道类型',
   'pages.notify.template.column.subject': '标题模板',
+  'pages.notify.template.column.format': '输出格式',
+  'pages.notify.template.form.format.tooltip':
+    '邮件仅 HTML 生效（其余按纯文本）；群机器人：卡片 → 卡片消息、Markdown/HTML → Markdown、文本 → 文本；Webhook 原样透传',
   'pages.notify.template.column.version': '版本',
   'pages.notify.template.delete.title': '删除模板',
   'pages.notify.template.delete.description':

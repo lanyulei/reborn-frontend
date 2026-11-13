@@ -5,7 +5,7 @@
 import { UploadOutlined } from '@ant-design/icons';
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, App, Button, Modal, Space, Upload } from 'antd';
+import { Alert, App, Button, Modal, Space, Typography, Upload } from 'antd';
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import {
@@ -162,6 +162,13 @@ const toRows = (
   });
 };
 
+/** 后端约定：资源已写入但关联未建成的行，message 以此开头（biz ImportRelationFailedPrefix） */
+const RELATION_FAILED_PREFIX = 'relation failed: ';
+
+const relationFailures = (result: ImportResult): number =>
+  result.results.filter((r) => r.message?.startsWith(RELATION_FAILED_PREFIX))
+    .length;
+
 export const ImportModal: React.FC<{
   open: boolean;
   onClose: () => void;
@@ -221,7 +228,18 @@ export const ImportModal: React.FC<{
       const result = await importCIs(model.code, rows, false);
       setPreview(result);
       setDone(true);
-      message.success(t('pages.cmdb.import.result', summary(result)));
+      const relFailed = relationFailures(result);
+      if (relFailed > 0) {
+        // 资源已写入但部分关联未建成：整体不算失败，单独提示
+        message.warning(
+          `${t('pages.cmdb.import.result', summary(result))}${t(
+            'pages.cmdb.import.relationFailed',
+            { n: relFailed },
+          )}`,
+        );
+      } else {
+        message.success(t('pages.cmdb.import.result', summary(result)));
+      }
       onImported();
     } finally {
       setLoading(false);
@@ -246,6 +264,15 @@ export const ImportModal: React.FC<{
         title: t('pages.cmdb.import.column.message'),
         dataIndex: 'message',
         ellipsis: true,
+        // 「资源已写入、关联失败」的行用警告色标出（action 仍是新建 / 更新 / 无变化）
+        render: (_, r) =>
+          r.message?.startsWith(RELATION_FAILED_PREFIX) ? (
+            <Typography.Text type="warning" ellipsis={{ tooltip: r.message }}>
+              {r.message}
+            </Typography.Text>
+          ) : (
+            (r.message ?? '')
+          ),
       },
     ],
     [t, actionEnum],
@@ -308,7 +335,9 @@ export const ImportModal: React.FC<{
             <Alert
               type={
                 done
-                  ? 'success'
+                  ? relationFailures(preview) > 0 || (preview.failed ?? 0) > 0
+                    ? 'warning'
+                    : 'success'
                   : (preview.failed ?? 0) > 0
                     ? 'warning'
                     : 'info'

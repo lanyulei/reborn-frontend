@@ -27,6 +27,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
+import { createStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import type React from 'react';
 import {
@@ -47,7 +48,7 @@ import {
 import {
   getModel,
   getModelView,
-  listModels,
+  listAllModels,
   type ViewSection,
 } from '@/services/cmdb/model';
 import {
@@ -67,7 +68,6 @@ import type {
   CmdbRelationType,
 } from '@/services/cmdb/typings';
 import { usePermissions } from '@/services/system/permissions';
-import { getErrorMessage } from '@/services/system/request';
 import {
   useEnumText,
   useFormRules,
@@ -78,7 +78,7 @@ import {
 import { toTableResult } from '@/utils/table';
 import { CIForm } from '../components/CIForm';
 import { HistoryDiff, isRelationAction } from '../components/HistoryDiff';
-import { ModelIcon, UiIcon } from '../components/icons';
+import { ModelIcon } from '../components/icons';
 import {
   CMDB_ACTION_META,
   CMDB_ANY_MODEL,
@@ -89,6 +89,21 @@ import {
 import { renderAttrValue } from '../components/schema';
 import { useCmdbStyles } from '../components/styles';
 import { TopologyPanel } from '../components/TopologyPanel';
+import { useSourceText } from '../components/useSourceText';
+import { useUserNames } from '../components/useUserNames';
+
+/** 关联 Tab 内 ProTable 的紧凑留白（按用户指定的选择器与数值） */
+const useRelationStyles = createStyles(({ css }) => ({
+  relationTables: css`
+    .ant-pro-card > .ant-pro-card-body {
+      padding-inline: 8px;
+      padding-block: 6px;
+    }
+    .ant-pro-table-list-toolbar-container {
+      padding: 5px 0 12px;
+    }
+  `,
+}));
 
 /** 关联面板：某关系类型某方向上的关联资源表格与操作 */
 const RelationPanel: React.FC<{
@@ -204,6 +219,7 @@ const RelationPanel: React.FC<{
     {
       title: t('common.column.action'),
       valueType: 'option',
+      fixed: 'right',
       width: 120,
       hideInTable: !canLink,
       render: (_, r) => [
@@ -240,6 +256,7 @@ const RelationPanel: React.FC<{
         options={false}
         size="small"
         columns={columns}
+        scroll={{ x: 'max-content' }}
         headerTitle={
           <Space>
             <Typography.Text type="secondary">
@@ -381,8 +398,8 @@ const RelationPanel: React.FC<{
               await linkCIs(ci.id, summary.relationType, summary.direction, [
                 created.id,
               ]);
-            } catch (error) {
-              message.error(getErrorMessage(error));
+            } catch {
+              // authRequest 已按后端 message 提示，不重复弹
             }
             refresh();
           }}
@@ -398,7 +415,10 @@ const HistoryPanel: React.FC<{
   fields: CmdbField[];
 }> = ({ ciId, version, fields }) => {
   const t = useT();
+  const { styles } = useCmdbStyles();
   const actionEnum = useValueEnum(CMDB_ACTION_META);
+  const userNames = useUserNames();
+  const sourceText = useSourceText();
   const columns: ProColumns<CmdbHistory>[] = [
     {
       title: t('pages.cmdb.detail.history.column.time'),
@@ -418,11 +438,13 @@ const HistoryPanel: React.FC<{
       width: 220,
       ellipsis: true,
       copyable: true,
+      renderText: (val) => userNames[val ?? ''] || val,
     },
     {
       title: t('pages.cmdb.detail.history.column.source'),
       dataIndex: 'source',
       width: 100,
+      renderText: (val) => sourceText(val),
     },
     {
       title: t('pages.cmdb.detail.history.column.diff'),
@@ -433,39 +455,43 @@ const HistoryPanel: React.FC<{
     },
   ];
   return (
-    <ProTable<CmdbHistory>
-      cardBordered
-      key={version}
-      rowKey="id"
-      search={false}
-      options={false}
-      size="small"
-      columns={columns}
-      expandable={{
-        rowExpandable: (r) => !isRelationAction(r.action),
-        expandedRowRender: (r) => (
-          <HistoryDiff action={r.action} diff={r.diff} fields={fields} />
-        ),
-      }}
-      request={async (params) => {
-        const result = await listCIHistory(ciId, {
-          page: params.current,
-          pageSize: params.pageSize,
-        });
-        return toTableResult(result);
-      }}
-    />
+    // 仅补表格最外层边框（单元格无线）
+    <div className={styles.tableWrap}>
+      {/* 与用户管理页的表格保持一致：默认密度 + 工具栏（刷新 / 密度 / 列设置）；
+          历史列无可筛选项，不渲染查询表单 */}
+      <ProTable<CmdbHistory>
+        cardBordered
+        key={version}
+        rowKey="id"
+        search={false}
+        columns={columns}
+        expandable={{
+          rowExpandable: (r) => !isRelationAction(r.action),
+          expandedRowRender: (r) => (
+            <HistoryDiff action={r.action} diff={r.diff} fields={fields} />
+          ),
+        }}
+        request={async (params) => {
+          const result = await listCIHistory(ciId, {
+            page: params.current,
+            pageSize: params.pageSize,
+          });
+          return toTableResult(result);
+        }}
+      />
+    </div>
   );
 };
 
-const CIDetailPage: React.FC = () => {
-  const id = useParams<{ id: string }>().id ?? '';
+const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
   const t = useT();
   const { message, modal } = App.useApp();
   const has = usePermissions();
   const statusText = useEnumText(CMDB_CI_STATUS_META);
   const ownerText = useEnumText(CMDB_FIELD_OWNER_META);
-  const { styles } = useCmdbStyles();
+  const { styles: pageStyles } = useCmdbStyles();
+  const { styles: relationStyles } = useRelationStyles();
+  const styles = { ...pageStyles, ...relationStyles };
   const [ci, setCI] = useState<CmdbCI | null>(null);
   const [summaries, setSummaries] = useState<CmdbRelationSummary[]>([]);
   const [model, setModel] = useState<CmdbModel | null>(null);
@@ -475,33 +501,58 @@ const CIDetailPage: React.FC = () => {
   const [sections, setSections] = useState<ViewSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  // 最近一次 load 的序号：只采纳最新一次的结果
+  const loadSeq = useRef(0);
   const [editOpen, setEditOpen] = useState(false);
 
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     try {
       const detail = await getCI(id);
-      setCI(detail.ci);
-      setSummaries(detail.relations);
       const [md, all, view] = await Promise.all([
         getModel(detail.ci.modelCode),
-        listModels({ page: 1, pageSize: 100 }),
+        listAllModels(),
         getModelView(detail.ci.modelCode),
       ]);
+      if (seq !== loadSeq.current) return;
+      setCI(detail.ci);
+      setSummaries(detail.relations);
       setModel(md.model);
       setFields(md.fields);
       setRelTypes(md.relationTypes);
       setModels(all.items);
       setSections(view.sections);
-    } catch {
-      setNotFound(true);
+      setNotFound(false);
+      setLoadFailed(false);
+    } catch (error) {
+      if (seq !== loadSeq.current) return;
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      // 仅 404 视为资源不存在；网络 / 5xx 等可重试（已有数据时保留当前展示）
+      if (status === 404) setNotFound(true);
+      else setLoadFailed(true);
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // 关联增删后的轻量刷新：只重取资源与关联汇总（模型 / 字段 / 布局不会因此变化）
+  const refreshCI = useCallback(async () => {
+    const seq = loadSeq.current;
+    try {
+      const detail = await getCI(id);
+      if (seq !== loadSeq.current) return;
+      setCI(detail.ci);
+      setSummaries(detail.relations);
+    } catch {
+      // authRequest 已提示；保留当前展示
+    }
+  }, [id]);
 
   const transitionItems = useMemo(
     () =>
@@ -591,8 +642,23 @@ const CIDetailPage: React.FC = () => {
       <PageContainer title={false}>
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={t('pages.cmdb.detail.notFound')}
-        />
+          description={
+            notFound
+              ? t('pages.cmdb.detail.notFound')
+              : t('pages.cmdb.detail.loadFailed')
+          }
+        >
+          {!notFound && loadFailed && (
+            <Button
+              onClick={() => {
+                setLoading(true);
+                void load();
+              }}
+            >
+              {t('pages.cmdb.detail.retry')}
+            </Button>
+          )}
+        </Empty>
       </PageContainer>
     );
   }
@@ -627,6 +693,18 @@ const CIDetailPage: React.FC = () => {
       .map((code) => activeFields.find((f) => f.code === code))
       .filter((f): f is CmdbField => !!f),
   }));
+  // 布局未收录的字段（如新建后尚未分组）归「其他」，否则在详情里不可见
+  const grouped = new Set(
+    attrGroups.flatMap((g) => g.fields.map((f) => f.code)),
+  );
+  const ungrouped = activeFields.filter((f) => !grouped.has(f.code));
+  if (ungrouped.length > 0) {
+    attrGroups.push({
+      key: 'attrs-other',
+      title: t('pages.cmdb.modelDetail.fields.otherGroup'),
+      fields: ungrouped,
+    });
+  }
   // 关联面板：按布局顺序匹配汇总；布局未列出的关系方向不展示（缺省布局包含全部）
   const relationPanels = sections
     .filter((s) => s.type === 'relation')
@@ -643,17 +721,6 @@ const CIDetailPage: React.FC = () => {
 
   return (
     <PageContainer title={false}>
-      <div className={styles.pageBar}>
-        <Button
-          type="text"
-          aria-label={t('pages.cmdb.detail.backToList')}
-          onClick={() => history.push(`/cmdb/ci?model=${ci.modelCode}`)}
-          icon={<UiIcon name="back" size={18} />}
-        />
-        <span className={styles.pageBarTitle}>
-          {model.name}【{ci.name}】
-        </span>
-      </div>
       <div className={styles.summaryHeader}>
         <ModelIcon
           icon={model.icon}
@@ -806,37 +873,40 @@ const CIDetailPage: React.FC = () => {
                   description={t('pages.cmdb.detail.relation.empty')}
                 />
               ) : (
-                <Collapse
-                  size="small"
-                  defaultActiveKey={relationPanels
-                    .filter((p) => !p.section.collapsed)
-                    .map(
-                      (p) => `${p.summary.relationType}:${p.summary.direction}`,
-                    )}
-                  items={relationPanels.map(({ section, summary: s }) => ({
-                    key: `${s.relationType}:${s.direction}`,
-                    label: (
-                      <Space size={4}>
-                        {section.title || s.name}
-                        <Badge
-                          count={Number(s.count)}
-                          showZero
-                          color="blue"
-                          overflowCount={9999}
+                <div className={styles.relationTables}>
+                  <Collapse
+                    size="small"
+                    defaultActiveKey={relationPanels
+                      .filter((p) => !p.section.collapsed)
+                      .map(
+                        (p) =>
+                          `${p.summary.relationType}:${p.summary.direction}`,
+                      )}
+                    items={relationPanels.map(({ section, summary: s }) => ({
+                      key: `${s.relationType}:${s.direction}`,
+                      label: (
+                        <Space size={4}>
+                          {section.title || s.name}
+                          <Badge
+                            count={Number(s.count)}
+                            showZero
+                            color="blue"
+                            overflowCount={9999}
+                          />
+                        </Space>
+                      ),
+                      children: (
+                        <RelationPanel
+                          ci={ci}
+                          summary={s}
+                          models={models}
+                          columns={section.columns}
+                          onChanged={() => void refreshCI()}
                         />
-                      </Space>
-                    ),
-                    children: (
-                      <RelationPanel
-                        ci={ci}
-                        summary={s}
-                        models={models}
-                        columns={section.columns}
-                        onChanged={() => void load()}
-                      />
-                    ),
-                  }))}
-                />
+                      ),
+                    }))}
+                  />
+                </div>
               ),
           },
           {
@@ -864,6 +934,12 @@ const CIDetailPage: React.FC = () => {
       />
     </PageContainer>
   );
+};
+
+/** 按资源 id 设 key：页内跳转到另一资源时整页重建，避免沿用上一资源的表格与状态 */
+const CIDetailPage: React.FC = () => {
+  const id = useParams<{ id: string }>().id ?? '';
+  return <CIDetailBody key={id} id={id} />;
 };
 
 export default CIDetailPage;

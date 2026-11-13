@@ -97,6 +97,7 @@ const DispatchList: React.FC = () => {
     {
       title: t('common.column.action'),
       valueType: 'option',
+      fixed: 'right',
       width: 100,
       // 下钻：任务 → 逐次投递尝试明细（需投递明细页权限）
       hideInTable: !access.canNotifyDeliveryLog,
@@ -120,6 +121,7 @@ const DispatchList: React.FC = () => {
         initialValues: { eventId: searchParams.get('eventId') ?? undefined },
       }}
       columns={columns}
+      scroll={{ x: 'max-content' }}
       request={async (params) => {
         if (channelFilter.guard(params)) {
           return { data: [], total: 0, success: true };
