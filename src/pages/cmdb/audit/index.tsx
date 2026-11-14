@@ -230,7 +230,12 @@ const SchemaAuditTab: React.FC = () => {
       dataIndex: 'keyword',
       ellipsis: true,
       render: (_, r) =>
-        r.targetName ? `${r.targetName} (${r.targetCode})` : r.targetCode,
+        // 唯一规则的对象编码是规则 ID（无阅读价值），只显示名称
+        r.targetName
+          ? r.targetType === 'unique_rule'
+            ? r.targetName
+            : `${r.targetName} (${r.targetCode})`
+          : r.targetCode,
       fieldProps: { placeholder: t('pages.cmdb.audit.keyword.placeholder') },
     },
     {

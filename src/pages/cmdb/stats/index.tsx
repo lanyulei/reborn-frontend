@@ -5,12 +5,27 @@
  * 不影响其他页面；天数范围 7 / 30 / 90。
  */
 import { PageContainer } from '@ant-design/pro-components';
-import { Alert, Card, Col, Row, Segmented, Spin } from 'antd';
+import { history } from '@umijs/max';
+import {
+  Alert,
+  Card,
+  Col,
+  Row,
+  Segmented,
+  Spin,
+  Table,
+  Typography,
+} from 'antd';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { getOverview } from '@/services/cmdb/insight';
+import { getOverview, getQuality } from '@/services/cmdb/insight';
 import { listAllModels, listRelationTypes } from '@/services/cmdb/model';
-import type { CmdbCIStatus, CmdbOverview } from '@/services/cmdb/typings';
+import type {
+  CmdbCIStatus,
+  CmdbOverview,
+  CmdbQualityIssue,
+  CmdbQualityRow,
+} from '@/services/cmdb/typings';
 import { useEnumText, useT } from '@/utils/i18n';
 import {
   BarList,
@@ -22,6 +37,18 @@ import { ModelGlyph } from '../components/icons';
 import { CMDB_CI_STATUS_META } from '../components/meta';
 import { useCmdbStyles } from '../components/styles';
 
+/** 数据质量各问题列：问题类别 → 计数字段 */
+const QUALITY_ISSUES: {
+  issue: CmdbQualityIssue;
+  field: 'missingRequired' | 'noOwner' | 'orphan' | 'stale' | 'outdated';
+}[] = [
+  { issue: 'missing_required', field: 'missingRequired' },
+  { issue: 'no_owner', field: 'noOwner' },
+  { issue: 'orphan', field: 'orphan' },
+  { issue: 'stale', field: 'stale' },
+  { issue: 'outdated', field: 'outdated' },
+];
+
 const StatsPage: React.FC = () => {
   const t = useT();
   const { styles } = useCmdbStyles();
@@ -31,6 +58,26 @@ const StatsPage: React.FC = () => {
   // failed 且有 data = 降级：只有模型数 / 资源数 / 关联数 / 按模型分布
   const [data, setData] = useState<Partial<CmdbOverview> | null>(null);
   const [failed, setFailed] = useState(false);
+  // 数据质量：独立加载（接口不可用 / 未授权时整块不展示）
+  const [quality, setQuality] = useState<{
+    items: CmdbQualityRow[];
+    outdatedDays: number;
+  } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getQuality()
+      .then((res) => {
+        if (!cancelled)
+          setQuality({
+            items: res.items ?? [],
+            outdatedDays: res.outdatedDays ?? 180,
+          });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -216,6 +263,67 @@ const StatsPage: React.FC = () => {
               </Card>
             </Col>
           </Row>
+          {quality && quality.items.length > 0 && (
+            <Card
+              variant="outlined"
+              size="small"
+              title={t('pages.cmdb.quality.title')}
+              extra={
+                <Typography.Text type="secondary">
+                  {t('pages.cmdb.quality.tip')}
+                </Typography.Text>
+              }
+              style={{ marginTop: 16 }}
+            >
+              <Table<CmdbQualityRow>
+                rowKey="modelCode"
+                size="small"
+                pagination={false}
+                dataSource={quality.items}
+                columns={[
+                  {
+                    title: t('pages.cmdb.ci.column.model'),
+                    dataIndex: 'modelName',
+                    render: (_, r) => r.modelName || r.modelCode,
+                  },
+                  {
+                    title: t('pages.cmdb.quality.total'),
+                    dataIndex: 'total',
+                    align: 'right',
+                    width: 110,
+                    render: (_, r) => Number(r.total ?? 0).toLocaleString(),
+                  },
+                  ...QUALITY_ISSUES.map(({ issue, field }) => ({
+                    title:
+                      issue === 'outdated'
+                        ? t('pages.cmdb.quality.issue.outdated', {
+                            days: quality.outdatedDays,
+                          })
+                        : t(`pages.cmdb.quality.issue.${issue}`),
+                    align: 'right' as const,
+                    width: 130,
+                    render: (_: unknown, r: CmdbQualityRow) => {
+                      const n = Number(r[field] ?? 0);
+                      // 有问题的数字可点：跳到该模型的资源列表并带上问题筛选
+                      return n > 0 ? (
+                        <a
+                          onClick={() =>
+                            history.push(
+                              `/cmdb/ci?model=${r.modelCode}&issue=${issue}`,
+                            )
+                          }
+                        >
+                          {n.toLocaleString()}
+                        </a>
+                      ) : (
+                        <Typography.Text type="secondary">0</Typography.Text>
+                      );
+                    },
+                  })),
+                ]}
+              />
+            </Card>
+          )}
           <Card
             variant="outlined"
             size="small"

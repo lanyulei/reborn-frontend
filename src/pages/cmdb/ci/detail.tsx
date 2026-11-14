@@ -26,6 +26,7 @@ import {
   Tabs,
   Tag,
   Typography,
+  theme,
 } from 'antd';
 import { createStyles } from 'antd-style';
 import dayjs from 'dayjs';
@@ -38,7 +39,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { DeleteConfirmLink } from '@/components/TableActions';
 import {
   getCI,
   listCIHistory,
@@ -115,7 +115,8 @@ const RelationPanel: React.FC<{
   onChanged: () => void;
 }> = ({ ci, summary, models, columns: viewColumns, onChanged }) => {
   const t = useT();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
+  const { token } = theme.useToken();
   const has = usePermissions();
   const rules = useFormRules();
   const submitter = useSubmitter();
@@ -226,23 +227,33 @@ const RelationPanel: React.FC<{
         <a key="move" onClick={() => setMoveRow(r)}>
           {t('pages.cmdb.detail.relation.move')}
         </a>,
-        <DeleteConfirmLink
+        <a
           key="unlink"
-          title={t('pages.cmdb.detail.relation.unlink')}
-          description={t('pages.cmdb.detail.relation.unlink.confirm')}
-          onConfirm={async () => {
-            await unlinkCI(
-              ci.id,
-              summary.relationType,
-              summary.direction,
-              r.ci.id,
-            );
-            message.success(t('common.msg.updated'));
-            refresh();
-          }}
+          style={{ color: token.colorError }}
+          onClick={() =>
+            // 二次确认弹窗（与模型详情的删除 / 停用确认同一写法）
+            modal.confirm({
+              title: t('pages.cmdb.detail.relation.unlink.title', {
+                name: r.ci.name,
+              }),
+              content: t('pages.cmdb.detail.relation.unlink.confirm'),
+              okButtonProps: { danger: true },
+              onOk: async () => {
+                // 失败时 authRequest 已提示；抛出以保持弹窗打开
+                await unlinkCI(
+                  ci.id,
+                  summary.relationType,
+                  summary.direction,
+                  r.ci.id,
+                );
+                message.success(t('common.msg.updated'));
+                refresh();
+              },
+            })
+          }
         >
           {t('pages.cmdb.detail.relation.unlink')}
-        </DeleteConfirmLink>,
+        </a>,
       ],
     },
   ];
@@ -745,7 +756,7 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
             )}
             {ci.owner && (
               <span>
-                {t('pages.cmdb.ci.column.owner')}：{ci.owner}
+                {t('pages.cmdb.ci.column.owner')}：{ci.ownerName || ci.owner}
               </span>
             )}
             {ci.tags?.length ? (
@@ -912,7 +923,7 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
           {
             key: 'topology',
             label: t('pages.cmdb.detail.tab.topology'),
-            children: <TopologyPanel ciId={ci.id} />,
+            children: <TopologyPanel ciId={ci.id} models={models} />,
           },
           {
             key: 'history',

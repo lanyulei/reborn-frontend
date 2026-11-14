@@ -6,9 +6,10 @@ import { authRequest, getErrorMessage } from '@/services/system/request';
 import type { PagedResult } from '@/services/system/typings';
 import type {
   CmdbCI,
-  CmdbHistory,
-  CmdbDirection,
   CmdbCIStatus,
+  CmdbDirection,
+  CmdbHistory,
+  CmdbQualityIssue,
   CmdbRelationSummary,
 } from './typings';
 
@@ -29,6 +30,12 @@ export interface ListCIsParams {
   relNone?: boolean;
   /** 游标分页（上一页 nextCursor）；提供时忽略 page */
   cursor?: string;
+  /** 负责人精确匹配（用户 ID 或原文） */
+  owner?: string;
+  /** true = 查询回收站（已删除的资源） */
+  deleted?: boolean;
+  /** 数据质量问题筛选（与看板同口径） */
+  issue?: CmdbQualityIssue;
 }
 
 export async function listCIs(
@@ -121,6 +128,66 @@ export async function deleteCI(
   });
 }
 
+/** 从回收站恢复；名称 / 唯一规则已被占用时 409 */
+export async function restoreCI(id: string): Promise<{ ci: CmdbCI }> {
+  return authRequest<{ ci: CmdbCI }>(`/api/v1/cmdb/ci/${id}:restore`, {
+    method: 'POST',
+    data: {},
+  });
+}
+
+/** 批量操作结果：逐条成功 / 失败及原因（与请求 ids 同序） */
+export interface BatchCIsResult {
+  succeeded?: number;
+  failed?: number;
+  results?: { id: string; name?: string; ok?: boolean; message?: string }[];
+}
+
+export interface BatchUpdateParams {
+  ids: string[];
+  /** 负责人（用户 ID）；空串 = 清空；不传不改 */
+  owner?: string;
+  env?: string;
+  addTags?: string[];
+  removeTags?: string[];
+}
+
+export async function batchUpdateCIs(
+  body: BatchUpdateParams,
+): Promise<BatchCIsResult> {
+  return authRequest<BatchCIsResult>('/api/v1/cmdb/ci:batchUpdate', {
+    method: 'POST',
+    data: body,
+  });
+}
+
+export async function batchTransitionCIs(
+  ids: string[],
+  status: CmdbCIStatus,
+): Promise<BatchCIsResult> {
+  return authRequest<BatchCIsResult>('/api/v1/cmdb/ci:batchTransition', {
+    method: 'POST',
+    data: { ids, status },
+  });
+}
+
+export async function batchDeleteCIs(ids: string[]): Promise<BatchCIsResult> {
+  return authRequest<BatchCIsResult>('/api/v1/cmdb/ci:batchDelete', {
+    method: 'POST',
+    data: { ids },
+  });
+}
+
+/** 可选负责人（启用的系统用户，仅 ID 与显示名，至多 50 个）。静默：选择器自行降级 */
+export async function listOwnerCandidates(
+  keyword?: string,
+): Promise<{ items?: { id: string; name: string }[] }> {
+  return authRequest<{ items?: { id: string; name: string }[] }>(
+    '/api/v1/cmdb/owner-candidate',
+    { method: 'GET', params: keyword ? { keyword } : undefined, silent: true },
+  );
+}
+
 export interface ImportRelation {
   relationType: string;
   direction: CmdbDirection;
@@ -179,6 +246,7 @@ export async function exportCIs(
     | 'status'
     | 'env'
     | 'tag'
+    | 'owner'
     | 'attrs'
     | 'relType'
     | 'relDirection'

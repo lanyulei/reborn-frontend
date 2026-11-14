@@ -12,6 +12,7 @@ import type { PagedResult } from '@/services/system/typings';
 import type {
   CmdbModelGroup,
   CmdbOverview,
+  CmdbQualityRow,
   CmdbSchemaAction,
   CmdbSchemaAudit,
   CmdbSchemaTargetType,
@@ -89,6 +90,16 @@ export async function getOverview(days?: number): Promise<CmdbOverview> {
   return quietGet<CmdbOverview>(
     '/api/v1/cmdb/overview',
     days ? { days } : undefined,
+  );
+}
+
+/** GetQuality 数据质量：按模型的问题资源数（受数据范围约束） */
+export async function getQuality(): Promise<{
+  items?: CmdbQualityRow[];
+  outdatedDays?: number;
+}> {
+  return quietGet<{ items?: CmdbQualityRow[]; outdatedDays?: number }>(
+    '/api/v1/cmdb/quality',
   );
 }
 

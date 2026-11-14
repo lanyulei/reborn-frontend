@@ -1,12 +1,14 @@
 /**
  * 详情布局编辑器（自 ViewDrawer 抽出，内嵌于模型详情页）：
- * 按顺序维护“属性分组 / 关联面板”区块，整体替换保存。
+ * 分两段维护“属性分组”（对应资源详情的属性页签与表单）和“关联面板”（对应关联页签），
+ * 各自段内排序；保存时按“属性分组在前、关联面板在后”整体替换。
  * 缺省布局（未配置时）由后端 GetModelView 生成；“恢复缺省”在本地按同一规则重建。
  */
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
   DeleteOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import {
   Alert,
@@ -19,7 +21,7 @@ import {
   Space,
   Spin,
   Switch,
-  Tag,
+  Typography,
 } from 'antd';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
@@ -37,6 +39,13 @@ import type {
 import { usePermissions } from '@/services/system/permissions';
 import { useT } from '@/utils/i18n';
 import { CMDB_ANY_MODEL } from '../components/meta';
+import { useCmdbStyles } from '../components/styles';
+
+/** 属性分组在前、关联面板在后（各自保持原有顺序）：两类在资源详情里分属不同页签，互相的先后无意义 */
+const normalize = (sections: ViewSection[]): ViewSection[] => [
+  ...sections.filter((s) => s.type === 'attrs'),
+  ...sections.filter((s) => s.type !== 'attrs'),
+];
 
 /** 适用于本类型的关系方向（与后端 DefaultView 规则一致） */
 interface RelationOption {
@@ -104,6 +113,7 @@ export const ViewEditor: React.FC<{
 }> = ({ model, fields, relationTypes, sectionsKey, onChanged }) => {
   const t = useT();
   const has = usePermissions();
+  const { styles: pageStyles } = useCmdbStyles();
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -125,7 +135,7 @@ export const ViewEditor: React.FC<{
     getModelView(model.code)
       .then((view) => {
         if (cancelled) return;
-        setSections(view.sections);
+        setSections(normalize(view.sections));
         setConfigured(view.configured);
       })
       .catch(() => undefined)
@@ -193,11 +203,12 @@ export const ViewEditor: React.FC<{
     setSections((prev) =>
       prev.map((s, i) => (i === index ? { ...s, ...update } : s)),
     );
+  /** 段内移动：只与相邻的同类型区块交换（两类各自连续，见 normalize） */
   const move = (index: number, delta: -1 | 1) =>
     setSections((prev) => {
-      const next = [...prev];
       const target = index + delta;
-      if (target < 0 || target >= next.length) return prev;
+      if (prev[target]?.type !== prev[index].type) return prev;
+      const next = [...prev];
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
@@ -239,51 +250,38 @@ export const ViewEditor: React.FC<{
       <Card
         variant="outlined"
         key={`${section.type}-${index}`}
-        size="small"
+        // 头部与页面其它工具栏同规格：默认尺寸控件（32px）+ 12px 16px 内边距；内容区同为 16px
+        styles={{
+          header: { minHeight: 56, padding: '12px 16px' },
+          body: { padding: 16 },
+        }}
         title={
-          <Space>
-            {/* 与同行的小号输入框 / 按钮等高（24px） */}
-            <Tag
-              color={isAttrs ? 'blue' : 'purple'}
-              style={{ height: 24, lineHeight: '22px', marginInlineEnd: 0 }}
-            >
-              {t(
-                isAttrs
-                  ? 'pages.cmdb.view.section.attrs'
-                  : 'pages.cmdb.view.section.relation',
-              )}
-            </Tag>
-            <Input
-              size="small"
-              placeholder={t('pages.cmdb.view.section.title')}
-              value={section.title}
-              maxLength={64}
-              style={{ width: 200 }}
-              disabled={!canEdit}
-              onChange={(e) => patch(index, { title: e.target.value })}
-            />
-          </Space>
+          <Input
+            placeholder={t('pages.cmdb.view.section.title')}
+            value={section.title}
+            maxLength={64}
+            style={{ width: 280 }}
+            disabled={!canEdit}
+            onChange={(e) => patch(index, { title: e.target.value })}
+          />
         }
         extra={
           canEdit && (
             <Space size={4}>
               <Button
                 type="text"
-                size="small"
                 icon={<ArrowUpOutlined />}
-                disabled={index === 0}
+                disabled={sections[index - 1]?.type !== section.type}
                 onClick={() => move(index, -1)}
               />
               <Button
                 type="text"
-                size="small"
                 icon={<ArrowDownOutlined />}
-                disabled={index === sections.length - 1}
+                disabled={sections[index + 1]?.type !== section.type}
                 onClick={() => move(index, 1)}
               />
               <Button
                 type="text"
-                size="small"
                 danger
                 icon={<DeleteOutlined />}
                 onClick={() => remove(index)}
@@ -358,57 +356,101 @@ export const ViewEditor: React.FC<{
     );
   }
 
+  /** 一段：小节标题 + 数量 + 说明（影响资源详情的哪一处）+ 添加按钮，下接该类型的区块 */
+  const renderGroup = (
+    type: ViewSection['type'],
+    hint: string,
+    emptyText: string,
+    addButton: React.ReactNode,
+  ) => {
+    const items = sections
+      .map((section, index) => ({ section, index }))
+      .filter((x) => x.section.type === type);
+    return (
+      <div>
+        <div className={pageStyles.toolbar} style={{ marginBottom: 8 }}>
+          <div className={pageStyles.sectionTitle} style={{ margin: 0 }}>
+            {t(
+              type === 'attrs'
+                ? 'pages.cmdb.view.section.attrs'
+                : 'pages.cmdb.view.section.relation',
+            )}
+          </div>
+          <span className={pageStyles.groupCount}>( {items.length} )</span>
+          <Typography.Text type="secondary">{hint}</Typography.Text>
+          <span className={pageStyles.spacer} />
+          {canEdit && addButton}
+        </div>
+        {items.length === 0 ? (
+          <Card variant="outlined" styles={{ body: { padding: 16 } }}>
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={emptyText}
+            />
+          </Card>
+        ) : (
+          <Space vertical size="middle" style={{ width: '100%' }}>
+            {items.map(({ section, index }) => renderSection(section, index))}
+          </Space>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <Space vertical size="middle" style={{ width: '100%' }}>
+    <Space vertical size={18} style={{ width: '100%' }}>
       {!configured && (
         <Alert type="info" showIcon title={t('pages.cmdb.view.default')} />
       )}
-      {sections.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={t('pages.cmdb.view.empty')}
-        />
-      ) : (
-        sections.map(renderSection)
+      {renderGroup(
+        'attrs',
+        t('pages.cmdb.view.attrs.hint'),
+        t('pages.cmdb.view.attrs.empty'),
+        <Button
+          icon={<PlusOutlined />}
+          onClick={() =>
+            // 插在最后一个属性分组之后（关联面板之前）
+            setSections((prev) =>
+              normalize([...prev, { type: 'attrs', fields: [] }]),
+            )
+          }
+        >
+          {t('pages.cmdb.view.add.attrs')}
+        </Button>,
+      )}
+      {renderGroup(
+        'relation',
+        t('pages.cmdb.view.relation.hint'),
+        t('pages.cmdb.view.relation.empty'),
+        <Button
+          icon={<PlusOutlined />}
+          disabled={relations.length === 0}
+          onClick={() =>
+            setSections((prev) => [
+              ...prev,
+              {
+                type: 'relation',
+                relationType: relations[0].relationType,
+                direction: relations[0].direction,
+              },
+            ])
+          }
+        >
+          {t('pages.cmdb.view.add.relation')}
+        </Button>,
       )}
       {canEdit && (
-        <Space>
+        <div className={pageStyles.toolbar} style={{ marginBottom: 0 }}>
           <Button
             onClick={() => setSections(defaultSections(fields, relations))}
           >
             {t('pages.cmdb.view.reset')}
           </Button>
-          <Button
-            onClick={() =>
-              setSections((prev) => [...prev, { type: 'attrs', fields: [] }])
-            }
-          >
-            {t('pages.cmdb.view.add.attrs')}
-          </Button>
-          <Button
-            disabled={relations.length === 0}
-            onClick={() =>
-              setSections((prev) => [
-                ...prev,
-                {
-                  type: 'relation',
-                  relationType: relations[0].relationType,
-                  direction: relations[0].direction,
-                },
-              ])
-            }
-          >
-            {t('pages.cmdb.view.add.relation')}
-          </Button>
-          <Button
-            type="primary"
-            loading={saving}
-            onClick={() => void onSave()}
-            style={{ marginInlineStart: 'auto' }}
-          >
+          <span className={pageStyles.spacer} />
+          <Button type="primary" loading={saving} onClick={() => void onSave()}>
             {t('common.action.save')}
           </Button>
-        </Space>
+        </div>
       )}
     </Space>
   );

@@ -139,6 +139,27 @@ export async function listRuns(
   );
 }
 
+/** 一条未解决的同步冲突：因名称 / 唯一规则冲突而未能写入的采集行 */
+export interface SyncConflict {
+  modelCode: string;
+  modelName?: string;
+  externalId: string;
+  name: string;
+  reason: string;
+  firstSeen?: string;
+  lastSeen?: string;
+}
+
+export async function listConflicts(
+  id: string,
+  params: { page?: number; pageSize?: number },
+): Promise<{ items?: SyncConflict[]; total?: string }> {
+  return authRequest<{ items?: SyncConflict[]; total?: string }>(
+    `/api/v1/cmdb/sync/source/${id}/conflict`,
+    { method: 'GET', params },
+  );
+}
+
 export interface WebhookRotateResult {
   /** 令牌明文，仅返回一次 */
   token: string;

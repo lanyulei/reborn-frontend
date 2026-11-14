@@ -15,6 +15,7 @@ import type {
   CmdbModelStatus,
   CmdbOnDelete,
   CmdbRelationType,
+  CmdbUniqueRule,
 } from './typings';
 
 export interface ListModelsParams {
@@ -72,6 +73,8 @@ export interface ModelDetail {
   model: CmdbModel;
   fields: CmdbField[];
   relationTypes: CmdbRelationType[];
+  /** 唯一规则（按名称排序）；无规则时后端省略该字段 */
+  uniqueRules?: CmdbUniqueRule[];
 }
 
 export async function getModel(
@@ -134,7 +137,6 @@ export interface FieldParams {
   name?: string;
   type?: CmdbFieldType;
   required?: boolean;
-  unique?: boolean;
   enumValues?: string[];
   enumLabels?: Record<string, string>;
   refModel?: string;
@@ -175,6 +177,62 @@ export async function deprecateField(
   await authRequest<Record<string, never>>(
     `/api/v1/cmdb/model/${modelCode}/field/${id}`,
     { method: 'DELETE' },
+  );
+}
+
+export interface UniqueRuleParams {
+  name?: string;
+  fieldCodes?: string[];
+}
+
+/** 新增唯一规则；存量资源在这组字段上已有重复时 409（CMDB_UNIQUE_RULE_CONFLICT） */
+export async function createUniqueRule(
+  modelCode: string,
+  body: Required<UniqueRuleParams>,
+): Promise<{ rule: CmdbUniqueRule }> {
+  return authRequest<{ rule: CmdbUniqueRule }>(
+    `/api/v1/cmdb/model/${modelCode}/unique-rule`,
+    { method: 'POST', data: body },
+  );
+}
+
+/** 更新唯一规则；fieldCodes 非空时整组替换并重算（存量重复则 409） */
+export async function updateUniqueRule(
+  modelCode: string,
+  id: string,
+  body: UniqueRuleParams,
+): Promise<{ rule: CmdbUniqueRule }> {
+  return authRequest<{ rule: CmdbUniqueRule }>(
+    `/api/v1/cmdb/model/${modelCode}/unique-rule/${id}`,
+    { method: 'PUT', data: body },
+  );
+}
+
+export async function deleteUniqueRule(
+  modelCode: string,
+  id: string,
+): Promise<void> {
+  await authRequest<Record<string, never>>(
+    `/api/v1/cmdb/model/${modelCode}/unique-rule/${id}`,
+    { method: 'DELETE' },
+  );
+}
+
+export interface UniqueRuleCheck {
+  /** 存量资源中取值重复的组数（int64 → 字符串）；0 = 可以建立（零值可能被省略） */
+  conflictGroups?: string;
+  /** 重复组样例（至多 5 组）；数据范围受限的用户看不到资源名称 */
+  samples?: { count: string; names?: string[] }[];
+}
+
+/** 预检：存量资源在这组字段上是否有重复（只读）。静默：失败不弹错误，由表单自行处理 */
+export async function checkUniqueRule(
+  modelCode: string,
+  fieldCodes: string[],
+): Promise<UniqueRuleCheck> {
+  return authRequest<UniqueRuleCheck>(
+    `/api/v1/cmdb/model/${modelCode}/unique-rule:check`,
+    { method: 'POST', data: { fieldCodes }, silent: true },
   );
 }
 

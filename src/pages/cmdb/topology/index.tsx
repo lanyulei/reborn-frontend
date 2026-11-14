@@ -29,8 +29,8 @@ const TopologyPage: React.FC = () => {
   const [relationsLoading, setRelationsLoading] = useState(true);
   // 选中的分组（undefined = 全部）
   const [activeGroup, setActiveGroup] = useState<string | undefined>();
-  // 画布高度随视口（挂载时取值）
-  const [height] = useState(() => Math.max(480, window.innerHeight - 190));
+  // 画布高度随视口（挂载时取值；容器内还有工具栏一行）
+  const [height] = useState(() => Math.max(440, window.innerHeight - 248));
 
   useEffect(() => {
     let cancelled = false;
@@ -102,7 +102,15 @@ const TopologyPage: React.FC = () => {
           {loading || relationsLoading ? (
             <Card
               variant="outlined"
-              styles={{ body: { padding: 96, textAlign: 'center' } }}
+              styles={{
+                body: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  // 与关系图同高（画布 + 工具栏一行），加载完成后不跳动
+                  height: height + 57,
+                },
+              }}
             >
               <Spin />
             </Card>

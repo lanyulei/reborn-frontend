@@ -49,12 +49,14 @@ export default {
   'enum.cmdb.action.update': 'Update',
   'enum.cmdb.action.transition': 'Status change',
   'enum.cmdb.action.delete': 'Delete',
+  'enum.cmdb.action.restore': 'Restore',
   'enum.cmdb.action.link': 'Link',
   'enum.cmdb.action.unlink': 'Unlink',
   'enum.cmdb.schemaTarget.group': 'Group',
   'enum.cmdb.schemaTarget.model': 'Model',
   'enum.cmdb.schemaTarget.field': 'Field',
   'enum.cmdb.schemaTarget.relation_type': 'Relation Type',
+  'enum.cmdb.schemaTarget.unique_rule': 'Unique Rule',
 
   'pages.cmdb.model.tab.models': 'Models',
   'pages.cmdb.model.tab.relationTypes': 'Relation types',
@@ -178,6 +180,7 @@ export default {
   'pages.cmdb.detail.relation.link': 'Link existing',
   'pages.cmdb.detail.relation.createAndLink': 'Create and link',
   'pages.cmdb.detail.relation.unlink': 'Unlink',
+  'pages.cmdb.detail.relation.unlink.title': 'Unlink "{name}"',
   'pages.cmdb.detail.relation.unlink.confirm':
     'Only the relation is removed; the resource is kept. Unlink?',
   'pages.cmdb.detail.relation.move': 'Move',
@@ -244,6 +247,13 @@ export default {
   'pages.cmdb.view.section.collapsed': 'Collapsed by default',
   'pages.cmdb.view.add.attrs': 'Add attribute group',
   'pages.cmdb.view.add.relation': 'Add relation panel',
+  'pages.cmdb.view.attrs.hint':
+    'Shown on the resource Attributes tab and in the create / edit form',
+  'pages.cmdb.view.relation.hint': 'Shown on the resource Relations tab',
+  'pages.cmdb.view.attrs.empty':
+    'With no attribute groups, all fields are shown as one group',
+  'pages.cmdb.view.relation.empty':
+    'With no relation panels, resource details show no relations',
   'pages.cmdb.view.reset': 'Reset to default',
   'pages.cmdb.view.empty': 'Keep at least one section',
   'pages.cmdb.scope.column.role': 'Role',
@@ -328,6 +338,26 @@ export default {
   'pages.cmdb.topology.truncated':
     'Node limit reached; only part of the graph is shown. Reduce the depth or use the relation panels.',
   'pages.cmdb.topology.empty': 'No related resources',
+  'pages.cmdb.topology.zoomIn': 'Zoom in',
+  'pages.cmdb.topology.zoomOut': 'Zoom out',
+  'pages.cmdb.topology.fit': 'Fit view',
+  'pages.cmdb.topology.hint':
+    'Scroll to zoom · drag to pan · hover for details · click to open',
+  'pages.cmdb.topology.tooltip.model': 'Model',
+  'pages.cmdb.topology.tooltip.status': 'Status',
+  'pages.cmdb.topology.tooltip.env': 'Environment',
+  'pages.cmdb.topology.tooltip.layer': 'Layer',
+  'pages.cmdb.topology.tooltip.view': 'Click to open details',
+  'pages.cmdb.modelGraph.summary': '{models} models · {relations} relations',
+  'pages.cmdb.modelGraph.search.placeholder': 'Search models',
+  'pages.cmdb.modelGraph.tooltip.code': 'Code',
+  'pages.cmdb.modelGraph.tooltip.group': 'Group',
+  'pages.cmdb.modelGraph.tooltip.instances': 'Instances',
+  'pages.cmdb.modelGraph.tooltip.type': 'Type',
+  'pages.cmdb.modelGraph.tooltip.disabled': 'Disabled',
+  'pages.cmdb.modelGraph.tooltip.cardinality': 'Cardinality',
+  'pages.cmdb.modelGraph.tooltip.view': 'Click to open model',
+  'pages.cmdb.modelGraph.unlinked': 'Models without relations',
   'pages.cmdb.search.action': 'Global search',
   'pages.cmdb.search.title': 'Global search',
   'pages.cmdb.search.button': 'Search',
@@ -406,6 +436,24 @@ export default {
     'This cannot be undone; their relations will be removed as well',
   'pages.cmdb.ci.batch.transition': 'Batch Transition',
   'pages.cmdb.ci.batch.done': '{ok} succeeded, {failed} failed',
+  'pages.cmdb.ci.form.owner.placeholder': 'Search and select a user',
+  'pages.cmdb.ci.batch.edit': 'Batch edit',
+  'pages.cmdb.ci.batch.edit.title': 'Batch edit {n} resources',
+  'pages.cmdb.ci.batch.edit.tip':
+    'Only the fields you fill in are changed; empty ones are left as is.',
+  'pages.cmdb.ci.batch.edit.empty': 'Fill in at least one field',
+  'pages.cmdb.ci.batch.edit.clearOwner': 'Clear the owner',
+  'pages.cmdb.ci.batch.notProcessed':
+    'Not processed: the request failed, please retry',
+  'pages.cmdb.ci.batch.edit.addTags': 'Add tags',
+  'pages.cmdb.ci.batch.edit.removeTags': 'Remove tags',
+  'pages.cmdb.ci.recycle.action': 'Recycle bin',
+  'pages.cmdb.ci.recycle.back': 'Back to list',
+  'pages.cmdb.ci.recycle.tip': 'Deleted resources; they can be restored',
+  'pages.cmdb.ci.recycle.deleteTime': 'Deleted at',
+  'pages.cmdb.ci.recycle.restore': 'Restore',
+  'pages.cmdb.ci.recycle.restore.confirm': 'Restore resource "{name}"?',
+  'pages.cmdb.ci.recycle.restored': 'Restored',
   // instance detail
   'pages.cmdb.detail.tab.attrs': 'Attributes',
   'pages.cmdb.detail.backToList': 'Back to list',
@@ -447,9 +495,29 @@ export default {
   'pages.cmdb.modelDetail.fields.group.delete.contentFields':
     'The {n} fields in "{name}" will move to "Others". Delete?',
   'pages.cmdb.modelDetail.fields.syncReadonly': 'Sync read-only',
-  'pages.cmdb.modelDetail.unique.explain':
-    'All unique fields of this model compose a single uniqueness key: creating or updating a record whose values of these fields all match an existing one will be rejected. The per-field unique switch is maintained under "Fields".',
-  'pages.cmdb.modelDetail.unique.empty': 'No unique fields',
+  'pages.cmdb.uniqueRule.explain':
+    'Values of the fields in a rule must not repeat: one field is single-field unique, several are composite. Resources with an empty field are not constrained.',
+  'pages.cmdb.uniqueRule.empty': 'No unique rules',
+  'pages.cmdb.uniqueRule.create.title': 'New unique rule',
+  'pages.cmdb.uniqueRule.edit.title': 'Edit unique rule: {name}',
+  'pages.cmdb.uniqueRule.form.name': 'Rule name',
+  'pages.cmdb.uniqueRule.form.name.placeholder':
+    'e.g. Management IP, Data center + slot',
+  'pages.cmdb.uniqueRule.form.fields': 'Fields',
+  'pages.cmdb.uniqueRule.form.fields.extra':
+    'One field = single-field unique, several = composite; up to {max}. Deprecated or sensitive fields and float / bool / JSON types cannot be used.',
+  'pages.cmdb.uniqueRule.kind.single': 'Single field',
+  'pages.cmdb.uniqueRule.kind.composite': 'Composite',
+  'pages.cmdb.uniqueRule.check.ok':
+    'No existing resources share the same values on these fields. Safe to save.',
+  'pages.cmdb.uniqueRule.check.conflict':
+    '{count} group(s) of existing resources share the same values on these fields; resolve them before saving:',
+  'pages.cmdb.uniqueRule.check.failed':
+    'Could not check for duplicates; you can still save, and duplicates will be rejected.',
+  'pages.cmdb.uniqueRule.delete.confirm': 'Delete unique rule "{name}"?',
+  'pages.cmdb.uniqueRule.delete.description':
+    'These fields will no longer be checked for duplicates.',
+  'pages.cmdb.uniqueRule.limit': 'Up to {max} unique rules per model',
   // relation graph
   'pages.cmdb.topology.allModels': 'All models',
   // field-level diff
@@ -480,6 +548,23 @@ export default {
   'pages.cmdb.stats.byEnv': 'By Environment',
   'pages.cmdb.stats.bySource': 'By Source',
   'pages.cmdb.stats.trend': 'Change Trend',
+  'pages.cmdb.quality.title': 'Data quality',
+  'pages.cmdb.quality.tip':
+    'In-service resources only (not deleted or retired); click a number to see them',
+  'pages.cmdb.quality.total': 'In service',
+  'pages.cmdb.quality.issue.missing_required': 'Missing required',
+  'pages.cmdb.quality.issue.no_owner': 'No owner',
+  'pages.cmdb.quality.issue.orphan': 'No relations',
+  'pages.cmdb.quality.issue.stale': 'Stale sync',
+  'pages.cmdb.quality.issue.outdated': 'Not updated in {days} days',
+  'pages.cmdb.ci.issue.tip': 'Showing only in-service resources with: {issue}',
+  'pages.cmdb.sync.action.conflicts': 'Conflicts',
+  'pages.cmdb.sync.conflict.title': 'Sync conflicts: {name}',
+  'pages.cmdb.sync.conflict.tip':
+    'Discovered rows that could not be written in the latest sync because of a name or unique-rule conflict. Once the conflicting resource is fixed, the next sync writes them and they disappear from here.',
+  'pages.cmdb.sync.conflict.column.externalId': 'External ID',
+  'pages.cmdb.sync.conflict.column.reason': 'Reason',
+  'pages.cmdb.sync.conflict.column.firstSeen': 'First seen',
   'pages.cmdb.stats.envEmpty': 'No environment',
   // resource sync
   'pages.cmdb.sync.intro':

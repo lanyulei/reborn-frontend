@@ -21,7 +21,6 @@ import {
   Spin,
   Tabs,
   Tag,
-  Typography,
 } from 'antd';
 import { createStyles } from 'antd-style';
 import type React from 'react';
@@ -41,6 +40,7 @@ import type {
   CmdbField,
   CmdbModel,
   CmdbRelationType,
+  CmdbUniqueRule,
 } from '@/services/cmdb/typings';
 import { usePermissions } from '@/services/system/permissions';
 import { useEnumText, useT } from '@/utils/i18n';
@@ -55,6 +55,7 @@ import { useCmdbStyles } from '../components/styles';
 import { useCatalog } from '../components/useCatalog';
 import { FieldFormModal } from './FieldFormModal';
 import { ModelFormModal } from './ModelFormModal';
+import { UniqueRules } from './UniqueRules';
 import { ViewEditor } from './ViewEditor';
 
 const useStyles = createStyles(({ token, css }) => ({
@@ -139,28 +140,8 @@ const useStyles = createStyles(({ token, css }) => ({
     opacity: 0;
     transition: opacity ${token.motionDurationMid};
   `,
-  rowTitle: css`
-    color: ${token.colorText};
-    font-weight: 500;
-    white-space: nowrap;
-  `,
   requiredMark: css`
     color: ${token.colorError};
-  `,
-  secondary: css`
-    color: ${token.colorTextTertiary};
-    font-size: ${token.fontSizeSM}px;
-    white-space: nowrap;
-  `,
-  plainRow: css`
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 2px;
-    border-bottom: 1px solid ${token.colorSplit};
-    &:last-child {
-      border-bottom: none;
-    }
   `,
 }));
 
@@ -189,6 +170,7 @@ const ModelDetailPage: React.FC = () => {
   const [model, setModel] = useState<CmdbModel | null>(null);
   const [fields, setFields] = useState<CmdbField[]>([]);
   const [relationTypes, setRelationTypes] = useState<CmdbRelationType[]>([]);
+  const [uniqueRules, setUniqueRules] = useState<CmdbUniqueRule[]>([]);
   const [sections, setSections] = useState<ViewSection[]>([]);
   const [modelNames, setModelNames] = useState<Record<string, string>>({});
   const [editOpen, setEditOpen] = useState(false);
@@ -221,6 +203,7 @@ const ModelDetailPage: React.FC = () => {
       setModel(detail.model);
       setFields(detail.fields);
       setRelationTypes(detail.relationTypes);
+      setUniqueRules(detail.uniqueRules ?? []);
       setSections(view.sections);
       configuredRef.current = view.configured;
       setModelNames(
@@ -277,10 +260,17 @@ const ModelDetailPage: React.FC = () => {
     [fieldGroups, has],
   );
 
-  const uniqueFields = useMemo(
-    () => fields.filter((f) => f.unique && !f.deprecated),
-    [fields],
-  );
+  // 字段的唯一标记：出现在单字段规则里 →「唯一」（它自身不可重复）；只出现在联合规则里 →「联合唯一」
+  const uniqueMark = useMemo(() => {
+    const mark = new Map<string, 'single' | 'composite'>();
+    for (const r of uniqueRules) {
+      for (const c of r.fieldCodes) {
+        if (r.fieldCodes.length === 1) mark.set(c, 'single');
+        else if (!mark.has(c)) mark.set(c, 'composite');
+      }
+    }
+    return mark;
+  }, [uniqueRules]);
 
   // 与本模型相关的关联类型（含通配）
   const myRelations = useMemo(
@@ -622,9 +612,13 @@ const ModelDetailPage: React.FC = () => {
                                   </span>
                                 </div>
                                 <div className={styles.fieldMarks}>
-                                  {f.unique && (
+                                  {uniqueMark.has(f.code) && (
                                     <span className={styles.fieldMark}>
-                                      {t('pages.cmdb.field.column.unique')}
+                                      {t(
+                                        uniqueMark.get(f.code) === 'single'
+                                          ? 'pages.cmdb.field.column.unique'
+                                          : 'pages.cmdb.uniqueRule.kind.composite',
+                                      )}
                                     </span>
                                   )}
                                   {f.owner === 'sync' && (
@@ -768,29 +762,12 @@ const ModelDetailPage: React.FC = () => {
             key: 'unique',
             label: t('pages.cmdb.modelDetail.tab.unique'),
             children: (
-              <Card variant="outlined" size="small">
-                <Typography.Paragraph type="secondary">
-                  {t('pages.cmdb.modelDetail.unique.explain')}
-                </Typography.Paragraph>
-                {uniqueFields.length === 0 ? (
-                  <Empty
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description={t('pages.cmdb.modelDetail.unique.empty')}
-                    style={{ padding: 32 }}
-                  />
-                ) : (
-                  uniqueFields.map((f) => (
-                    <div key={f.id} className={styles.plainRow}>
-                      <FieldTypeIcon type={f.type} />
-                      <span className={styles.rowTitle}>{f.name}</span>
-                      <Typography.Text code>{f.code}</Typography.Text>
-                      <span className={styles.secondary}>
-                        {typeText(f.type)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </Card>
+              <UniqueRules
+                modelCode={model.code}
+                fields={fields}
+                rules={uniqueRules}
+                onChanged={() => void load()}
+              />
             ),
           },
           {

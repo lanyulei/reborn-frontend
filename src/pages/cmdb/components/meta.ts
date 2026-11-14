@@ -118,6 +118,7 @@ export const CMDB_ACTION_META: EnumMeta<CmdbHistory['action']> = {
   update: { textId: 'enum.cmdb.action.update', status: 'Processing' },
   transition: { textId: 'enum.cmdb.action.transition', status: 'Warning' },
   delete: { textId: 'enum.cmdb.action.delete', status: 'Error' },
+  restore: { textId: 'enum.cmdb.action.restore', status: 'Success' },
   link: { textId: 'enum.cmdb.action.link', status: 'Processing' },
   unlink: { textId: 'enum.cmdb.action.unlink', status: 'Default' },
 };
@@ -128,12 +129,14 @@ export const CMDB_SCHEMA_TARGET_META: EnumMeta<CmdbSchemaTargetType> = {
   model: { textId: 'enum.cmdb.schemaTarget.model' },
   field: { textId: 'enum.cmdb.schemaTarget.field' },
   relation_type: { textId: 'enum.cmdb.schemaTarget.relation_type' },
+  unique_rule: { textId: 'enum.cmdb.schemaTarget.unique_rule' },
 };
 export const CMDB_SCHEMA_TARGET_ORDER: readonly CmdbSchemaTargetType[] = [
   'group',
   'model',
   'field',
   'relation_type',
+  'unique_rule',
 ];
 
 /** 模型变更审计：动作（复用实例变更动作文案） */

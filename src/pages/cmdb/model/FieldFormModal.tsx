@@ -35,7 +35,6 @@ interface FieldFormValues {
   name: string;
   type: CmdbFieldType;
   required?: boolean;
-  unique?: boolean;
   enumPairs?: { value: string; label?: string }[];
   refModel?: string;
   pattern?: string;
@@ -58,7 +57,6 @@ const toParams = (values: FieldFormValues) => ({
   name: values.name,
   type: values.type,
   required: values.required ?? false,
-  unique: values.unique ?? false,
   enumValues:
     values.type === 'enum'
       ? (values.enumPairs ?? []).map((p) => p.value.trim())
@@ -323,11 +321,6 @@ export const FieldFormModal: React.FC<{
         label={t('pages.cmdb.field.column.required')}
       />
       <ProFormSwitch
-        name="unique"
-        colProps={{ span: 12 }}
-        label={t('pages.cmdb.field.column.unique')}
-      />
-      <ProFormSwitch
         name="listVisible"
         colProps={{ span: 12 }}
         label={t('pages.cmdb.field.column.listVisible')}
@@ -372,7 +365,6 @@ export const FieldFormModal: React.FC<{
               name: field.name,
               type: field.type,
               required: field.required,
-              unique: field.unique,
               enumPairs: (field.enumValues ?? []).map((v) => ({
                 value: v,
                 label: field.enumLabels?.[v],

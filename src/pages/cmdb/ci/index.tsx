@@ -6,6 +6,7 @@
  * 导出携带当前筛选；空模型给出新建引导。
  */
 import {
+  DeleteOutlined,
   DownloadOutlined,
   SearchOutlined,
   UploadOutlined,
@@ -19,27 +20,41 @@ import {
   ModalForm,
   PageContainer,
   ProForm,
+  ProFormCheckbox,
   ProFormDependency,
   ProFormSelect,
+  ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
 import { history, useSearchParams } from '@umijs/max';
 import type { MenuProps } from 'antd';
 import {
+  Alert,
   App,
   Button,
   Dropdown,
   Empty,
   Input,
   Menu,
+  Popconfirm,
   Space,
   Spin,
   Tag,
+  Typography,
 } from 'antd';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
-import { deleteCI, exportCIs, listCIs, transitionCI } from '@/services/cmdb/ci';
+import {
+  type BatchCIsResult,
+  batchDeleteCIs,
+  batchTransitionCIs,
+  batchUpdateCIs,
+  deleteCI,
+  exportCIs,
+  listCIs,
+  restoreCI,
+} from '@/services/cmdb/ci';
 import { getModel } from '@/services/cmdb/model';
 import { linkCIs } from '@/services/cmdb/relation';
 import type {
@@ -47,6 +62,7 @@ import type {
   CmdbCIStatus,
   CmdbDirection,
   CmdbField,
+  CmdbQualityIssue,
   CmdbRelationType,
 } from '@/services/cmdb/typings';
 import { usePermissions } from '@/services/system/permissions';
@@ -61,35 +77,48 @@ import {
   CMDB_CI_STATUS_META,
   CMDB_CI_STATUS_ORDER,
 } from '../components/meta';
+import { OwnerSelect } from '../components/OwnerSelect';
 import { useAttrColumns } from '../components/schema';
 import { useCmdbStyles } from '../components/styles';
 import { useCatalog } from '../components/useCatalog';
 
-/** 批量操作并发上限（逐条请求；避免一次选中数百行时同时打出数百个请求） */
-const BATCH_CONCURRENCY = 5;
+/**
+ * 每次提交的条数。后端单次上限 100，但逐条执行、受请求超时约束，
+ * 小批次提交可保证每个请求都在超时内返回逐条结果。
+ */
+const BATCH_CHUNK = 20;
 
-/** 限并发的 allSettled：结果顺序与入参一致 */
-async function settleLimited<T, R>(
-  items: T[],
-  run: (item: T) => Promise<R>,
-): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = new Array(items.length);
-  let next = 0;
-  const worker = async () => {
-    while (next < items.length) {
-      const i = next++;
-      try {
-        results[i] = { status: 'fulfilled', value: await run(items[i]) };
-      } catch (reason) {
-        results[i] = { status: 'rejected', reason };
+/**
+ * 分批顺序提交并合并结果。某一批整体失败（网络 / 超时）时不抛出：已完成批次的结果保留，
+ * 该批及之后的条目标记为未处理，由调用方统一汇报。
+ */
+async function runBatch(
+  ids: string[],
+  call: (chunk: string[]) => Promise<BatchCIsResult>,
+  notProcessed: string,
+): Promise<NonNullable<BatchCIsResult['results']>> {
+  const out: NonNullable<BatchCIsResult['results']> = [];
+  for (let i = 0; i < ids.length; i += BATCH_CHUNK) {
+    try {
+      const { results } = await call(ids.slice(i, i + BATCH_CHUNK));
+      out.push(...(results ?? []));
+    } catch {
+      for (const id of ids.slice(i)) {
+        out.push({ id, ok: false, message: notProcessed });
       }
+      break;
     }
-  };
-  await Promise.all(
-    Array.from({ length: Math.min(BATCH_CONCURRENCY, items.length) }, worker),
-  );
-  return results;
+  }
+  return out;
 }
+
+const QUALITY_ISSUE_KEYS: readonly CmdbQualityIssue[] = [
+  'missing_required',
+  'no_owner',
+  'orphan',
+  'stale',
+  'outdated',
+];
 
 /** 可做等值筛选的字段类型（后端按 attrs ->> code 文本比较，均成立） */
 const FILTERABLE_TYPES = ['string', 'ip', 'enum', 'int', 'float', 'bool'];
@@ -109,11 +138,20 @@ const CIListPage: React.FC = () => {
   const [activeCode, setActiveCode] = useState<string | undefined>(
     () => searchParams.get('model') ?? undefined,
   );
+  // 数据质量问题筛选：从统计页带入（?issue=），显示为可关闭的提示条；切换模型即清除
+  const [issue, setIssue] = useState<CmdbQualityIssue | undefined>(() => {
+    const v = searchParams.get('issue');
+    return QUALITY_ISSUE_KEYS.includes(v as CmdbQualityIssue)
+      ? (v as CmdbQualityIssue)
+      : undefined;
+  });
   const [fields, setFields] = useState<CmdbField[]>([]);
   const [relTypes, setRelTypes] = useState<CmdbRelationType[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectedRows, setSelectedRows] = useState<CmdbCI[]>([]);
   const [batchOpen, setBatchOpen] = useState(false);
+  const [batchEditOpen, setBatchEditOpen] = useState(false);
+  // 回收站视图：只列已删除的资源，行操作为「恢复」
+  const [recycle, setRecycle] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editRow, setEditRow] = useState<CmdbCI | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -135,7 +173,8 @@ const CIListPage: React.FC = () => {
   const selectModel = useCallback((code: string) => {
     setActiveCode(code);
     setSelectedIds([]);
-    setSelectedRows([]);
+    setRecycle(false);
+    setIssue(undefined);
     history.replace(`/cmdb/ci?model=${code}`);
   }, []);
   useEffect(() => {
@@ -288,6 +327,7 @@ const CIListPage: React.FC = () => {
       status: (params.status as CmdbCIStatus) || undefined,
       env: (params.env as string) || undefined,
       tag: (params.tag as string) || undefined,
+      owner: (params.owner as string) || undefined,
       attrs: Object.keys(attrs).length > 0 ? attrs : undefined,
       ...(rel
         ? {
@@ -336,15 +376,35 @@ const CIListPage: React.FC = () => {
     [fields],
   );
 
-  // 批量操作结果汇报：部分失败给出成功/失败计数
-  const reportBatch = (results: PromiseSettledResult<unknown>[]) => {
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    const ok = results.length - failed;
-    const text = t('pages.cmdb.ci.batch.done', { ok, failed });
-    if (failed > 0) message.warning(text);
-    else message.success(text);
+  // 批量操作结果汇报：全部成功给提示；有失败时列出每条失败的资源与原因
+  const reportBatch = (results: NonNullable<BatchCIsResult['results']>) => {
+    const failures = results.filter((r) => !r.ok);
+    const text = t('pages.cmdb.ci.batch.done', {
+      ok: results.length - failures.length,
+      failed: failures.length,
+    });
+    if (failures.length === 0) {
+      message.success(text);
+    } else {
+      modal.warning({
+        title: text,
+        width: 560,
+        content: (
+          <div style={{ maxHeight: 320, overflow: 'auto' }}>
+            {failures.map((r) => (
+              <div key={r.id} style={{ padding: '4px 0' }}>
+                <Typography.Text strong>{r.name || r.id}</Typography.Text>
+                <Typography.Text type="secondary">
+                  {' — '}
+                  {r.message}
+                </Typography.Text>
+              </div>
+            ))}
+          </div>
+        ),
+      });
+    }
     setSelectedIds([]);
-    setSelectedRows([]);
     reload();
   };
   const onBatchDelete = () => {
@@ -353,10 +413,13 @@ const CIListPage: React.FC = () => {
       content: t('pages.cmdb.ci.batch.delete.description'),
       okButtonProps: { danger: true },
       onOk: async () => {
-        const results = await settleLimited(selectedIds, (id) =>
-          deleteCI(id, { silent: true }),
+        reportBatch(
+          await runBatch(
+            selectedIds,
+            batchDeleteCIs,
+            t('pages.cmdb.ci.batch.notProcessed'),
+          ),
         );
-        reportBatch(results);
       },
     });
   };
@@ -367,17 +430,26 @@ const CIListPage: React.FC = () => {
         status: statusText(status),
       }),
       onOk: async () => {
-        const results = await settleLimited(selectedRows, (r) =>
-          transitionCI(r.id, r.version, status, { silent: true }),
+        reportBatch(
+          await runBatch(
+            selectedIds,
+            (ids) => batchTransitionCIs(ids, status),
+            t('pages.cmdb.ci.batch.notProcessed'),
+          ),
         );
-        reportBatch(results);
       },
     });
   };
 
   const canSelect =
-    has('cmdb.ci.link') || has('cmdb.ci.delete') || has('cmdb.ci.transition');
-  const hasAnyAction = has('cmdb.ci.edit') || has('cmdb.ci.delete');
+    !recycle &&
+    (has('cmdb.ci.link') ||
+      has('cmdb.ci.delete') ||
+      has('cmdb.ci.transition') ||
+      has('cmdb.ci.edit'));
+  const hasAnyAction = recycle
+    ? has('cmdb.ci.delete')
+    : has('cmdb.ci.edit') || has('cmdb.ci.delete');
   const columns: ProColumns<CmdbCI>[] = [
     {
       title: t('common.column.keyword'),
@@ -431,16 +503,20 @@ const CIListPage: React.FC = () => {
       search: false,
       ellipsis: true,
       fixed: 'left',
-      render: (_, r) => (
-        <a onClick={() => history.push(`/cmdb/ci/${r.id}`)}>
-          {r.name}
-          {r.stale && (
-            <Tag color="orange" style={{ marginInlineStart: 8 }}>
-              {t('pages.cmdb.ci.stale')}
-            </Tag>
-          )}
-        </a>
-      ),
+      render: (_, r) =>
+        // 已删除的资源没有详情页
+        recycle ? (
+          r.name
+        ) : (
+          <a onClick={() => history.push(`/cmdb/ci/${r.id}`)}>
+            {r.name}
+            {r.stale && (
+              <Tag color="orange" style={{ marginInlineStart: 8 }}>
+                {t('pages.cmdb.ci.stale')}
+              </Tag>
+            )}
+          </a>
+        ),
     },
     {
       title: t('common.column.status'),
@@ -453,8 +529,16 @@ const CIListPage: React.FC = () => {
     {
       title: t('pages.cmdb.ci.column.owner'),
       dataIndex: 'owner',
-      search: false,
-      width: 100,
+      width: 120,
+      ellipsis: true,
+      render: (_, r) => r.ownerName || r.owner || t('common.empty'),
+      formItemRender: (_, { value, onChange }) => (
+        <OwnerSelect
+          value={value as string | undefined}
+          onChange={onChange}
+          placeholder={t('pages.cmdb.ci.form.owner.placeholder')}
+        />
+      ),
     },
     {
       title: t('pages.cmdb.ci.column.tags'),
@@ -466,13 +550,21 @@ const CIListPage: React.FC = () => {
           ? r.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
           : t('common.empty'),
     },
-    {
-      title: t('common.column.updateTime'),
-      dataIndex: 'updateTime',
-      valueType: 'dateTime',
-      search: false,
-      width: 160,
-    },
+    recycle
+      ? {
+          title: t('pages.cmdb.ci.recycle.deleteTime'),
+          dataIndex: 'deleteTime',
+          valueType: 'dateTime',
+          search: false,
+          width: 160,
+        }
+      : {
+          title: t('common.column.updateTime'),
+          dataIndex: 'updateTime',
+          valueType: 'dateTime',
+          search: false,
+          width: 160,
+        },
     {
       title: t('common.column.action'),
       valueType: 'option',
@@ -480,6 +572,26 @@ const CIListPage: React.FC = () => {
       fixed: 'right',
       hideInTable: !hasAnyAction,
       render: (_, r) => {
+        if (recycle) {
+          return (
+            <Popconfirm
+              title={t('pages.cmdb.ci.recycle.restore.confirm', {
+                name: r.name,
+              })}
+              onConfirm={async () => {
+                try {
+                  await restoreCI(r.id);
+                } catch {
+                  return; // authRequest 已提示（名称 / 唯一规则被占用等）
+                }
+                message.success(t('pages.cmdb.ci.recycle.restored'));
+                reload();
+              }}
+            >
+              <a>{t('pages.cmdb.ci.recycle.restore')}</a>
+            </Popconfirm>
+          );
+        }
         const actions: React.ReactNode[] = [];
         if (has('cmdb.ci.edit')) {
           actions.push(
@@ -497,6 +609,8 @@ const CIListPage: React.FC = () => {
               onConfirm={async () => {
                 await deleteCI(r.id);
                 message.success(t('common.msg.deleted'));
+                // 已删除的行从勾选里去掉（跨页保留勾选时不会自动清理）
+                setSelectedIds((ids) => ids.filter((id) => id !== r.id));
                 reload();
               }}
             />,
@@ -551,21 +665,37 @@ const CIListPage: React.FC = () => {
           )}
         </aside>
         <div className={styles.splitMain}>
+          {activeModel && issue && !recycle && (
+            <Alert
+              type="info"
+              showIcon
+              closable={{ onClose: () => setIssue(undefined) }}
+              title={t('pages.cmdb.ci.issue.tip', {
+                issue: t(`pages.cmdb.quality.issue.${issue}`, { days: 180 }),
+              })}
+              style={{ marginBottom: 16 }}
+            />
+          )}
           {activeModel && (
             <ProTable<CmdbCI>
               cardBordered
-              key={activeModel.code}
+              key={`${activeModel.code}-${recycle ? 'bin' : 'live'}-${issue ?? ''}`}
               rowKey="id"
               actionRef={actionRef}
               formRef={formRef}
               headerTitle={
                 <Space size={8}>
-                  {has('cmdb.ci.create') && (
+                  {recycle && (
+                    <Typography.Text type="secondary">
+                      {t('pages.cmdb.ci.recycle.tip')}
+                    </Typography.Text>
+                  )}
+                  {!recycle && has('cmdb.ci.create') && (
                     <CreateButton onClick={() => setCreateOpen(true)}>
                       {t('common.action.create')}
                     </CreateButton>
                   )}
-                  {has('cmdb.ci.import') && (
+                  {!recycle && has('cmdb.ci.import') && (
                     <Button
                       icon={<UploadOutlined />}
                       onClick={() => setImportOpen(true)}
@@ -573,7 +703,7 @@ const CIListPage: React.FC = () => {
                       {t('pages.cmdb.import.action')}
                     </Button>
                   )}
-                  {has('cmdb.ci.export') && (
+                  {!recycle && has('cmdb.ci.export') && (
                     <Dropdown
                       menu={{
                         items: [
@@ -591,20 +721,53 @@ const CIListPage: React.FC = () => {
                   )}
                 </Space>
               }
+              toolBarRender={() =>
+                has('cmdb.ci.delete')
+                  ? [
+                      <Button
+                        key="recycle"
+                        type={recycle ? 'primary' : 'default'}
+                        ghost={recycle}
+                        icon={<DeleteOutlined />}
+                        onClick={() => {
+                          setSelectedIds([]);
+                          setRecycle((v) => !v);
+                        }}
+                      >
+                        {t(
+                          recycle
+                            ? 'pages.cmdb.ci.recycle.back'
+                            : 'pages.cmdb.ci.recycle.action',
+                        )}
+                      </Button>,
+                    ]
+                  : []
+              }
               search={{ labelWidth: 'auto' }}
+              // 筛选条件变化后清空勾选：避免批量操作落到当前已看不见的行上
+              onSubmit={() => setSelectedIds([])}
+              onReset={() => setSelectedIds([])}
               rowSelection={
                 canSelect
                   ? {
                       selectedRowKeys: selectedIds,
-                      onChange: (keys, rows) => {
-                        setSelectedIds(keys as string[]);
-                        setSelectedRows(rows);
-                      },
+                      // 跨页保留勾选（批量接口按 ID 提交，不依赖行数据）
+                      preserveSelectedRowKeys: true,
+                      onChange: (keys) => setSelectedIds(keys as string[]),
                     }
                   : undefined
               }
               tableAlertOptionRender={() => (
                 <>
+                  {has('cmdb.ci.edit') && (
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => setBatchEditOpen(true)}
+                    >
+                      {t('pages.cmdb.ci.batch.edit')}
+                    </Button>
+                  )}
                   {has('cmdb.ci.delete') && (
                     <Button
                       type="link"
@@ -649,6 +812,8 @@ const CIListPage: React.FC = () => {
                   page: params.current,
                   pageSize: params.pageSize,
                   modelCode: activeModel.code,
+                  deleted: recycle || undefined,
+                  issue: recycle ? undefined : issue,
                   ...buildFilters(params),
                 });
                 return toTableResult(result);
@@ -699,7 +864,6 @@ const CIListPage: React.FC = () => {
               t('pages.cmdb.detail.relation.linked', { count: linked }),
             );
             setSelectedIds([]);
-            setSelectedRows([]);
             reload();
             return true;
           }}
@@ -748,6 +912,97 @@ const CIListPage: React.FC = () => {
           </ProFormDependency>
         </ModalForm>
       )}
+      {/* 批量编辑：只提交填写了的项（负责人 / 环境 / 增删标签） */}
+      <ModalForm<{
+        owner?: string;
+        clearOwner?: boolean;
+        env?: string;
+        addTags?: string[];
+        removeTags?: string[];
+      }>
+        title={t('pages.cmdb.ci.batch.edit.title', { n: selectedIds.length })}
+        width={520}
+        open={batchEditOpen}
+        onOpenChange={setBatchEditOpen}
+        modalProps={{ destroyOnHidden: true }}
+        onFinish={async (values) => {
+          const addTags = values.addTags ?? [];
+          const removeTags = values.removeTags ?? [];
+          const env = values.env?.trim();
+          // 负责人：勾选「清空」提交空串；否则选了才提交
+          const owner = values.clearOwner ? '' : values.owner || undefined;
+          if (
+            owner === undefined &&
+            !env &&
+            !addTags.length &&
+            !removeTags.length
+          ) {
+            message.warning(t('pages.cmdb.ci.batch.edit.empty'));
+            return false;
+          }
+          reportBatch(
+            await runBatch(
+              selectedIds,
+              (ids) =>
+                batchUpdateCIs({
+                  ids,
+                  owner,
+                  env: env || undefined,
+                  addTags: addTags.length ? addTags : undefined,
+                  removeTags: removeTags.length ? removeTags : undefined,
+                }),
+              t('pages.cmdb.ci.batch.notProcessed'),
+            ),
+          );
+          return true;
+        }}
+      >
+        <Typography.Paragraph type="secondary">
+          {t('pages.cmdb.ci.batch.edit.tip')}
+        </Typography.Paragraph>
+        <ProFormDependency name={['clearOwner']}>
+          {({ clearOwner }) =>
+            !clearOwner && (
+              <ProForm.Item
+                name="owner"
+                label={t('pages.cmdb.ci.column.owner')}
+              >
+                <OwnerSelect
+                  placeholder={t('pages.cmdb.ci.form.owner.placeholder')}
+                />
+              </ProForm.Item>
+            )
+          }
+        </ProFormDependency>
+        <ProFormCheckbox name="clearOwner">
+          {t('pages.cmdb.ci.batch.edit.clearOwner')}
+        </ProFormCheckbox>
+        <ProFormText
+          name="env"
+          label={t('pages.cmdb.ci.column.env')}
+          rules={[{ max: 32 }]}
+        />
+        <ProFormSelect
+          name="addTags"
+          label={t('pages.cmdb.ci.batch.edit.addTags')}
+          fieldProps={{
+            mode: 'tags',
+            open: false,
+            tokenSeparators: [',', ' '],
+            maxCount: 20,
+          }}
+        />
+        <ProFormSelect
+          name="removeTags"
+          label={t('pages.cmdb.ci.batch.edit.removeTags')}
+          fieldProps={{
+            mode: 'tags',
+            open: false,
+            tokenSeparators: [',', ' '],
+            maxCount: 20,
+          }}
+        />
+      </ModalForm>
       {activeModel && editRow && (
         <CIForm
           open={!!editRow}

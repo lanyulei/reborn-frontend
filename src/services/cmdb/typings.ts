@@ -42,6 +42,39 @@ export interface CmdbModel {
   updateTime?: string;
 }
 
+/**
+ * 唯一规则：fieldCodes 这组字段的取值在模型内不可重复（1 个 = 单字段唯一，多个 = 联合唯一）。
+ * 任一字段为空的资源不受该规则约束。
+ */
+export interface CmdbUniqueRule {
+  id: string;
+  modelCode: string;
+  name: string;
+  fieldCodes: string[];
+  createTime?: string;
+  updateTime?: string;
+}
+
+/** 数据质量问题类别（看板计数与列表筛选同口径，只含在册资源） */
+export type CmdbQualityIssue =
+  | 'missing_required'
+  | 'no_owner'
+  | 'orphan'
+  | 'stale'
+  | 'outdated';
+
+/** 一个模型的数据质量计数（int64 → 字符串；零值可能被省略） */
+export interface CmdbQualityRow {
+  modelCode: string;
+  modelName?: string;
+  total?: string;
+  missingRequired?: string;
+  noOwner?: string;
+  orphan?: string;
+  stale?: string;
+  outdated?: string;
+}
+
 export interface CmdbFieldRule {
   pattern?: string;
   min?: number;
@@ -57,6 +90,7 @@ export interface CmdbField {
   name: string;
   type: CmdbFieldType;
   required?: boolean;
+  /** 只读派生值：被任一唯一规则引用（唯一约束经唯一规则维护） */
   unique?: boolean;
   enumValues?: string[];
   /** 枚举展示值（实际值 → 展示值）；未配置的项显示实际值 */
@@ -95,7 +129,12 @@ export interface CmdbCI {
   name: string;
   status: CmdbCIStatus;
   env?: string;
+  /** 负责人：系统用户 ID，或历史自由文本 */
   owner?: string;
+  /** owner 为系统用户时的显示名；否则为空（展示 owner 原文） */
+  ownerName?: string;
+  /** 删除时间：仅回收站列表返回 */
+  deleteTime?: string;
   tags?: string[];
   source?: string;
   externalId?: string;
@@ -127,7 +166,14 @@ export interface CmdbHistory {
   /** 全局审计列表附带 */
   ciName?: string;
   modelCode?: string;
-  action: 'create' | 'update' | 'transition' | 'delete' | 'link' | 'unlink';
+  action:
+    | 'create'
+    | 'update'
+    | 'transition'
+    | 'delete'
+    | 'restore'
+    | 'link'
+    | 'unlink';
   diff?: Record<string, unknown>;
   operator?: string;
   source?: string;
@@ -182,7 +228,12 @@ export interface CmdbOverview {
   days: number;
 }
 
-export type CmdbSchemaTargetType = 'group' | 'model' | 'field' | 'relation_type';
+export type CmdbSchemaTargetType =
+  | 'group'
+  | 'model'
+  | 'field'
+  | 'relation_type'
+  | 'unique_rule';
 export type CmdbSchemaAction = 'create' | 'update' | 'delete';
 
 /** 模型变更审计记录 */

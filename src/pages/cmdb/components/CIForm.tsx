@@ -5,6 +5,7 @@
  */
 import {
   DrawerForm,
+  ProForm,
   ProFormSelect,
   ProFormText,
 } from '@ant-design/pro-components';
@@ -21,6 +22,7 @@ import type {
 } from '@/services/cmdb/typings';
 import { useFormRules, useOptions, useSubmitter, useT } from '@/utils/i18n';
 import { CMDB_CI_STATUS_META } from './meta';
+import { OwnerSelect } from './OwnerSelect';
 import { AttrFormItems, attrsToForm, formToAttrs } from './schema';
 import { useCmdbStyles } from './styles';
 
@@ -170,11 +172,12 @@ export const CIForm: React.FC<{
         label={t('pages.cmdb.ci.column.env')}
         rules={[rules.max(32)]}
       />
-      <ProFormText
-        name="owner"
-        label={t('pages.cmdb.ci.column.owner')}
-        rules={[rules.max(64)]}
-      />
+      <ProForm.Item name="owner" label={t('pages.cmdb.ci.column.owner')}>
+        <OwnerSelect
+          currentName={ci?.ownerName}
+          placeholder={t('pages.cmdb.ci.form.owner.placeholder')}
+        />
+      </ProForm.Item>
       <ProFormSelect
         name="tags"
         label={t('pages.cmdb.ci.column.tags')}

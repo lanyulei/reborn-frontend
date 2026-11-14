@@ -37,8 +37,10 @@ import {
   type CmdbRunStatus,
   createSource,
   deleteSource,
+  listConflicts,
   listRuns,
   listSources,
+  type SyncConflict,
   type SyncRun,
   type SyncSource,
   triggerSync,
@@ -433,6 +435,83 @@ const RunsDrawer: React.FC<{
   );
 };
 
+/** 同步冲突抽屉：该采集源当前仍未能写入的采集行与原因 */
+const ConflictsDrawer: React.FC<{
+  source: SyncSource | null;
+  onClose: () => void;
+}> = ({ source, onClose }) => {
+  const t = useT();
+  const columns: ProColumns<SyncConflict>[] = [
+    {
+      title: t('pages.cmdb.ci.column.model'),
+      dataIndex: 'modelName',
+      width: 120,
+      render: (_, r) => r.modelName || r.modelCode,
+    },
+    {
+      title: t('pages.cmdb.ci.column.name'),
+      dataIndex: 'name',
+      width: 180,
+      ellipsis: true,
+    },
+    {
+      title: t('pages.cmdb.sync.conflict.column.externalId'),
+      dataIndex: 'externalId',
+      width: 180,
+      ellipsis: true,
+      copyable: true,
+    },
+    {
+      title: t('pages.cmdb.sync.conflict.column.reason'),
+      dataIndex: 'reason',
+      ellipsis: true,
+    },
+    {
+      title: t('pages.cmdb.sync.conflict.column.firstSeen'),
+      dataIndex: 'firstSeen',
+      valueType: 'dateTime',
+      width: 160,
+    },
+  ];
+  return (
+    <Drawer
+      title={
+        source ? t('pages.cmdb.sync.conflict.title', { name: source.name }) : ''
+      }
+      size={960}
+      open={!!source}
+      onClose={onClose}
+      destroyOnHidden
+    >
+      {source && (
+        <>
+          <Typography.Paragraph type="secondary">
+            {t('pages.cmdb.sync.conflict.tip')}
+          </Typography.Paragraph>
+          <ProTable<SyncConflict>
+            rowKey={(r) => `${r.modelCode}/${r.externalId}`}
+            search={false}
+            options={{ reload: true, density: false, setting: false }}
+            size="small"
+            columns={columns}
+            request={async (params) => {
+              const result = await listConflicts(source.id, {
+                page: params.current,
+                pageSize: params.pageSize,
+              });
+              return {
+                data: result.items ?? [],
+                total: Number(result.total ?? 0),
+                success: true,
+              };
+            }}
+          />
+        </>
+      )}
+    </Drawer>
+  );
+};
+
 const SyncSourcePage: React.FC = () => {
   const t = useT();
   const { message, modal } = App.useApp();
@@ -446,6 +525,7 @@ const SyncSourcePage: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [editRow, setEditRow] = useState<SyncSource | null>(null);
   const [runsRow, setRunsRow] = useState<SyncSource | null>(null);
+  const [conflictsRow, setConflictsRow] = useState<SyncSource | null>(null);
   const [webhookRow, setWebhookRow] = useState<SyncSource | null>(null);
   const reload = () => actionRef.current?.reload();
   const hasAnyAction =
@@ -559,6 +639,7 @@ const SyncSourcePage: React.FC = () => {
         // 高频的「立即同步」外露，其余收进「更多」（同用户管理页）
         const items: MenuProps['items'] = [
           { key: 'runs', label: t('pages.cmdb.sync.action.runs') },
+          { key: 'conflicts', label: t('pages.cmdb.sync.action.conflicts') },
         ];
         if (has('cmdb.sync.webhook')) {
           items.push({
@@ -604,6 +685,8 @@ const SyncSourcePage: React.FC = () => {
               onClick: ({ key }) => {
                 if (key === 'runs') {
                   setRunsRow(r);
+                } else if (key === 'conflicts') {
+                  setConflictsRow(r);
                 } else if (key === 'webhook') {
                   setWebhookRow(r);
                 } else if (key === 'edit') {
@@ -771,6 +854,10 @@ const SyncSourcePage: React.FC = () => {
         </ModalForm>
       )}
       <RunsDrawer source={runsRow} onClose={() => setRunsRow(null)} />
+      <ConflictsDrawer
+        source={conflictsRow}
+        onClose={() => setConflictsRow(null)}
+      />
       <WebhookModal
         source={webhookRow}
         onClose={() => setWebhookRow(null)}
