@@ -208,7 +208,7 @@ export default {
   'pages.cmdb.export.action': '导出 CSV',
   'pages.cmdb.import.upload': '选择 CSV / JSON 文件',
   'pages.cmdb.import.hint':
-    'CSV 首行为表头（name 必填；关系列 rel:<关系类型>:<方向>[:<对端类型>]，单元格为对端名称，分号分隔多个）或导出格式的 JSON 文件；先试运行预览再确认导入。',
+    'CSV 首行为表头（name 必填；关系列 rel:<关系类型>:<方向>[:<对端类型>]，单元格为对端名称，分号分隔多个；名称本身含分号时改用 rel1: 列，一格一个名称）或导出格式的 JSON 文件；先试运行预览再确认导入。',
   'pages.cmdb.import.parseError': '第 {row} 行解析失败：{message}',
   'pages.cmdb.import.empty': '文件没有数据行',
   'pages.cmdb.import.preview':
@@ -326,6 +326,10 @@ export default {
   'pages.cmdb.detail.tab.topology': '拓扑',
   'pages.cmdb.topology.title': '资源拓扑',
   'pages.cmdb.topology.depth': '展开层数',
+  'pages.cmdb.topology.flow.all': '全部',
+  'pages.cmdb.topology.flow.upstream': '上游',
+  'pages.cmdb.topology.flow.downstream': '下游',
+  'pages.cmdb.export.withRelations': '{format}（含关联）',
   'pages.cmdb.topology.summary': '{nodes} 个节点 · {edges} 条关系',
   'pages.cmdb.topology.truncated':
     '节点数已达上限，仅展示部分关联；请缩小层数或从关联面板查看。',
@@ -472,6 +476,7 @@ export default {
   'pages.cmdb.uniqueRule.limit': '每个模型最多 {max} 条唯一规则',
   // 模型关系图
   'pages.cmdb.topology.allModels': '全部模型',
+  'pages.cmdb.topology.groups': '模型分组',
   // 收藏分组（资源实例左栏）
   'pages.cmdb.overview.favorites': '我的收藏',
   // 资源实例列表
@@ -530,9 +535,37 @@ export default {
   'pages.cmdb.stats.byEnv': '按环境',
   'pages.cmdb.stats.bySource': '按来源',
   'pages.cmdb.stats.trend': '变更趋势',
+  'pages.cmdb.sync.conflict.capped':
+    '冲突过多，清单不完整（每个模型最多列出 2000 条）。这通常说明唯一规则或采集配置有问题，建议先排查原因，而不是逐条处理。',
+  'pages.cmdb.detail.unclaim': '解除同步',
+  'pages.cmdb.detail.unclaim.title': '解除同步托管',
+  'pages.cmdb.detail.unclaim.content':
+    '资源将改回人工维护：同步不再更新它，也不会因采集源里不再出现而自动退役；它身上由同步建立的关联会保留并转为人工关联。采集源里若仍有这台设备，下次同步会把它当作新资源（重名时进入同步冲突清单）。注意：关联类型上配置的「级联退役」对所有资源生效，与是否由同步维护无关。',
+  'pages.cmdb.ci.views.action': '视图',
+  'pages.cmdb.ci.views.save': '保存当前筛选为视图',
+  'pages.cmdb.ci.views.name': '视图名称',
+  'pages.cmdb.ci.views.delete.title': '确认删除视图「{name}」？',
+  'pages.cmdb.ci.views.unavailable': '视图服务暂不可用，请稍后再试',
+  'pages.cmdb.ci.views.tip': '随账号保存，同名会覆盖',
+  'pages.cmdb.ci.views.empty': '当前没有筛选条件',
+  'pages.cmdb.ci.views.limit': '每个模型最多保存 {max} 个视图',
+  'pages.cmdb.detail.history.stateAt': '当时状态',
+  'pages.cmdb.detail.history.stateAt.title': '{time} 的资源状态',
+  'pages.cmdb.detail.history.stateAt.tip':
+    '按变更历史倒推出的基本信息与属性，不含关联。',
+  'pages.cmdb.detail.history.stateAt.deleted':
+    '该时刻资源处于已删除状态（之后被恢复）。',
+  'pages.cmdb.sync.conflict.claim': '认领',
+  'pages.cmdb.sync.conflict.claim.title': '认领「{name}」',
+  'pages.cmdb.sync.conflict.claim.tip':
+    '选择一条已有的人工资源作为这条采集数据的落点：该资源将改由本采集源同步维护，之后的同步直接更新它。适用于同一台设备既被人工录入、又被同步发现的情况。',
+  'pages.cmdb.sync.conflict.claim.target': '已有资源',
+  'pages.cmdb.sync.conflict.claim.warning':
+    '认领后不可撤销：同步会覆盖该资源的名称和同步字段；采集源里不再出现它时，会按宽限期自动退役。',
+  'pages.cmdb.sync.conflict.claimed': '已认领，下次同步生效',
   'pages.cmdb.quality.title': '数据质量',
   'pages.cmdb.quality.tip':
-    '只统计在册资源（未删除、未退役）；点击数字查看对应资源',
+    '只统计在册资源（未删除、未退役），「同步陈旧」的不重复计入「未更新」；点击数字查看对应资源',
   'pages.cmdb.quality.total': '在册资源',
   'pages.cmdb.quality.issue.missing_required': '缺必填项',
   'pages.cmdb.quality.issue.no_owner': '无负责人',

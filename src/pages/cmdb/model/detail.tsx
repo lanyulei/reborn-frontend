@@ -430,6 +430,7 @@ const ModelDetailPage: React.FC = () => {
                   // 停用需二次确认；启用直接执行
                   if (model.status === 1) {
                     modal.confirm({
+                      okButtonProps: { danger: true },
                       title: t('pages.cmdb.model.disableConfirm.title'),
                       content: t('pages.cmdb.model.disableConfirm.description'),
                       onOk: () => onToggleStatus(),
@@ -452,6 +453,7 @@ const ModelDetailPage: React.FC = () => {
               onClick={() => {
                 // 删除需二次确认（与停用一致的对话框格式）
                 modal.confirm({
+                  okButtonProps: { danger: true },
                   title: t('pages.cmdb.model.delete.title'),
                   content: t('pages.cmdb.model.delete.description'),
                   onOk: async () => {

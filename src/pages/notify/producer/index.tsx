@@ -9,10 +9,14 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import { App, Modal, Popconfirm, Tag, Typography } from 'antd';
+import { App, Modal, Tag, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import React, { useRef, useState } from 'react';
-import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
+import {
+  ConfirmLink,
+  CreateButton,
+  DeleteConfirmLink,
+} from '@/components/TableActions';
 import { ENABLED_META, NOTIFY_EVENT_PATTERN_REGEX } from '@/constants';
 import { useBizScope } from '@/services/notify/hooks';
 import type { ProducerSpecPayload } from '@/services/notify/producer';
@@ -196,7 +200,7 @@ const ProducerList: React.FC = () => {
         }
         if (has('notify.producer.rotate')) {
           actions.push(
-            <Popconfirm
+            <ConfirmLink
               key="rotate"
               title={t('pages.notify.producer.rotate.title')}
               description={t('pages.notify.producer.rotate.description')}
@@ -209,8 +213,8 @@ const ProducerList: React.FC = () => {
                 setTokenInfo({ name: producer.name, token });
               }}
             >
-              <a>{t('pages.notify.producer.rotate.title')}</a>
-            </Popconfirm>,
+              {t('pages.notify.producer.rotate.title')}
+            </ConfirmLink>,
           );
         }
         if (has('notify.producer.delete')) {

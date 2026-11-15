@@ -176,44 +176,6 @@ export const useCmdbStyles = createStyles(({ token, css, isDarkMode }) => ({
     flex: 1;
     min-width: 0;
   `,
-  /** 列表行按钮（模型关系左侧分组列表） */
-  modelRow: css`
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 9px 20px;
-    color: ${token.colorText};
-    text-align: start;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: background ${token.motionDurationMid};
-    &:hover {
-      color: ${token.colorPrimary};
-      background: ${token.colorFillQuaternary};
-    }
-  `,
-  /** 选中态（模型关系左侧分组列表） */
-  modelRowOn: css`
-    color: ${token.colorPrimary};
-    background: ${token.colorPrimaryBg};
-    &:hover {
-      background: ${token.colorPrimaryBg};
-    }
-  `,
-  modelRowName: css`
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  modelRowCount: css`
-    flex: none;
-    color: ${token.colorTextTertiary};
-    font-variant-numeric: tabular-nums;
-  `,
   /** 键值栅格（实例详情属性）：三等分列，标签右对齐 */
   kvGrid: css`
     display: grid;
@@ -364,7 +326,7 @@ export const useCmdbStyles = createStyles(({ token, css, isDarkMode }) => ({
   /** 运营统计统计卡行 */
   statGrid: css`
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 16px;
     margin-bottom: 16px;
   `,

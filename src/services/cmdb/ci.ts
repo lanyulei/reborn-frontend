@@ -247,6 +247,7 @@ export async function exportCIs(
     | 'env'
     | 'tag'
     | 'owner'
+    | 'issue'
     | 'attrs'
     | 'relType'
     | 'relDirection'
@@ -256,6 +257,8 @@ export async function exportCIs(
     modelCode: string;
     /** csv（缺省）/ json */
     format?: 'csv' | 'json';
+    /** 同时导出关联（rel: 列 / relations，与导入格式一致） */
+    withRelations?: boolean;
   },
 ): Promise<Blob> {
   const { attrs, ...rest } = params;
@@ -296,6 +299,25 @@ export async function listCIHistory(
   return authRequest<PagedResult<CmdbHistory>>(
     `/api/v1/cmdb/ci/${id}/history`,
     { method: 'GET', params },
+  );
+}
+
+/** 解除同步托管：由采集源维护的资源改回人工维护（之后同步不再更新或退役它） */
+export async function unclaimCI(id: string): Promise<{ ci: CmdbCI }> {
+  return authRequest<{ ci: CmdbCI }>(`/api/v1/cmdb/ci/${id}:unclaim`, {
+    method: 'POST',
+    data: {},
+  });
+}
+
+/** 时间点回溯：资源在指定时刻的状态（基本信息与属性；不含关联） */
+export async function getCIAt(
+  id: string,
+  time: string,
+): Promise<{ ci: CmdbCI; deleted?: boolean }> {
+  return authRequest<{ ci: CmdbCI; deleted?: boolean }>(
+    `/api/v1/cmdb/ci/${id}/at`,
+    { method: 'GET', params: { time } },
   );
 }
 

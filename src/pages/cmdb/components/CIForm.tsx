@@ -201,7 +201,10 @@ export const CIForm: React.FC<{
                 {group.title ?? t('pages.cmdb.detail.section.attrs')}
               </div>
             </Col>
-            <AttrFormItems fields={group.fields} editing={editing} />
+            <AttrFormItems
+              fields={group.fields}
+              syncManaged={editing && !!ci?.source?.startsWith('sync:')}
+            />
           </Fragment>
         ),
       )}

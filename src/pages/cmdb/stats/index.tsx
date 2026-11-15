@@ -159,17 +159,17 @@ const StatsPage: React.FC = () => {
       <StatCard
         label={t('pages.cmdb.stats.modelCount')}
         value={Number(data.modelCount)}
-        icon={<ModelGlyph icon="cube" size={26} />}
+        icon={<ModelGlyph icon="cube" size={20} />}
       />
       <StatCard
         label={t('pages.cmdb.stats.ciCount')}
         value={Number(data.ciCount)}
-        icon={<ModelGlyph icon="server" size={26} />}
+        icon={<ModelGlyph icon="server" size={20} />}
       />
       <StatCard
         label={t('pages.cmdb.stats.relationCount')}
         value={Number(data.relationCount)}
-        icon={<ModelGlyph icon="network" size={26} />}
+        icon={<ModelGlyph icon="network" size={20} />}
       />
       {data.changeCount !== undefined && (
         <StatCard
@@ -177,10 +177,26 @@ const StatsPage: React.FC = () => {
             days: data.days ?? Number(days),
           })}
           value={Number(data.changeCount)}
-          icon={<ModelGlyph icon="monitor" size={26} />}
+          icon={<ModelGlyph icon="monitor" size={20} />}
         />
       )}
     </div>
+  );
+
+  // 内容面板：默认内边距卡片 + 带分割线的卡片标题（同行等高，由 Row 拉伸）
+  const panel = (
+    title: string,
+    children: React.ReactNode,
+    extra?: React.ReactNode,
+  ) => (
+    <Card
+      variant="outlined"
+      title={title}
+      extra={extra}
+      style={{ height: '100%' }}
+    >
+      {children}
+    </Card>
   );
 
   return (
@@ -214,128 +230,107 @@ const StatsPage: React.FC = () => {
             style={{ marginBottom: 16 }}
           />
           {statCards}
-          <Card
-            variant="outlined"
-            size="small"
-            title={t('pages.cmdb.stats.byModel')}
-          >
-            <BarList items={barItems('byModel')} />
-          </Card>
+          {panel(
+            t('pages.cmdb.stats.byModel'),
+            <BarList items={barItems('byModel')} />,
+          )}
         </>
       ) : (
         <>
           {statCards}
           <Row gutter={[16, 16]}>
             <Col xs={24} lg={12}>
-              <Card
-                variant="outlined"
-                size="small"
-                title={t('pages.cmdb.stats.byModel')}
-              >
-                <BarList items={barItems('byModel')} />
-              </Card>
+              {panel(
+                t('pages.cmdb.stats.byModel'),
+                <BarList items={barItems('byModel')} />,
+              )}
             </Col>
             <Col xs={24} lg={12}>
-              <Card
-                variant="outlined"
-                size="small"
-                title={t('pages.cmdb.stats.byStatus')}
-              >
-                <BarList items={barItems('byStatus')} />
-              </Card>
+              {panel(
+                t('pages.cmdb.stats.byStatus'),
+                <BarList items={barItems('byStatus')} />,
+              )}
             </Col>
             <Col xs={24} lg={12}>
-              <Card
-                variant="outlined"
-                size="small"
-                title={t('pages.cmdb.stats.byEnv')}
-              >
-                <BarList items={barItems('byEnv')} />
-              </Card>
+              {panel(
+                t('pages.cmdb.stats.byEnv'),
+                <BarList items={barItems('byEnv')} />,
+              )}
             </Col>
             <Col xs={24} lg={12}>
-              <Card
-                variant="outlined"
-                size="small"
-                title={t('pages.cmdb.stats.bySource')}
-              >
-                <BarList items={barItems('bySource')} />
-              </Card>
+              {panel(
+                t('pages.cmdb.stats.bySource'),
+                <BarList items={barItems('bySource')} />,
+              )}
             </Col>
           </Row>
           {quality && quality.items.length > 0 && (
-            <Card
-              variant="outlined"
-              size="small"
-              title={t('pages.cmdb.quality.title')}
-              extra={
+            <div style={{ marginTop: 16 }}>
+              {panel(
+                t('pages.cmdb.quality.title'),
+                <Table<CmdbQualityRow>
+                  rowKey="modelCode"
+                  size="middle"
+                  pagination={false}
+                  dataSource={quality.items}
+                  columns={[
+                    {
+                      title: t('pages.cmdb.ci.column.model'),
+                      dataIndex: 'modelName',
+                      render: (_, r) => r.modelName || r.modelCode,
+                    },
+                    {
+                      title: t('pages.cmdb.quality.total'),
+                      dataIndex: 'total',
+                      align: 'right',
+                      width: 110,
+                      render: (_, r) => Number(r.total ?? 0).toLocaleString(),
+                    },
+                    ...QUALITY_ISSUES.map(({ issue, field }) => ({
+                      title:
+                        issue === 'outdated'
+                          ? t('pages.cmdb.quality.issue.outdated', {
+                              days: quality.outdatedDays,
+                            })
+                          : t(`pages.cmdb.quality.issue.${issue}`),
+                      align: 'right' as const,
+                      width: 130,
+                      render: (_: unknown, r: CmdbQualityRow) => {
+                        const n = Number(r[field] ?? 0);
+                        // 有问题的数字可点：跳到该模型的资源列表并带上问题筛选
+                        return n > 0 ? (
+                          <a
+                            onClick={() =>
+                              history.push(
+                                `/cmdb/ci?model=${r.modelCode}&issue=${issue}`,
+                              )
+                            }
+                          >
+                            {n.toLocaleString()}
+                          </a>
+                        ) : (
+                          <Typography.Text type="secondary">0</Typography.Text>
+                        );
+                      },
+                    })),
+                  ]}
+                />,
                 <Typography.Text type="secondary">
                   {t('pages.cmdb.quality.tip')}
-                </Typography.Text>
-              }
-              style={{ marginTop: 16 }}
-            >
-              <Table<CmdbQualityRow>
-                rowKey="modelCode"
-                size="small"
-                pagination={false}
-                dataSource={quality.items}
-                columns={[
-                  {
-                    title: t('pages.cmdb.ci.column.model'),
-                    dataIndex: 'modelName',
-                    render: (_, r) => r.modelName || r.modelCode,
-                  },
-                  {
-                    title: t('pages.cmdb.quality.total'),
-                    dataIndex: 'total',
-                    align: 'right',
-                    width: 110,
-                    render: (_, r) => Number(r.total ?? 0).toLocaleString(),
-                  },
-                  ...QUALITY_ISSUES.map(({ issue, field }) => ({
-                    title:
-                      issue === 'outdated'
-                        ? t('pages.cmdb.quality.issue.outdated', {
-                            days: quality.outdatedDays,
-                          })
-                        : t(`pages.cmdb.quality.issue.${issue}`),
-                    align: 'right' as const,
-                    width: 130,
-                    render: (_: unknown, r: CmdbQualityRow) => {
-                      const n = Number(r[field] ?? 0);
-                      // 有问题的数字可点：跳到该模型的资源列表并带上问题筛选
-                      return n > 0 ? (
-                        <a
-                          onClick={() =>
-                            history.push(
-                              `/cmdb/ci?model=${r.modelCode}&issue=${issue}`,
-                            )
-                          }
-                        >
-                          {n.toLocaleString()}
-                        </a>
-                      ) : (
-                        <Typography.Text type="secondary">0</Typography.Text>
-                      );
-                    },
-                  })),
-                ]}
-              />
-            </Card>
+                </Typography.Text>,
+              )}
+            </div>
           )}
-          <Card
-            variant="outlined"
-            size="small"
-            title={t('pages.cmdb.stats.trend')}
-            style={{ marginTop: 16 }}
-          >
-            <TrendChart
-              points={points}
-              height={260}
-              title={t('pages.cmdb.stats.trend')}
-            />
-          </Card>
+          <div style={{ marginTop: 16 }}>
+            {panel(
+              t('pages.cmdb.stats.trend'),
+              <TrendChart
+                points={points}
+                height={260}
+                title={t('pages.cmdb.stats.trend')}
+              />,
+            )}
+          </div>
         </>
       )}
     </PageContainer>

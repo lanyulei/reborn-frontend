@@ -56,6 +56,7 @@ export const WebhookModal: React.FC<{
   const disable = () => {
     if (!source) return;
     modal.confirm({
+      okButtonProps: { danger: true },
       title: t('pages.cmdb.sync.webhook.disable'),
       content: t('pages.cmdb.sync.webhook.disable.confirm'),
       onOk: async () => {

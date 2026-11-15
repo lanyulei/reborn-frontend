@@ -5,8 +5,9 @@ import type {
 } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { Link, useAccess } from '@umijs/max';
-import { App, Popconfirm } from 'antd';
+import { App } from 'antd';
 import React, { useRef } from 'react';
+import { ConfirmLink } from '@/components/TableActions';
 import { NOTIFY_REPLAY_STATE_META } from '@/constants';
 import {
   listDeadLetters,
@@ -114,7 +115,7 @@ const DeadLetterList: React.FC = () => {
         // 状态机：仅未重放（none）的行可标记
         if (canReplay && record.replayState === 1) {
           actions.push(
-            <Popconfirm
+            <ConfirmLink
               key="replay"
               title={t('pages.notify.dlq.replay.action')}
               description={t('pages.notify.dlq.replay.description')}
@@ -124,8 +125,8 @@ const DeadLetterList: React.FC = () => {
                 reload();
               }}
             >
-              <a>{t('pages.notify.dlq.replay.action')}</a>
-            </Popconfirm>,
+              {t('pages.notify.dlq.replay.action')}
+            </ConfirmLink>,
           );
         }
         // 下钻：同事件的全部发送任务 / 本任务的逐次投递明细

@@ -84,10 +84,17 @@ export interface TopologyResult {
   truncated?: boolean;
 }
 
-/** Neighbors 资源拓扑：按层展开（depth ≤3，maxNodes ≤500） */
+/**
+ * Neighbors 资源拓扑：按层展开（depth ≤3，maxNodes ≤500）。
+ * flow：缺省两个方向；downstream 只看下游（本资源影响谁）；upstream 只看上游（本资源依赖谁）。
+ */
 export async function getNeighbors(
   ciId: string,
-  params: { depth?: number; maxNodes?: number },
+  params: {
+    depth?: number;
+    maxNodes?: number;
+    flow?: 'downstream' | 'upstream';
+  },
 ): Promise<TopologyResult> {
   return authRequest<TopologyResult>(`/api/v1/cmdb/ci/${ciId}/neighbors`, {
     method: 'GET',

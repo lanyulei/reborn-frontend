@@ -1,4 +1,10 @@
-import { ExclamationCircleFilled, UserOutlined } from '@ant-design/icons';
+import {
+  CheckCircleFilled,
+  ExclamationCircleFilled,
+  LoadingOutlined,
+  RightOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import {
   Bubble,
   Conversations,
@@ -167,11 +173,83 @@ const StepContent: React.FC<{ step: ChatStep; t: Translate }> = ({
   </Space>
 );
 
+/** 步骤达到这个数量才收成一行摘要；更少时直接平铺 */
+const STEPS_COLLAPSE_MIN = 3;
+
+const formatDuration = (ms: number) =>
+  ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`;
+
+/**
+ * 助手消息里的操作步骤。步骤多时默认收成一行摘要（数量 / 失败数 / 总耗时；进行中显示
+ * 当前步骤），点击展开完整列表，列表限高、内部滚动——调用再多也不把消息撑长。
+ * 列表里每个步骤的样子与平铺时完全一样。
+ */
+const StepsBlock: React.FC<{
+  msg: AssistantChatMessage;
+  items: ThoughtChainItemType[];
+  t: Translate;
+}> = ({ msg, items, t }) => {
+  const { styles, cx } = useStyles();
+  const { steps } = msg;
+  const failed = steps.filter(
+    (step) => step.status === 'failed' || step.status === 'denied',
+  ).length;
+  // 默认：进行中收起（摘要里看当前步骤）；结束后有失败则展开。用户手动点过后以用户为准
+  const [picked, setPicked] = useState<boolean>();
+  const expanded = picked ?? (!msg.streaming && failed > 0);
+
+  const chain = <ThoughtChain items={items} />;
+  if (steps.length < STEPS_COLLAPSE_MIN) {
+    return <div className={styles.steps}>{chain}</div>;
+  }
+
+  const last = steps[steps.length - 1];
+  const running = msg.streaming && last.status === 'approved';
+  const totalMs = steps.reduce((sum, step) => sum + (step.durationMs ?? 0), 0);
+  return (
+    <div className={styles.steps}>
+      <button
+        type="button"
+        className={styles.stepsSummary}
+        aria-expanded={expanded}
+        onClick={() => setPicked(!expanded)}
+      >
+        {running ? (
+          <LoadingOutlined className={styles.stepsIconRunning} />
+        ) : failed > 0 ? (
+          <ExclamationCircleFilled className={styles.stepsIconFailed} />
+        ) : (
+          <CheckCircleFilled className={styles.stepsIconDone} />
+        )}
+        <span className={styles.stepsText}>
+          {running
+            ? t('component.chat.steps.running', {
+                name: last.title || last.tool,
+                index: steps.length,
+              })
+            : t('component.chat.steps.summary', { count: steps.length })}
+        </span>
+        {!running && failed > 0 && (
+          <span className={styles.stepsFailed}>
+            {t('component.chat.steps.failed', { count: failed })}
+          </span>
+        )}
+        {!running && totalMs > 0 && (
+          <span className={styles.stepsMeta}>{formatDuration(totalMs)}</span>
+        )}
+        <RightOutlined
+          className={cx(styles.stepsArrow, expanded && styles.stepsArrowOpen)}
+        />
+      </button>
+      {expanded && <div className={styles.stepsList}>{chain}</div>}
+    </div>
+  );
+};
+
 const AssistantHeader: React.FC<{
   msg: AssistantChatMessage;
   t: Translate;
 }> = ({ msg, t }) => {
-  const { styles } = useStyles();
   const items = useMemo<ThoughtChainItemType[]>(
     () =>
       msg.steps.map((step) => ({
@@ -204,11 +282,7 @@ const AssistantHeader: React.FC<{
           {msg.reasoning}
         </Think>
       )}
-      {items.length > 0 && (
-        <div className={styles.steps}>
-          <ThoughtChain items={items} />
-        </div>
-      )}
+      {items.length > 0 && <StepsBlock msg={msg} items={items} t={t} />}
     </Space>
   );
 };

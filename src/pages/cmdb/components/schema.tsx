@@ -145,9 +145,9 @@ const patternRule = (pattern?: string): { pattern: RegExp }[] => {
 /** 表单项：name 统一为 ['attrs', code]，按字段类型选择控件 */
 export const AttrFormItems: React.FC<{
   fields: CmdbField[];
-  /** 编辑时同步只读字段禁用 */
-  editing?: boolean;
-}> = ({ fields, editing }) => {
+  /** 编辑由采集源维护的资源时，同步只读字段禁用（人工资源没有同步来写，可人工维护） */
+  syncManaged?: boolean;
+}> = ({ fields, syncManaged }) => {
   const t = useT();
   return (
     <>
@@ -155,7 +155,7 @@ export const AttrFormItems: React.FC<{
         .filter((f) => !f.deprecated)
         .map((f) => {
           const name = ['attrs', f.code];
-          const disabled = editing && f.owner === 'sync';
+          const disabled = syncManaged && f.owner === 'sync';
           const rules = f.required
             ? [
                 {

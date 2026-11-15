@@ -162,6 +162,9 @@ export default {
   'component.chat.placeholder': '輸入訊息，按 Enter 送出...',
   'component.chat.thinking': '思考過程',
   'component.chat.steps': '操作步驟',
+  'component.chat.steps.summary': '已呼叫 {count} 個工具',
+  'component.chat.steps.failed': '{count} 個失敗',
+  'component.chat.steps.running': '正在執行：{name}（第 {index} 步）',
   'component.chat.pendingNotice':
     '有一個操作等待確認；送出新訊息將自動取消它。',
   'component.chat.confirm.title': '該操作會修改資料，請確認後執行',

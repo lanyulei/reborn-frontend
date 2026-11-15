@@ -57,5 +57,8 @@ export default function access(
     canNotifyDlq: has('notify.dlq'),
     canNotifyRule,
     canNotifyTrace,
+    canOncallCalendar: has('oncall.calendar'),
+    canOncallGroup: has('oncall.group'),
+    canOncall: has('oncall.calendar') || has('oncall.group'),
   };
 }

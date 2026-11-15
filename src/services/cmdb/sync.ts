@@ -153,10 +153,26 @@ export interface SyncConflict {
 export async function listConflicts(
   id: string,
   params: { page?: number; pageSize?: number },
-): Promise<{ items?: SyncConflict[]; total?: string }> {
-  return authRequest<{ items?: SyncConflict[]; total?: string }>(
+): Promise<{ items?: SyncConflict[]; total?: string; capped?: boolean }> {
+  return authRequest<{
+    items?: SyncConflict[];
+    total?: string;
+    /** 清单不完整：某个模型的冲突数达到留存上限 */
+    capped?: boolean;
+  }>(
     `/api/v1/cmdb/sync/source/${id}/conflict`,
     { method: 'GET', params },
+  );
+}
+
+/** 认领：把同步冲突绑定到已有的人工资源（该资源改由本采集源同步维护） */
+export async function claimConflict(
+  id: string,
+  body: { modelCode: string; externalId: string; ciId: string },
+): Promise<void> {
+  await authRequest<Record<string, never>>(
+    `/api/v1/cmdb/sync/source/${id}/conflict:claim`,
+    { method: 'POST', data: body },
   );
 }
 

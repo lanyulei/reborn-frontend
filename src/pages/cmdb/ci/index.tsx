@@ -26,7 +26,7 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import { history, useSearchParams } from '@umijs/max';
+import { history, useModel, useSearchParams } from '@umijs/max';
 import type { MenuProps } from 'antd';
 import {
   Alert,
@@ -36,7 +36,6 @@ import {
   Empty,
   Input,
   Menu,
-  Popconfirm,
   Space,
   Spin,
   Tag,
@@ -44,7 +43,11 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
+import {
+  ConfirmLink,
+  CreateButton,
+  DeleteConfirmLink,
+} from '@/components/TableActions';
 import {
   type BatchCIsResult,
   batchDeleteCIs,
@@ -78,6 +81,7 @@ import {
   CMDB_CI_STATUS_ORDER,
 } from '../components/meta';
 import { OwnerSelect } from '../components/OwnerSelect';
+import { SavedViews } from '../components/SavedViews';
 import { useAttrColumns } from '../components/schema';
 import { useCmdbStyles } from '../components/styles';
 import { useCatalog } from '../components/useCatalog';
@@ -134,6 +138,9 @@ const CIListPage: React.FC = () => {
   const statusText = useEnumText(CMDB_CI_STATUS_META);
   const { loading, models, groups, favorites, refreshCounts } = useCatalog();
   const [searchParams] = useSearchParams();
+  // 本地保存的列设置按账号区分
+  const { initialState } = useModel('@@initialState');
+  const userId = initialState?.currentUser?.id ?? 'anonymous';
   const [modelKeyword, setModelKeyword] = useState('');
   const [activeCode, setActiveCode] = useState<string | undefined>(
     () => searchParams.get('model') ?? undefined,
@@ -204,7 +211,10 @@ const CIListPage: React.FC = () => {
   }, [activeCode]);
 
   // 导出当前类型（随当前筛选，与列表一致）为 CSV/JSON 并触发下载
-  const onExport = async (format: 'csv' | 'json' = 'csv') => {
+  const onExport = async (
+    format: 'csv' | 'json' = 'csv',
+    withRelations = false,
+  ) => {
     if (!activeModel) return;
     const values = formRef.current?.getFieldsValue?.() ?? {};
     setExporting(true);
@@ -212,7 +222,10 @@ const CIListPage: React.FC = () => {
       const blob = await exportCIs({
         modelCode: activeModel.code,
         ...buildFilters(values),
+        // 与列表一致：从数据质量看板带入的问题筛选同样作用于导出
+        issue,
         format,
+        withRelations: withRelations || undefined,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -574,7 +587,7 @@ const CIListPage: React.FC = () => {
       render: (_, r) => {
         if (recycle) {
           return (
-            <Popconfirm
+            <ConfirmLink
               title={t('pages.cmdb.ci.recycle.restore.confirm', {
                 name: r.name,
               })}
@@ -588,8 +601,8 @@ const CIListPage: React.FC = () => {
                 reload();
               }}
             >
-              <a>{t('pages.cmdb.ci.recycle.restore')}</a>
-            </Popconfirm>
+              {t('pages.cmdb.ci.recycle.restore')}
+            </ConfirmLink>
           );
         }
         const actions: React.ReactNode[] = [];
@@ -685,11 +698,6 @@ const CIListPage: React.FC = () => {
               formRef={formRef}
               headerTitle={
                 <Space size={8}>
-                  {recycle && (
-                    <Typography.Text type="secondary">
-                      {t('pages.cmdb.ci.recycle.tip')}
-                    </Typography.Text>
-                  )}
                   {!recycle && has('cmdb.ci.create') && (
                     <CreateButton onClick={() => setCreateOpen(true)}>
                       {t('common.action.create')}
@@ -709,9 +717,25 @@ const CIListPage: React.FC = () => {
                         items: [
                           { key: 'csv', label: 'CSV' },
                           { key: 'json', label: 'JSON' },
+                          { type: 'divider' },
+                          {
+                            key: 'csv:rel',
+                            label: t('pages.cmdb.export.withRelations', {
+                              format: 'CSV',
+                            }),
+                          },
+                          {
+                            key: 'json:rel',
+                            label: t('pages.cmdb.export.withRelations', {
+                              format: 'JSON',
+                            }),
+                          },
                         ],
                         onClick: ({ key }) =>
-                          void onExport(key as 'csv' | 'json'),
+                          void onExport(
+                            key.split(':')[0] as 'csv' | 'json',
+                            key.endsWith(':rel'),
+                          ),
                       }}
                     >
                       <Button icon={<DownloadOutlined />} loading={exporting}>
@@ -719,30 +743,51 @@ const CIListPage: React.FC = () => {
                       </Button>
                     </Dropdown>
                   )}
+                  {!recycle && (
+                    <SavedViews
+                      // 换模型即重建：不带着上一个模型的视图列表
+                      key={activeModel.code}
+                      modelCode={activeModel.code}
+                      getValues={() =>
+                        formRef.current?.getFieldsValue?.() ?? {}
+                      }
+                      onApply={(values) => {
+                        formRef.current?.resetFields();
+                        formRef.current?.setFieldsValue(values);
+                        formRef.current?.submit();
+                      }}
+                    />
+                  )}
+                  {has('cmdb.ci.delete') && (
+                    <Button
+                      type={recycle ? 'primary' : 'default'}
+                      ghost={recycle}
+                      icon={<DeleteOutlined />}
+                      onClick={() => {
+                        setSelectedIds([]);
+                        setRecycle((v) => !v);
+                      }}
+                    >
+                      {t(
+                        recycle
+                          ? 'pages.cmdb.ci.recycle.back'
+                          : 'pages.cmdb.ci.recycle.action',
+                      )}
+                    </Button>
+                  )}
+                  {recycle && (
+                    <Typography.Text type="secondary">
+                      {t('pages.cmdb.ci.recycle.tip')}
+                    </Typography.Text>
+                  )}
                 </Space>
               }
-              toolBarRender={() =>
-                has('cmdb.ci.delete')
-                  ? [
-                      <Button
-                        key="recycle"
-                        type={recycle ? 'primary' : 'default'}
-                        ghost={recycle}
-                        icon={<DeleteOutlined />}
-                        onClick={() => {
-                          setSelectedIds([]);
-                          setRecycle((v) => !v);
-                        }}
-                      >
-                        {t(
-                          recycle
-                            ? 'pages.cmdb.ci.recycle.back'
-                            : 'pages.cmdb.ci.recycle.action',
-                        )}
-                      </Button>,
-                    ]
-                  : []
-              }
+              // 列显示 / 顺序按模型记在浏览器本地
+              columnsState={{
+                // 回收站的列不同（删除时间），单独记
+                persistenceKey: `cmdb.ci.columns.${userId}.${activeModel.code}${recycle ? '.bin' : ''}`,
+                persistenceType: 'localStorage',
+              }}
               search={{ labelWidth: 'auto' }}
               // 筛选条件变化后清空勾选：避免批量操作落到当前已看不见的行上
               onSubmit={() => setSelectedIds([])}

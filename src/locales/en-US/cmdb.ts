@@ -210,7 +210,7 @@ export default {
   'pages.cmdb.export.action': 'Export CSV',
   'pages.cmdb.import.upload': 'Choose a CSV / JSON file',
   'pages.cmdb.import.hint':
-    'CSV with a header row (name required; relation columns rel:<type>:<direction>[:<target model>] hold target names, semicolon-separated) or a JSON file in export format; preview with a dry run before importing.',
+    'CSV with a header row (name required; relation columns rel:<type>:<direction>[:<target model>] hold target names, semicolon-separated; for a name that itself contains a semicolon use a rel1: column, one name per cell) or a JSON file in export format; preview with a dry run before importing.',
   'pages.cmdb.import.parseError': 'Row {row} could not be parsed: {message}',
   'pages.cmdb.import.empty': 'The file has no data rows',
   'pages.cmdb.import.preview':
@@ -334,6 +334,10 @@ export default {
   'pages.cmdb.detail.tab.topology': 'Topology',
   'pages.cmdb.topology.title': 'Resource topology',
   'pages.cmdb.topology.depth': 'Depth',
+  'pages.cmdb.topology.flow.all': 'All',
+  'pages.cmdb.topology.flow.upstream': 'Upstream',
+  'pages.cmdb.topology.flow.downstream': 'Downstream',
+  'pages.cmdb.export.withRelations': '{format} (with relations)',
   'pages.cmdb.topology.summary': '{nodes} nodes · {edges} relations',
   'pages.cmdb.topology.truncated':
     'Node limit reached; only part of the graph is shown. Reduce the depth or use the relation panels.',
@@ -520,6 +524,7 @@ export default {
   'pages.cmdb.uniqueRule.limit': 'Up to {max} unique rules per model',
   // relation graph
   'pages.cmdb.topology.allModels': 'All models',
+  'pages.cmdb.topology.groups': 'Model groups',
   // field-level diff
   'pages.cmdb.diff.field': 'Field',
   'pages.cmdb.diff.before': 'Before',
@@ -548,9 +553,39 @@ export default {
   'pages.cmdb.stats.byEnv': 'By Environment',
   'pages.cmdb.stats.bySource': 'By Source',
   'pages.cmdb.stats.trend': 'Change Trend',
+  'pages.cmdb.sync.conflict.capped':
+    'Too many conflicts: the list is incomplete (up to 2000 per model). This usually points to a problem with the unique rules or the source configuration; investigate the cause rather than handling them one by one.',
+  'pages.cmdb.detail.unclaim': 'Detach from sync',
+  'pages.cmdb.detail.unclaim.title': 'Detach from sync',
+  'pages.cmdb.detail.unclaim.content':
+    'The resource goes back to manual maintenance: sync no longer updates it or retires it when the source stops reporting it, and its sync-created relations are kept as manual relations. If the source still reports this device, the next sync treats it as a new resource (it lands in the conflict list when the name clashes). Note: cascade-retire configured on a relation type applies to every resource, whether sync-managed or not.',
+  'pages.cmdb.ci.views.action': 'Views',
+  'pages.cmdb.ci.views.save': 'Save current filters as a view',
+  'pages.cmdb.ci.views.name': 'View name',
+  'pages.cmdb.ci.views.delete.title': 'Delete view "{name}"?',
+  'pages.cmdb.ci.views.unavailable':
+    'The view service is unavailable right now. Please try again later',
+  'pages.cmdb.ci.views.tip':
+    'Saved to your account; a view with the same name is overwritten',
+  'pages.cmdb.ci.views.empty': 'There are no filters to save',
+  'pages.cmdb.ci.views.limit': 'Up to {max} views per model',
+  'pages.cmdb.detail.history.stateAt': 'State then',
+  'pages.cmdb.detail.history.stateAt.title': 'Resource state at {time}',
+  'pages.cmdb.detail.history.stateAt.tip':
+    'Basic info and attributes reconstructed from the change history; relations are not included.',
+  'pages.cmdb.detail.history.stateAt.deleted':
+    'The resource was deleted at that time (and restored later).',
+  'pages.cmdb.sync.conflict.claim': 'Claim',
+  'pages.cmdb.sync.conflict.claim.title': 'Claim "{name}"',
+  'pages.cmdb.sync.conflict.claim.tip':
+    'Pick an existing manually created resource to receive this discovered row: it will be maintained by this source from now on, and later syncs update it directly. Use this when the same device was both entered by hand and discovered by sync.',
+  'pages.cmdb.sync.conflict.claim.target': 'Existing resource',
+  'pages.cmdb.sync.conflict.claim.warning':
+    'Claiming cannot be undone: sync will overwrite the name and synced fields of this resource, and will retire it automatically after the grace period once the source no longer reports it.',
+  'pages.cmdb.sync.conflict.claimed': 'Claimed; takes effect on the next sync',
   'pages.cmdb.quality.title': 'Data quality',
   'pages.cmdb.quality.tip':
-    'In-service resources only (not deleted or retired); click a number to see them',
+    'In-service resources only (not deleted or retired); stale ones are not counted again as not updated. Click a number to see them',
   'pages.cmdb.quality.total': 'In service',
   'pages.cmdb.quality.issue.missing_required': 'Missing required',
   'pages.cmdb.quality.issue.no_owner': 'No owner',

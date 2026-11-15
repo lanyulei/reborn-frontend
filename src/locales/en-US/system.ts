@@ -173,6 +173,9 @@ export default {
   'component.chat.placeholder': 'Type a message and press Enter to send...',
   'component.chat.thinking': 'Thinking',
   'component.chat.steps': 'Steps',
+  'component.chat.steps.summary': '{count} tool calls',
+  'component.chat.steps.failed': '{count} failed',
+  'component.chat.steps.running': 'Running: {name} (step {index})',
   'component.chat.pendingNotice':
     'An action is waiting for confirmation; sending a new message cancels it.',
   'component.chat.confirm.title':

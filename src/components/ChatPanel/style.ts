@@ -204,6 +204,69 @@ export const useStyles = createStyles(({ css, token }) => ({
     }
   `,
 
+  /* 步骤摘要行：步骤多时默认只显示这一行，点击展开列表 */
+  stepsSummary: css`
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    padding: 6px 12px;
+    color: ${token.colorText};
+    font-size: ${token.fontSize}px;
+    line-height: 22px;
+    text-align: start;
+    background: ${token.colorFillQuaternary};
+    border: 0;
+    border-radius: ${token.borderRadius}px;
+    cursor: pointer;
+    transition: background ${token.motionDurationMid};
+    &:hover {
+      background: ${token.colorFillTertiary};
+    }
+  `,
+  stepsText: css`
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  `,
+  stepsFailed: css`
+    flex: none;
+    color: ${token.colorError};
+  `,
+  stepsMeta: css`
+    flex: none;
+    color: ${token.colorTextTertiary};
+    font-variant-numeric: tabular-nums;
+  `,
+  stepsIconDone: css`
+    color: ${token.colorSuccess};
+  `,
+  stepsIconFailed: css`
+    color: ${token.colorError};
+  `,
+  stepsIconRunning: css`
+    color: ${token.colorPrimary};
+  `,
+  stepsArrow: css`
+    flex: none;
+    margin-inline-start: auto;
+    color: ${token.colorTextTertiary};
+    font-size: 12px;
+    transition: transform ${token.motionDurationMid};
+  `,
+  stepsArrowOpen: css`
+    transform: rotate(90deg);
+  `,
+  /* 展开后的步骤列表：限高，内部滚动 */
+  stepsList: css`
+    max-height: 320px;
+    margin-top: 8px;
+    padding-inline-end: 4px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  `,
+
   /* 写操作确认卡：警示色系（与输入框上方的待确认提示一致），在白色面板与灰色气泡上都有清晰轮廓；
      宽度至少为消息列表宽度的 30%（列表根节点为容器查询上下文） */
   confirmCard: css`

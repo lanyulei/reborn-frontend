@@ -1,10 +1,10 @@
 /**
- * 模型关系：左侧分组列表（全部 / 单个分组，带模型数）+ 关系图（分组分列、边为关联类型）。
+ * 模型关系：左侧分组菜单（全部 / 单个分组，带模型数；与资源实例左侧面板同款）+ 关系图（分组分列、边为关联类型）。
  * 点击节点进入模型详情；滚轮缩放 / 拖拽平移 / 适应画布见右下控制。
  */
 import { PageContainer } from '@ant-design/pro-components';
 import { history } from '@umijs/max';
-import { Card, Spin } from 'antd';
+import { Card, Menu, Spin } from 'antd';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { listRelationTypes } from '@/services/cmdb/model';
@@ -15,7 +15,7 @@ import { useCatalog } from '../components/useCatalog';
 
 const TopologyPage: React.FC = () => {
   const t = useT();
-  const { styles, cx } = useCmdbStyles();
+  const { styles } = useCmdbStyles();
   const { loading, models, groups } = useCatalog();
   const [relations, setRelations] = useState<
     {
@@ -68,34 +68,57 @@ const TopologyPage: React.FC = () => {
     builtin: m.builtin,
   }));
 
-  const groupItem = (key: string | undefined, name: string, count: number) => (
-    <button
-      key={key ?? 'all'}
-      type="button"
-      aria-pressed={activeGroup === key}
-      className={cx(styles.modelRow, activeGroup === key && styles.modelRowOn)}
-      onClick={() => setActiveGroup(key)}
-    >
-      <span className={styles.modelRowName}>{name}</span>
-      <span className={styles.modelRowCount}>{count}</span>
-    </button>
-  );
+  // 菜单项：全部模型 + 各分组（名称 + 模型数）；key 加前缀，避免分组编码与 all 撞名
+  const menuItem = (key: string, name: string, count: number) => ({
+    key,
+    label: (
+      <span className={styles.modelMenuItem}>
+        <span className={styles.modelMenuName}>{name}</span>
+        <span className={styles.modelMenuCount}>{count}</span>
+      </span>
+    ),
+  });
+  const menuItems = [
+    menuItem('all', t('pages.cmdb.topology.allModels'), models.length),
+    ...groups.map((g) =>
+      menuItem(
+        `group-${g.code}`,
+        g.name,
+        models.filter((m) => m.category === g.code).length,
+      ),
+    ),
+  ];
 
   return (
     <PageContainer title={false}>
       <div className={styles.split}>
-        <aside className={styles.splitSide} style={{ padding: '8px 0' }}>
-          {groupItem(
-            undefined,
-            t('pages.cmdb.topology.allModels'),
-            models.length,
-          )}
-          {groups.map((g) =>
-            groupItem(
-              g.code,
-              g.name,
-              models.filter((m) => m.category === g.code).length,
-            ),
+        <aside className={styles.splitSide}>
+          <div className={styles.splitSideTitle}>
+            {t('pages.cmdb.topology.groups')}
+          </div>
+          {loading && groups.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center' }}>
+              <Spin />
+            </div>
+          ) : (
+            <Menu
+              mode="inline"
+              inlineIndent={12}
+              className={styles.modelMenu}
+              selectedKeys={[activeGroup ? `group-${activeGroup}` : 'all']}
+              items={menuItems}
+              onClick={({ key }) =>
+                setActiveGroup(
+                  key === 'all' ? undefined : key.slice('group-'.length),
+                )
+              }
+              style={{
+                borderInlineEnd: 0,
+                marginTop: 4,
+                marginBottom: 6,
+                background: 'transparent',
+              }}
+            />
           )}
         </aside>
         <div className={styles.splitMain}>

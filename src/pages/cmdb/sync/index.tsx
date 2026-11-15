@@ -8,6 +8,7 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   ModalForm,
   PageContainer,
+  ProForm,
   ProFormDependency,
   ProFormDigit,
   ProFormSelect,
@@ -35,6 +36,7 @@ import { JsonView } from '@/pages/notify/components/JsonView';
 import {
   type CmdbProvider,
   type CmdbRunStatus,
+  claimConflict,
   createSource,
   deleteSource,
   listConflicts,
@@ -57,6 +59,7 @@ import {
   useValueEnum,
 } from '@/utils/i18n';
 import { toTableResult } from '@/utils/table';
+import { CISelect } from '../components/CISelect';
 import { WebhookModal } from './WebhookModal';
 
 const HALF = { span: 12 };
@@ -441,6 +444,12 @@ const ConflictsDrawer: React.FC<{
   onClose: () => void;
 }> = ({ source, onClose }) => {
   const t = useT();
+  const { message } = App.useApp();
+  const has = usePermissions();
+  const tableRef = useRef<ActionType>(null);
+  const [claimRow, setClaimRow] = useState<SyncConflict | null>(null);
+  // 清单不完整（某个模型的冲突数达到留存上限）
+  const [capped, setCapped] = useState(false);
   const columns: ProColumns<SyncConflict>[] = [
     {
       title: t('pages.cmdb.ci.column.model'),
@@ -472,6 +481,18 @@ const ConflictsDrawer: React.FC<{
       valueType: 'dateTime',
       width: 160,
     },
+    {
+      title: t('common.column.action'),
+      valueType: 'option',
+      width: 80,
+      // 认领会改写资源：除采集源权限外还须有编辑资源权限（与后端一致）
+      hideInTable: !has('cmdb.sync.edit') || !has('cmdb.ci.edit'),
+      render: (_, r) => (
+        <a onClick={() => setClaimRow(r)}>
+          {t('pages.cmdb.sync.conflict.claim')}
+        </a>
+      ),
+    },
   ];
   return (
     <Drawer
@@ -488,7 +509,16 @@ const ConflictsDrawer: React.FC<{
           <Typography.Paragraph type="secondary">
             {t('pages.cmdb.sync.conflict.tip')}
           </Typography.Paragraph>
+          {capped && (
+            <Alert
+              type="warning"
+              showIcon
+              title={t('pages.cmdb.sync.conflict.capped')}
+              style={{ marginBottom: 16 }}
+            />
+          )}
           <ProTable<SyncConflict>
+            actionRef={tableRef}
             rowKey={(r) => `${r.modelCode}/${r.externalId}`}
             search={false}
             options={{ reload: true, density: false, setting: false }}
@@ -499,6 +529,7 @@ const ConflictsDrawer: React.FC<{
                 page: params.current,
                 pageSize: params.pageSize,
               });
+              setCapped(!!result.capped);
               return {
                 data: result.items ?? [],
                 total: Number(result.total ?? 0),
@@ -506,6 +537,54 @@ const ConflictsDrawer: React.FC<{
               };
             }}
           />
+          {/* 认领：选一条同类型的已有资源，绑定为这条采集数据的落点 */}
+          <ModalForm<{ ciId: string }>
+            key={claimRow ? `${claimRow.modelCode}/${claimRow.externalId}` : ''}
+            title={t('pages.cmdb.sync.conflict.claim.title', {
+              name: claimRow?.name ?? '',
+            })}
+            width={520}
+            open={!!claimRow}
+            onOpenChange={(open) => {
+              if (!open) setClaimRow(null);
+            }}
+            modalProps={{ destroyOnHidden: true }}
+            onFinish={async ({ ciId }) => {
+              if (!claimRow) return false;
+              try {
+                await claimConflict(source.id, {
+                  modelCode: claimRow.modelCode,
+                  externalId: claimRow.externalId,
+                  ciId,
+                });
+              } catch {
+                return false; // authRequest 已提示
+              }
+              message.success(t('pages.cmdb.sync.conflict.claimed'));
+              tableRef.current?.reload();
+              return true;
+            }}
+          >
+            <Typography.Paragraph type="secondary">
+              {t('pages.cmdb.sync.conflict.claim.tip')}
+            </Typography.Paragraph>
+            <Alert
+              type="warning"
+              showIcon
+              title={t('pages.cmdb.sync.conflict.claim.warning')}
+              style={{ marginBottom: 16 }}
+            />
+            <ProForm.Item
+              name="ciId"
+              label={t('pages.cmdb.sync.conflict.claim.target')}
+              rules={[{ required: true }]}
+            >
+              <CISelect
+                modelCode={claimRow?.modelCode}
+                placeholder={t('pages.cmdb.ci.filter.relTarget.placeholder')}
+              />
+            </ProForm.Item>
+          </ModalForm>
         </>
       )}
     </Drawer>

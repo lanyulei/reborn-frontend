@@ -93,6 +93,45 @@ export async function getOverview(days?: number): Promise<CmdbOverview> {
   );
 }
 
+/** 保存的资源列表视图：命名的筛选条件（按账号 + 模型，服务端存储） */
+export interface CmdbCIView {
+  name: string;
+  filters?: Record<string, unknown>;
+}
+
+/** 当前用户在某模型下保存的视图；无权限 / 旧后端时抛出，调用方降级为本地存储 */
+export async function listCIViews(
+  modelCode: string,
+): Promise<{ items?: CmdbCIView[] }> {
+  return quietGet<{ items?: CmdbCIView[] }>('/api/v1/cmdb/ci-view', {
+    modelCode,
+  });
+}
+
+/** 保存视图（同名覆盖） */
+export async function saveCIView(
+  modelCode: string,
+  name: string,
+  filters: Record<string, unknown>,
+  options?: { silent?: boolean },
+): Promise<void> {
+  await authRequest<Record<string, never>>('/api/v1/cmdb/ci-view', {
+    method: 'PUT',
+    data: { modelCode, name, filters },
+    silent: options?.silent,
+  });
+}
+
+export async function deleteCIView(
+  modelCode: string,
+  name: string,
+): Promise<void> {
+  await authRequest<Record<string, never>>('/api/v1/cmdb/ci-view:delete', {
+    method: 'POST',
+    data: { modelCode, name },
+  });
+}
+
 /** GetQuality 数据质量：按模型的问题资源数（受数据范围约束） */
 export async function getQuality(): Promise<{
   items?: CmdbQualityRow[];

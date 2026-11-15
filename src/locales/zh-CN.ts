@@ -6,6 +6,7 @@ import globalHeader from './zh-CN/globalHeader';
 import menu from './zh-CN/menu';
 import network from './zh-CN/network';
 import notify from './zh-CN/notify';
+import oncall from './zh-CN/oncall';
 import pages from './zh-CN/pages';
 import settingDrawer from './zh-CN/settingDrawer';
 import settings from './zh-CN/settings';
@@ -29,4 +30,5 @@ export default {
   ...system,
   ...notify,
   ...cmdb,
+  ...oncall,
 };

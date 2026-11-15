@@ -26,20 +26,44 @@ import { parseCsv } from './csv';
 const FIXED = new Set(['name', 'status', 'env', 'owner', 'tags', 'externalId']);
 /** 导出文件里存在但导入时忽略的列 */
 const IGNORED = new Set(['id', 'version', 'updateTime', 'createTime']);
-/** 关系列：rel:<关系类型>:<方向>[:<对端类型>]，单元格为对端资源名称（分号分隔多个） */
+/**
+ * 关系列，两种列头（与后端导出一致）：
+ * - `rel:<关系类型>:<方向>[:<对端类型>]`  多值列：单元格为分号（; / ；）分隔的对端资源名称；
+ * - `rel1:<关系类型>:<方向>[:<对端类型>]` 单值列：单元格整体就是一个名称，不拆分；同一列头可重复多列。
+ * 没有转义规则：名称里本身带分号的资源用 rel1: 列。
+ */
 const REL_PREFIX = 'rel:';
+const REL_SINGLE_PREFIX = 'rel1:';
+
+/**
+ * 去掉导出时加的防公式前缀：首个单引号后跟 `=` `+` `-` `@`、制表 / 回车或另一个单引号时去掉它
+ * （与后端 csvSafe 严格互逆：本身以单引号开头的值导出时也会多前置一个）。其它以单引号开头的内容不动。
+ */
+export const unquoteCsvCell = (cell: string): string =>
+  /^'[=+\-@\t\r']/.test(cell) ? cell.slice(1) : cell;
+
+/** 多值关联列的单元格 → 对端名称列表（按分号拆分，去空白与空项） */
+export const splitRelationNames = (raw: string): string[] =>
+  raw
+    .split(/[;；]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
 const parseRelationHeader = (
   col: string,
-): Omit<ImportRelation, 'targetName'> | null => {
-  if (!col.startsWith(REL_PREFIX)) return null;
-  const parts = col.slice(REL_PREFIX.length).split(':');
+): (Omit<ImportRelation, 'targetName'> & { single: boolean }) | null => {
+  const single = col.startsWith(REL_SINGLE_PREFIX);
+  if (!single && !col.startsWith(REL_PREFIX)) return null;
+  const parts = col
+    .slice((single ? REL_SINGLE_PREFIX : REL_PREFIX).length)
+    .split(':');
   if (parts.length < 2 || (parts[1] !== 'outgoing' && parts[1] !== 'incoming'))
     return null;
   return {
     relationType: parts[0],
     direction: parts[1],
     targetModel: parts[2] || undefined,
+    single,
   };
 };
 
@@ -118,14 +142,15 @@ const toRows = (
     const row: ImportRow = { name: '', attrs: {} };
     try {
       header.forEach((col, i) => {
-        const raw = cells[i] ?? '';
+        // 导出时为防公式注入加的前导单引号（见后端 csvSafe）在导入时去掉，保证导出文件可原样导回
+        const raw = unquoteCsvCell(cells[i] ?? '');
         if (IGNORED.has(col)) return;
-        const rel = parseRelationHeader(col);
-        if (rel) {
-          const names = raw
-            .split(/[;；]/)
-            .map((s) => s.trim())
-            .filter(Boolean);
+        const parsed = parseRelationHeader(col);
+        if (parsed) {
+          const { single, ...rel } = parsed;
+          const names = single
+            ? [raw.trim()].filter(Boolean)
+            : splitRelationNames(raw);
           if (names.length) {
             row.relations = [
               ...(row.relations ?? []),

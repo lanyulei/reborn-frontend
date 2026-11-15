@@ -34,17 +34,18 @@ const useStyles = createStyles(({ token, css }) => ({
   statValue: css`
     display: block;
     color: ${token.colorText};
-    font-size: 28px;
+    font-size: ${token.fontSizeHeading3}px;
     font-weight: 600;
-    line-height: 1.25;
+    line-height: ${token.lineHeightHeading3};
+    font-variant-numeric: tabular-nums;
   `,
   statIcon: css`
     display: inline-flex;
     flex: none;
     align-items: center;
     justify-content: center;
-    width: 52px;
-    height: 52px;
+    width: 40px;
+    height: 40px;
     color: ${token.colorPrimary};
     background: ${token.colorPrimaryBg};
     border-radius: 50%;
@@ -61,10 +62,10 @@ const useStyles = createStyles(({ token, css }) => ({
   `,
   barLabel: css`
     flex: none;
-    width: 34%;
+    width: 30%;
+    max-width: 160px;
     overflow: hidden;
     color: ${token.colorTextSecondary};
-    font-size: ${token.fontSizeSM}px;
     text-overflow: ellipsis;
     white-space: nowrap;
   `,
@@ -88,7 +89,7 @@ const useStyles = createStyles(({ token, css }) => ({
     top: 50%;
     margin-left: 8px;
     color: ${token.colorText};
-    font-size: ${token.fontSizeSM}px;
+    font-variant-numeric: tabular-nums;
     line-height: 1;
     white-space: nowrap;
     transform: translateY(-50%);
@@ -102,11 +103,11 @@ const useStyles = createStyles(({ token, css }) => ({
   `,
   axisText: css`
     fill: ${token.colorTextTertiary};
-    font-size: 11px;
+    font-size: ${token.fontSizeSM}px;
   `,
   directLabel: css`
     fill: ${token.colorTextSecondary};
-    font-size: 11px;
+    font-size: ${token.fontSizeSM}px;
   `,
   hoverBand: css`
     fill: ${token.colorFillQuaternary};

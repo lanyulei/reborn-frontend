@@ -208,7 +208,7 @@ export default {
   'pages.cmdb.export.action': '匯出 CSV',
   'pages.cmdb.import.upload': '選擇 CSV / JSON 檔案',
   'pages.cmdb.import.hint':
-    'CSV 首列為表頭（name 必填；關係欄 rel:<關係類型>:<方向>[:<對端類型>]，儲存格為對端名稱，分號分隔多個）或匯出格式的 JSON 檔案；先試執行預覽再確認匯入。',
+    'CSV 首列為表頭（name 必填；關係欄 rel:<關係類型>:<方向>[:<對端類型>]，儲存格為對端名稱，分號分隔多個；名稱本身含分號時改用 rel1: 欄，一格一個名稱）或匯出格式的 JSON 檔案；先試執行預覽再確認匯入。',
   'pages.cmdb.import.parseError': '第 {row} 列解析失敗：{message}',
   'pages.cmdb.import.empty': '檔案沒有資料列',
   'pages.cmdb.import.preview':
@@ -326,6 +326,10 @@ export default {
   'pages.cmdb.detail.tab.topology': '拓撲',
   'pages.cmdb.topology.title': '資源拓撲',
   'pages.cmdb.topology.depth': '展開層數',
+  'pages.cmdb.topology.flow.all': '全部',
+  'pages.cmdb.topology.flow.upstream': '上游',
+  'pages.cmdb.topology.flow.downstream': '下游',
+  'pages.cmdb.export.withRelations': '{format}（含關聯）',
   'pages.cmdb.topology.summary': '{nodes} 個節點 · {edges} 條關係',
   'pages.cmdb.topology.truncated':
     '節點數已達上限，僅顯示部分關聯；請縮小層數或從關聯面板檢視。',
@@ -503,6 +507,7 @@ export default {
   'pages.cmdb.uniqueRule.limit': '每個模型最多 {max} 條唯一規則',
   // 模型關聯圖
   'pages.cmdb.topology.allModels': '全部模型',
+  'pages.cmdb.topology.groups': '模型分組',
   // diff 欄位級對比
   'pages.cmdb.diff.field': '欄位',
   'pages.cmdb.diff.before': '變更前',
@@ -530,9 +535,37 @@ export default {
   'pages.cmdb.stats.byEnv': '按環境',
   'pages.cmdb.stats.bySource': '按來源',
   'pages.cmdb.stats.trend': '變更趨勢',
+  'pages.cmdb.sync.conflict.capped':
+    '衝突過多，清單不完整（每個模型最多列出 2000 條）。這通常說明唯一規則或採集配置有問題，建議先排查原因，而不是逐條處理。',
+  'pages.cmdb.detail.unclaim': '解除同步',
+  'pages.cmdb.detail.unclaim.title': '解除同步託管',
+  'pages.cmdb.detail.unclaim.content':
+    '資源將改回人工維護：同步不再更新它，也不會因採集源裡不再出現而自動退役；它身上由同步建立的關聯會保留並轉為人工關聯。採集源裡若仍有這台設備，下次同步會把它當作新資源（重名時進入同步衝突清單）。注意：關聯類型上配置的「級聯退役」對所有資源生效，與是否由同步維護無關。',
+  'pages.cmdb.ci.views.action': '檢視',
+  'pages.cmdb.ci.views.save': '儲存目前篩選為檢視',
+  'pages.cmdb.ci.views.name': '檢視名稱',
+  'pages.cmdb.ci.views.delete.title': '確認刪除檢視「{name}」？',
+  'pages.cmdb.ci.views.unavailable': '檢視服務暫時無法使用，請稍後再試',
+  'pages.cmdb.ci.views.tip': '隨帳號儲存，同名會覆蓋',
+  'pages.cmdb.ci.views.empty': '目前沒有篩選條件',
+  'pages.cmdb.ci.views.limit': '每個模型最多儲存 {max} 個檢視',
+  'pages.cmdb.detail.history.stateAt': '當時狀態',
+  'pages.cmdb.detail.history.stateAt.title': '{time} 的資源狀態',
+  'pages.cmdb.detail.history.stateAt.tip':
+    '依變更歷史倒推出的基本資訊與屬性，不含關聯。',
+  'pages.cmdb.detail.history.stateAt.deleted':
+    '該時刻資源處於已刪除狀態（之後被恢復）。',
+  'pages.cmdb.sync.conflict.claim': '認領',
+  'pages.cmdb.sync.conflict.claim.title': '認領「{name}」',
+  'pages.cmdb.sync.conflict.claim.tip':
+    '選擇一條已有的人工資源作為這條採集資料的落點：該資源將改由本採集源同步維護，之後的同步直接更新它。適用於同一台設備既被人工錄入、又被同步發現的情況。',
+  'pages.cmdb.sync.conflict.claim.target': '已有資源',
+  'pages.cmdb.sync.conflict.claim.warning':
+    '認領後不可撤銷：同步會覆蓋該資源的名稱和同步欄位；採集源裡不再出現它時，會按寬限期自動退役。',
+  'pages.cmdb.sync.conflict.claimed': '已認領，下次同步生效',
   'pages.cmdb.quality.title': '資料品質',
   'pages.cmdb.quality.tip':
-    '只統計在冊資源（未刪除、未退役）；點擊數字查看對應資源',
+    '只統計在冊資源（未刪除、未退役），「同步陳舊」的不重複計入「未更新」；點擊數字查看對應資源',
   'pages.cmdb.quality.total': '在冊資源',
   'pages.cmdb.quality.issue.missing_required': '缺必填項',
   'pages.cmdb.quality.issue.no_owner': '無負責人',

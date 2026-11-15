@@ -156,6 +156,10 @@ export default defineConfig({
         token: {
           fontFamily: 'AlibabaSans, sans-serif',
         },
+        components: {
+          // 卡片标题栏（.ant-card-head）最小高度：默认 56 → 50；小号卡片不受影响
+          Card: { headerHeight: 50 },
+        },
       },
     },
   },

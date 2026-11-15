@@ -6,6 +6,7 @@ import globalHeader from './zh-TW/globalHeader';
 import menu from './zh-TW/menu';
 import network from './zh-TW/network';
 import notify from './zh-TW/notify';
+import oncall from './zh-TW/oncall';
 import pages from './zh-TW/pages';
 import settingDrawer from './zh-TW/settingDrawer';
 import settings from './zh-TW/settings';
@@ -29,4 +30,5 @@ export default {
   ...system,
   ...notify,
   ...cmdb,
+  ...oncall,
 };

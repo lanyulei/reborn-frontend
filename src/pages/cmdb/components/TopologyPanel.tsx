@@ -279,6 +279,8 @@ export const TopologyPanel: React.FC<{
   const { styles, cx: cls } = useStyles();
   const statusText = useEnumText(CMDB_CI_STATUS_META);
   const [depth, setDepth] = useState<number>(2);
+  // 展开方向：全部 / 上游（本资源依赖谁）/ 下游（本资源影响谁）
+  const [flow, setFlow] = useState<'all' | 'upstream' | 'downstream'>('all');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<TopologyResult | null>(null);
   const [hover, setHover] = useState<HoverTarget | null>(null);
@@ -323,7 +325,11 @@ export const TopologyPanel: React.FC<{
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getNeighbors(ciId, { depth, maxNodes: 200 })
+    getNeighbors(ciId, {
+      depth,
+      maxNodes: 200,
+      flow: flow === 'all' ? undefined : flow,
+    })
       .then((result) => {
         if (!cancelled) setData(result);
       })
@@ -336,7 +342,7 @@ export const TopologyPanel: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [ciId, depth]);
+  }, [ciId, depth, flow]);
 
   /**
    * 布局：以后端给出的层深建 BFS 树（父 = 任一上一层邻居），第一层按与中心的关系方向
@@ -703,6 +709,22 @@ export const TopologyPanel: React.FC<{
           options={[1, 2, 3]}
           value={depth}
           onChange={(v) => setDepth(Number(v))}
+        />
+        <Segmented
+          size="small"
+          value={flow}
+          onChange={(v) => setFlow(v as 'all' | 'upstream' | 'downstream')}
+          options={[
+            { value: 'all', label: t('pages.cmdb.topology.flow.all') },
+            {
+              value: 'upstream',
+              label: t('pages.cmdb.topology.flow.upstream'),
+            },
+            {
+              value: 'downstream',
+              label: t('pages.cmdb.topology.flow.downstream'),
+            },
+          ]}
         />
         {data && (
           <span className={styles.summary}>

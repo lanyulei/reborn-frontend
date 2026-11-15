@@ -33,6 +33,10 @@ import Exception403 from './pages/exception/403';
 import { errorConfig } from './requestErrorConfig';
 
 const loginPath = '/user/login';
+/** 免登录的公共页面前缀（如公共值班日历）：不拉取登录态、不跳转登录页 */
+const publicPathPrefix = '/public/';
+const isAnonymousPath = (pathname: string) =>
+  pathname === loginPath || pathname.startsWith(publicPathPrefix);
 
 /**
  * @see https://umijs.org/docs/api/runtime-config#getinitialstate
@@ -89,9 +93,9 @@ export async function getInitialState(): Promise<{
   } as Partial<LayoutSettings>;
   // 浏览器标签页标题：登录页由 Helmet 设置，主布局由 ProLayout 的
   // useDocumentTitle 设为「页面名 - 系统标题」，无需在此直接赋值
-  // 如果不是登录页面，执行
+  // 如果不是登录页面 / 公共页面，执行
   const { location } = history;
-  if (location.pathname !== loginPath) {
+  if (!isAnonymousPath(location.pathname)) {
     const profile = await fetchUserInfo();
     return {
       fetchUserInfo,
@@ -175,7 +179,7 @@ export const layout: RunTimeLayoutConfig = ({
       if (
         !initialState?.currentUser &&
         !initialState?.profileError &&
-        location.pathname !== loginPath
+        !isAnonymousPath(location.pathname)
       ) {
         history.replace(
           `${loginPath}?redirect=${encodeURIComponent(location.pathname + location.search + location.hash)}`,

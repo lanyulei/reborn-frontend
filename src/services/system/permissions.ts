@@ -14,6 +14,8 @@ export type MenuPermissionCode =
   | 'cmdb.ci'
   | 'cmdb.sync'
   | 'cmdb.audit'
+  | 'oncall.calendar'
+  | 'oncall.group'
   | 'system.user'
   | 'system.role'
   | 'system.login_log'
@@ -80,7 +82,15 @@ export type ElementPermissionCode =
   | 'cmdb.sync.edit'
   | 'cmdb.sync.delete'
   | 'cmdb.sync.trigger'
-  | 'cmdb.sync.webhook';
+  | 'cmdb.sync.webhook'
+  | 'oncall.calendar.override'
+  | 'oncall.calendar.share'
+  | 'oncall.group.create'
+  | 'oncall.group.edit'
+  | 'oncall.group.delete'
+  | 'oncall.group.member'
+  | 'oncall.group.schedule'
+  | 'oncall.group.share';
 
 /** 菜单权限定义 */
 export interface MenuPermissionDef {
@@ -123,6 +133,8 @@ export const MENU_PERMISSIONS: MenuPermissionDef[] = [
   { code: 'cmdb.ci', labelKey: 'menu.cmdb.ci', parentKey: 'menu.cmdb' },
   { code: 'cmdb.sync', labelKey: 'menu.cmdb.sync', parentKey: 'menu.cmdb' },
   { code: 'cmdb.audit', labelKey: 'menu.cmdb.audit', parentKey: 'menu.cmdb' },
+  { code: 'oncall.calendar', labelKey: 'menu.oncall.calendar', parentKey: 'menu.oncall' },
+  { code: 'oncall.group', labelKey: 'menu.oncall.group', parentKey: 'menu.oncall' },
 ];
 
 /** 全量元素权限目录 */
@@ -177,6 +189,14 @@ export const ELEMENT_PERMISSIONS: ElementPermissionDef[] = [
   { code: 'cmdb.sync.delete', labelKey: 'permission.cmdb.sync.delete', parentCode: 'cmdb.sync' },
   { code: 'cmdb.sync.trigger', labelKey: 'permission.cmdb.sync.trigger', parentCode: 'cmdb.sync' },
   { code: 'cmdb.sync.webhook', labelKey: 'permission.cmdb.sync.webhook', parentCode: 'cmdb.sync' },
+  { code: 'oncall.calendar.override', labelKey: 'permission.oncall.calendar.override', parentCode: 'oncall.calendar' },
+  { code: 'oncall.calendar.share', labelKey: 'permission.oncall.calendar.share', parentCode: 'oncall.calendar' },
+  { code: 'oncall.group.create', labelKey: 'permission.oncall.group.create', parentCode: 'oncall.group' },
+  { code: 'oncall.group.edit', labelKey: 'permission.oncall.group.edit', parentCode: 'oncall.group' },
+  { code: 'oncall.group.delete', labelKey: 'permission.oncall.group.delete', parentCode: 'oncall.group' },
+  { code: 'oncall.group.member', labelKey: 'permission.oncall.group.member', parentCode: 'oncall.group' },
+  { code: 'oncall.group.schedule', labelKey: 'permission.oncall.group.schedule', parentCode: 'oncall.group' },
+  { code: 'oncall.group.share', labelKey: 'permission.oncall.group.share', parentCode: 'oncall.group' },
 ];
 
 /** 全量合法权限码集合（菜单码 + 元素码，保存授权时过滤勾选值） */

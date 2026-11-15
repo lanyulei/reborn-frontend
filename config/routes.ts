@@ -90,6 +90,40 @@ export default [
     ],
   },
   {
+    // 值班管理：值班日历 / 值班分组；分组详情与值班表配置隐藏于菜单
+    path: '/oncall',
+    name: 'oncall',
+    icon: 'schedule',
+    access: 'canOncall',
+    routes: [
+      {
+        // 按权限落到第一个可访问的子页（见 src/pages/oncall/index.tsx）
+        path: '/oncall',
+        component: './oncall',
+        hideInMenu: true,
+      },
+      {
+        path: '/oncall/calendar',
+        name: 'calendar',
+        component: './oncall/calendar',
+        access: 'canOncallCalendar',
+      },
+      {
+        path: '/oncall/group',
+        name: 'group',
+        component: './oncall/group',
+        access: 'canOncallGroup',
+      },
+      {
+        path: '/oncall/group/:id',
+        name: 'group-detail',
+        hideInMenu: true,
+        component: './oncall/group/detail',
+        access: 'canOncallGroup',
+      },
+    ],
+  },
+  {
     path: '/account',
     name: 'account',
     hideInMenu: true,
@@ -245,6 +279,12 @@ export default [
         access: 'canSystemConfig',
       },
     ],
+  },
+  {
+    // 公共值班日历：免登录只读（令牌即凭据），不走主布局与登录态
+    path: '/public/oncall/:token',
+    layout: false,
+    component: './public/oncall',
   },
   {
     path: '/',

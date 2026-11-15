@@ -16,6 +16,7 @@ Other: `npm run openapi` (regenerate `src/services/`), `npm run simple` (**irrev
 - **Biome only** — no ESLint, no Prettier. Both `npm run lint` and `npx antd lint ./src` must pass before commit
 - **Always `npx antd info <Component>` before writing antd code** — don't guess APIs from memory
 - **`npm run simple` is irreversible** — always commit/branch first
+- **Destructive actions confirm with a modal, never `Popconfirm`** — delete / remove / revoke / void (作废) / reset or rotate credentials / disable. Table action links: `DeleteConfirmLink` or `ConfirmLink` from `@/components/TableActions`; buttons and menu items: `App.useApp().modal.confirm` with `okButtonProps: { danger: true }`
 - **Conventional commits** required (commitlint enforced)
 - **TypeScript strict** · **Node ≥ 22** · **`package-lock.json`** (not yarn/pnpm)
 - **`.umi` dir is auto-generated** — delete `src/.umi` and restart if dev server acts up

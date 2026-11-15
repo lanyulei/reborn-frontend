@@ -160,6 +160,9 @@ export default {
   'component.chat.placeholder': '输入消息，按 Enter 发送...',
   'component.chat.thinking': '思考过程',
   'component.chat.steps': '操作步骤',
+  'component.chat.steps.summary': '已调用 {count} 个工具',
+  'component.chat.steps.failed': '{count} 个失败',
+  'component.chat.steps.running': '正在执行：{name}（第 {index} 步）',
   'component.chat.pendingNotice':
     '有一个操作等待确认；发送新消息将自动取消它。',
   'component.chat.confirm.title': '该操作会修改数据，请确认后执行',

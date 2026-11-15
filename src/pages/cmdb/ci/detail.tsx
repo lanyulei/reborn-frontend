@@ -14,11 +14,14 @@ import {
 } from '@ant-design/pro-components';
 import { history, useParams } from '@umijs/max';
 import {
+  Alert,
   App,
   Badge,
   Button,
   Card,
   Collapse,
+  Descriptions,
+  Drawer,
   Dropdown,
   Empty,
   Space,
@@ -41,9 +44,11 @@ import {
 } from 'react';
 import {
   getCI,
+  getCIAt,
   listCIHistory,
   listCIs,
   transitionCI,
+  unclaimCI,
 } from '@/services/cmdb/ci';
 import {
   getModel,
@@ -430,6 +435,27 @@ const HistoryPanel: React.FC<{
   const actionEnum = useValueEnum(CMDB_ACTION_META);
   const userNames = useUserNames();
   const sourceText = useSourceText();
+  const statusText = useEnumText(CMDB_CI_STATUS_META);
+  // 时间点回溯：查看某条变更发生后那一刻的资源状态
+  const [stateAt, setStateAt] = useState<{
+    time: string;
+    loading: boolean;
+    ci?: CmdbCI;
+    deleted?: boolean;
+  } | null>(null);
+  const openStateAt = (time: string) => {
+    setStateAt({ time, loading: true });
+    getCIAt(ciId, time)
+      .then((res) =>
+        setStateAt((cur) =>
+          cur?.time === time
+            ? { time, loading: false, ci: res.ci, deleted: res.deleted }
+            : cur,
+        ),
+      )
+      // authRequest 已提示；关闭抽屉
+      .catch(() => setStateAt((cur) => (cur?.time === time ? null : cur)));
+  };
   const columns: ProColumns<CmdbHistory>[] = [
     {
       title: t('pages.cmdb.detail.history.column.time'),
@@ -464,6 +490,17 @@ const HistoryPanel: React.FC<{
         <HistoryDiff summary action={r.action} diff={r.diff} fields={fields} />
       ),
     },
+    {
+      title: t('common.column.action'),
+      valueType: 'option',
+      width: 90,
+      render: (_, r) =>
+        r.createTime ? (
+          <a onClick={() => openStateAt(r.createTime as string)}>
+            {t('pages.cmdb.detail.history.stateAt')}
+          </a>
+        ) : null,
+    },
   ];
   return (
     // 仅补表格最外层边框（单元格无线）
@@ -490,6 +527,71 @@ const HistoryPanel: React.FC<{
           return toTableResult(result);
         }}
       />
+      <Drawer
+        title={t('pages.cmdb.detail.history.stateAt.title', {
+          time: stateAt ? new Date(stateAt.time).toLocaleString() : '',
+        })}
+        size={640}
+        open={!!stateAt}
+        onClose={() => setStateAt(null)}
+        destroyOnHidden
+      >
+        {stateAt?.loading && <Spin />}
+        {stateAt?.ci && (
+          <>
+            <Alert
+              type={stateAt.deleted ? 'warning' : 'info'}
+              showIcon
+              title={t(
+                stateAt.deleted
+                  ? 'pages.cmdb.detail.history.stateAt.deleted'
+                  : 'pages.cmdb.detail.history.stateAt.tip',
+              )}
+              style={{ marginBottom: 16 }}
+            />
+            <Descriptions
+              column={1}
+              size="small"
+              bordered
+              items={[
+                {
+                  key: 'name',
+                  label: t('pages.cmdb.ci.column.name'),
+                  children: stateAt.ci.name,
+                },
+                {
+                  key: 'status',
+                  label: t('common.column.status'),
+                  children: statusText(stateAt.ci.status),
+                },
+                {
+                  key: 'env',
+                  label: t('pages.cmdb.ci.column.env'),
+                  children: stateAt.ci.env || t('common.empty'),
+                },
+                {
+                  key: 'tags',
+                  label: t('pages.cmdb.ci.column.tags'),
+                  children: stateAt.ci.tags?.length
+                    ? stateAt.ci.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
+                    : t('common.empty'),
+                },
+                ...fields
+                  .filter((f) => !f.deprecated)
+                  .map((f) => ({
+                    key: `attr-${f.code}`,
+                    label: f.name,
+                    children: renderAttrValue(
+                      f,
+                      stateAt.ci?.attrs?.[f.code],
+                      t,
+                    ),
+                  })),
+              ]}
+            />
+          </>
+        )}
+      </Drawer>
     </div>
   );
 };
@@ -774,6 +876,27 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
           </div>
         </div>
         <div className={styles.summaryActions}>
+          {has('cmdb.ci.edit') && ci.source?.startsWith('sync:') && (
+            <Button
+              onClick={() =>
+                modal.confirm({
+                  title: t('pages.cmdb.detail.unclaim.title'),
+                  content: t('pages.cmdb.detail.unclaim.content'),
+                  onOk: async () => {
+                    try {
+                      await unclaimCI(ci.id);
+                    } catch {
+                      return; // authRequest 已提示
+                    }
+                    message.success(t('common.msg.updated'));
+                    void load();
+                  },
+                })
+              }
+            >
+              {t('pages.cmdb.detail.unclaim')}
+            </Button>
+          )}
           {has('cmdb.ci.edit') && (
             <Button onClick={() => setEditOpen(true)}>
               {t('common.action.edit')}
