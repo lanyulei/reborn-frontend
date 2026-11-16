@@ -160,8 +160,6 @@ export default {
   'pages.cmdb.ci.column.version': '版本',
   'pages.cmdb.ci.form.tags.placeholder': '輸入後Enter新增標籤',
   'pages.cmdb.ci.form.attrs': '屬性',
-  'pages.cmdb.ci.form.json.invalid': '必须是合法的 JSON',
-  'pages.cmdb.ci.form.ip.invalid': '必须是合法的 IP 位址',
   'pages.cmdb.ci.form.ref.placeholder': '輸入名稱搜尋',
   'pages.cmdb.ci.delete.title': '刪除資源',
   'pages.cmdb.ci.delete.description':

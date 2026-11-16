@@ -9,8 +9,9 @@ import type { Translate } from './i18n';
 
 /** 后端分页结果 → ProTable request 返回值（total 为 int64 字符串） */
 export const toTableResult = <T>(result: PagedResult<T>) => ({
-  data: result.items,
-  total: Number(result.total),
+  // protojson 省略零值：空列表 / 总数 0 时字段缺失
+  data: result.items ?? [],
+  total: Number(result.total ?? 0),
   success: true,
 });
 

@@ -12,10 +12,11 @@ import { Empty, Input, Tooltip } from 'antd';
 import { createStyles, useTheme } from 'antd-style';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { IconGlyph } from '@/components/IconPicker';
 import type { CmdbCardinality } from '@/services/cmdb/typings';
 import { useT } from '@/utils/i18n';
 import { useSize } from './charts';
-import { ModelGlyph, UiIcon } from './icons';
+import { UiIcon } from './icons';
 import { CMDB_ANY_MODEL } from './meta';
 
 const useStyles = createStyles(({ token, css }) => ({
@@ -1228,7 +1229,7 @@ export const ModelGraph: React.FC<{
                       }}
                       pointerEvents="none"
                     >
-                      <ModelGlyph icon={model.icon} size={18} />
+                      <IconGlyph icon={model.icon} size={18} />
                     </g>
                     <text
                       className={styles.nodeName}

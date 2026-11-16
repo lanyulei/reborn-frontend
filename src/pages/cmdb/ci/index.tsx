@@ -43,6 +43,7 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { IconGlyph } from '@/components/IconPicker';
 import {
   ConfirmLink,
   CreateButton,
@@ -74,7 +75,6 @@ import { toTableResult } from '@/utils/table';
 import { CIForm } from '../components/CIForm';
 import { CISelect } from '../components/CISelect';
 import { ImportModal } from '../components/ImportModal';
-import { ModelGlyph } from '../components/icons';
 import {
   CMDB_ANY_MODEL,
   CMDB_CI_STATUS_META,
@@ -255,7 +255,7 @@ const CIListPage: React.FC = () => {
       key: m.code,
       label: (
         <span className={styles.modelMenuItem}>
-          <ModelGlyph icon={m.icon} size={16} />
+          <IconGlyph icon={m.icon} size={16} />
           <span className={styles.modelMenuName}>{m.name}</span>
           <span className={styles.modelMenuCount}>
             {m.ciCount ? Number(m.ciCount) : 0}

@@ -9,6 +9,7 @@ export default {
   'common.action.confirm': 'OK',
   'common.action.submitCreate': 'Create',
   'common.action.view': 'View',
+  'common.action.back': 'Back',
   'common.action.copy': 'Copy',
   'common.action.copied': 'Copied',
   'common.action.copyJson': 'Copy JSON',

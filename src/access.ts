@@ -11,10 +11,11 @@ export default function access(
     | {
         currentUser?: SystemUser;
         menus?: string[];
+        elements?: string[];
       }
     | undefined,
 ) {
-  const { currentUser, menus } = initialState ?? {};
+  const { currentUser, menus, elements } = initialState ?? {};
   const isAdmin = currentUser?.isAdmin === true;
   const has = (code: MenuPermissionCode) =>
     isAdmin || (menus ?? []).includes(code);
@@ -41,7 +42,26 @@ export default function access(
       has('cmdb.ci') ||
       has('cmdb.sync') ||
       has('cmdb.audit'),
+    canWorkflowDefinition: has('workflow.definition'),
+    canWorkflowInstance: has('workflow.instance'),
+    canWorkflowConfig: has('workflow.config'),
+    canWorkflow:
+      has('workflow.definition') ||
+      has('workflow.instance') ||
+      has('workflow.config'),
+    canTicketMine: has('ticket.mine'),
+    // 提交工单页与工单列表里的「提交工单」按钮同一权限（元素码，不新增菜单码）
+    canTicketCreate: isAdmin || (elements ?? []).includes('ticket.mine.create'),
+    canTicketAll: has('ticket.all'),
+    canTicketCatalog: has('ticket.catalog'),
+    canTicketStats: has('ticket.stats'),
+    canTicket:
+      has('ticket.mine') ||
+      has('ticket.all') ||
+      has('ticket.stats') ||
+      has('ticket.catalog'),
     canSystemUser: has('system.user'),
+    canSystemDept: has('system.dept'),
     canSystemRole: has('system.role'),
     canSystemLoginLog: has('system.login_log'),
     canSystemConfig: has('system.config'),

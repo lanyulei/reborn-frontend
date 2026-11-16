@@ -41,6 +41,59 @@ export default {
   'pages.system.user.roles.optionBuiltin': '{name}（{code}）· 内置',
   'pages.system.user.roles.success': '角色绑定已保存',
   'pages.system.user.roles.builtinHint': '内置角色默认绑定，不可解绑',
+  'pages.system.user.column.depts': '所属部门',
+  'pages.system.user.search.dept': '选择部门（含下级部门）',
+  'pages.system.user.form.depts.tooltip':
+    '可选择多个部门；选了多个时需指定其中一个为主部门',
+  'pages.system.user.form.depts.placeholder': '请选择部门（最多 20 个）',
+  'pages.system.user.form.primaryDept': '主部门',
+  'pages.system.user.form.primaryDept.tooltip':
+    '发起流程时默认以主部门为发起部门',
+  'pages.system.user.form.primaryDept.placeholder': '不选则取第一个部门',
+
+  // 部门管理
+  'pages.system.dept.create.title': '新建部门',
+  'pages.system.dept.edit.title': '编辑部门：{name}',
+  'pages.system.dept.search.placeholder': '部门名称 / 编码',
+  'pages.system.dept.column.name': '部门名称',
+  'pages.system.dept.column.code': '部门编码',
+  'pages.system.dept.column.leaders': '负责人',
+  'pages.system.dept.column.memberCount': '成员数',
+  'pages.system.dept.column.sort': '排序',
+  'pages.system.dept.leader.inactive': '该用户已非可用状态，流程中将被跳过',
+  'pages.system.dept.action.addChild': '添加下级',
+  'pages.system.dept.action.members': '成员',
+  'pages.system.dept.delete.title': '删除部门',
+  'pages.system.dept.delete.description':
+    '确定删除部门「{name}」？存在下级部门或成员时无法删除。',
+  'pages.system.dept.form.parent': '上级部门',
+  'pages.system.dept.form.parent.tooltip':
+    '调整上级部门会连同其全部下级部门一起移动',
+  'pages.system.dept.form.parent.placeholder': '不选则为根部门',
+  'pages.system.dept.form.code.placeholder':
+    '2-64 位字母/数字/下划线/中划线，可选',
+  'pages.system.dept.form.code.pattern': '2-64 位字母/数字/下划线/中划线',
+  'pages.system.dept.form.leaders.tooltip':
+    '可设置多人，按选择顺序排列；负责人不要求是本部门成员',
+  'pages.system.dept.form.leaders.placeholder':
+    '搜索并选择负责人（最多 20 人）',
+  'pages.system.dept.form.sort.tooltip': '同级部门按数值从小到大排列',
+  'pages.system.dept.form.description': '说明',
+  'pages.system.dept.member.title': '部门成员：{name}',
+  'pages.system.dept.member.includeSub': '包含下级部门',
+  'pages.system.dept.member.add': '添加成员',
+  'pages.system.dept.member.add.title': '添加成员：{name}',
+  'pages.system.dept.member.add.users': '用户',
+  'pages.system.dept.member.add.tooltip':
+    '已在部门内的用户会被跳过；用户尚无主部门时，本部门成为其主部门',
+  'pages.system.dept.member.add.placeholder':
+    '搜索并选择用户（单次最多 100 人）',
+  'pages.system.dept.member.added': '成员已添加',
+  'pages.system.dept.member.remove': '移出',
+  'pages.system.dept.member.remove.title': '移出部门',
+  'pages.system.dept.member.remove.description':
+    '确定将「{user}」移出部门「{dept}」？',
+  'pages.system.dept.member.removed': '已移出部门',
 
   // 角色管理
   'pages.system.role.create.title': '新建角色',

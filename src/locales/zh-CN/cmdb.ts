@@ -160,8 +160,6 @@ export default {
   'pages.cmdb.ci.column.version': '版本',
   'pages.cmdb.ci.form.tags.placeholder': '输入后回车添加标签',
   'pages.cmdb.ci.form.attrs': '属性',
-  'pages.cmdb.ci.form.json.invalid': '必须是合法的 JSON',
-  'pages.cmdb.ci.form.ip.invalid': '必须是合法的 IP 地址',
   'pages.cmdb.ci.form.ref.placeholder': '输入名称搜索',
   'pages.cmdb.ci.delete.title': '删除资源',
   'pages.cmdb.ci.delete.description':

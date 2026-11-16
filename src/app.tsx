@@ -1,8 +1,12 @@
 import type { Settings as LayoutSettings } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
-import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
+import type {
+  RequestConfig,
+  RunTimeLayoutConfig,
+  RuntimeAntdConfig,
+} from '@umijs/max';
 import { history, Link } from '@umijs/max';
-import { Button, Result } from 'antd';
+import { Button, Result, theme } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import React from 'react';
@@ -264,6 +268,23 @@ export const request: RequestConfig = {
   // 同源部署：开发环境走 config/proxy.ts 代理到本地 Go 后端
   baseURL: '',
   ...errorConfig,
+};
+
+/**
+ * @name antd 运行时配置
+ * 浅色主题的边框比 antd 默认略深一档（#d9d9d9 → #d0d0d0、#f0f0f0 → #e8e8e8）。
+ * 写成算法而非固定 token：暗色主题下 ProLayout 会在其后追加 darkAlgorithm
+ * 重新推导边框色，固定 token 则会把浅色边框带进暗色主题。
+ */
+export const antd: RuntimeAntdConfig = (memo) => {
+  memo.theme ??= {};
+  memo.theme.algorithm = (seed) => ({
+    ...theme.defaultAlgorithm(seed),
+    colorBorder: '#d0d0d0',
+    colorBorderDisabled: '#d0d0d0',
+    colorBorderSecondary: '#e8e8e8',
+  });
+  return memo;
 };
 
 export function rootContainer(container: React.ReactNode) {

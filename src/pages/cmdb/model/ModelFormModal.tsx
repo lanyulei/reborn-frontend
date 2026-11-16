@@ -11,10 +11,10 @@ import {
 } from '@ant-design/pro-components';
 import { App, Col } from 'antd';
 import type React from 'react';
+import { IconPicker } from '@/components/IconPicker';
 import { createModel, updateModel } from '@/services/cmdb/model';
 import type { CmdbModel, CmdbModelStatus } from '@/services/cmdb/typings';
 import { useFormRules, useOptions, useSubmitter, useT } from '@/utils/i18n';
-import { IconPicker } from '../components/icons';
 import {
   CMDB_MODEL_STATUS_META,
   CMDB_MODEL_STATUS_ORDER,

@@ -9,6 +9,7 @@ export default {
   'common.action.confirm': '确定',
   'common.action.submitCreate': '创建',
   'common.action.view': '查看',
+  'common.action.back': '返回',
   'common.action.copy': '复制',
   'common.action.copied': '已复制',
   'common.action.copyJson': '复制 JSON',

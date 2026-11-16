@@ -30,6 +30,7 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useMemo, useRef, useState } from 'react';
+import { IconBadge } from '@/components/IconPicker';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
 import {
   createModelGroup,
@@ -56,7 +57,7 @@ import {
   useSubmitter,
   useT,
 } from '@/utils/i18n';
-import { ModelIcon, UiIcon } from '../components/icons';
+import { UiIcon } from '../components/icons';
 import {
   CMDB_ANY_MODEL,
   CMDB_CARDINALITY_META,
@@ -248,7 +249,7 @@ const ModelsTab: React.FC = () => {
               className={cx(styles.modelCard)}
               onClick={() => history.push(`/cmdb/model/${m.code}`)}
             >
-              <ModelIcon icon={m.icon} muted={m.status === 2} />
+              <IconBadge icon={m.icon} muted={m.status === 2} />
               <span className={styles.modelCardBody}>
                 <span className={styles.modelCardName}>
                   {m.name}

@@ -39,10 +39,13 @@ export interface UpdateRoleParams {
 /** ListRoles 分页查询角色，page_size 上限 100 */
 export async function listRoles(
   params: ListRolesParams,
+  /** silent：辅助性查询（角色候选）无权限时不弹错误 */
+  options?: { silent?: boolean },
 ): Promise<PagedResult<SystemRole>> {
   return authRequest<PagedResult<SystemRole>>('/api/v1/system/role', {
     method: 'GET',
     params,
+    silent: options?.silent,
   });
 }
 

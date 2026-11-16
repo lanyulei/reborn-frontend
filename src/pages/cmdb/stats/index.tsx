@@ -18,6 +18,7 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { IconGlyph } from '@/components/IconPicker';
 import { getOverview, getQuality } from '@/services/cmdb/insight';
 import { listAllModels, listRelationTypes } from '@/services/cmdb/model';
 import type {
@@ -33,7 +34,6 @@ import {
   TrendChart,
   type TrendPoint,
 } from '../components/charts';
-import { ModelGlyph } from '../components/icons';
 import { CMDB_CI_STATUS_META } from '../components/meta';
 import { useCmdbStyles } from '../components/styles';
 
@@ -159,17 +159,17 @@ const StatsPage: React.FC = () => {
       <StatCard
         label={t('pages.cmdb.stats.modelCount')}
         value={Number(data.modelCount)}
-        icon={<ModelGlyph icon="cube" size={20} />}
+        icon={<IconGlyph icon="cube" size={20} />}
       />
       <StatCard
         label={t('pages.cmdb.stats.ciCount')}
         value={Number(data.ciCount)}
-        icon={<ModelGlyph icon="server" size={20} />}
+        icon={<IconGlyph icon="server" size={20} />}
       />
       <StatCard
         label={t('pages.cmdb.stats.relationCount')}
         value={Number(data.relationCount)}
-        icon={<ModelGlyph icon="network" size={20} />}
+        icon={<IconGlyph icon="network" size={20} />}
       />
       {data.changeCount !== undefined && (
         <StatCard
@@ -177,7 +177,7 @@ const StatsPage: React.FC = () => {
             days: data.days ?? Number(days),
           })}
           value={Number(data.changeCount)}
-          icon={<ModelGlyph icon="monitor" size={20} />}
+          icon={<IconGlyph icon="monitor" size={20} />}
         />
       )}
     </div>

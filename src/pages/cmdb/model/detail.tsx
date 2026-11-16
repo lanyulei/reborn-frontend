@@ -25,6 +25,7 @@ import {
 import { createStyles } from 'antd-style';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { IconBadge } from '@/components/IconPicker';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
 import {
   deleteModel,
@@ -44,7 +45,7 @@ import type {
 } from '@/services/cmdb/typings';
 import { usePermissions } from '@/services/system/permissions';
 import { useEnumText, useT } from '@/utils/i18n';
-import { FieldTypeIcon, ModelIcon, UiIcon } from '../components/icons';
+import { FieldTypeIcon, UiIcon } from '../components/icons';
 import {
   CMDB_ANY_MODEL,
   CMDB_CARDINALITY_META,
@@ -387,7 +388,7 @@ const ModelDetailPage: React.FC = () => {
   return (
     <PageContainer title={false}>
       <div className={pageStyles.summaryHeader}>
-        <ModelIcon icon={model.icon} size={56} muted={model.status === 2} />
+        <IconBadge icon={model.icon} size={56} muted={model.status === 2} />
         <div className={pageStyles.summaryBody}>
           <span className={pageStyles.summaryTitle}>
             {model.name}

@@ -160,8 +160,6 @@ export default {
   'pages.cmdb.ci.column.version': 'Version',
   'pages.cmdb.ci.form.tags.placeholder': 'Type and press Enter to add a tag',
   'pages.cmdb.ci.form.attrs': 'Attributes',
-  'pages.cmdb.ci.form.json.invalid': 'Must be valid JSON',
-  'pages.cmdb.ci.form.ip.invalid': 'Must be a valid IP address',
   'pages.cmdb.ci.form.ref.placeholder': 'Type a name to search',
   'pages.cmdb.ci.delete.title': 'Delete resource',
   'pages.cmdb.ci.delete.description':

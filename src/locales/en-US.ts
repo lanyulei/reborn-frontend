@@ -11,6 +11,8 @@ import pages from './en-US/pages';
 import settingDrawer from './en-US/settingDrawer';
 import settings from './en-US/settings';
 import system from './en-US/system';
+import ticket from './en-US/ticket';
+import workflow from './en-US/workflow';
 
 export default {
   'navBar.lang': 'Languages',
@@ -31,4 +33,6 @@ export default {
   ...notify,
   ...cmdb,
   ...oncall,
+  ...ticket,
+  ...workflow,
 };

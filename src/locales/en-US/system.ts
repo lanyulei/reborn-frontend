@@ -45,6 +45,65 @@ export default {
   'pages.system.user.roles.success': 'Role binding saved',
   'pages.system.user.roles.builtinHint':
     'Built-in roles are bound by default and cannot be unbound',
+  'pages.system.user.column.depts': 'Departments',
+  'pages.system.user.search.dept':
+    'Select a department (incl. sub-departments)',
+  'pages.system.user.form.depts.tooltip':
+    'A user may belong to several departments; when more than one is selected, pick one as the primary department',
+  'pages.system.user.form.depts.placeholder': 'Select departments (up to 20)',
+  'pages.system.user.form.primaryDept': 'Primary Department',
+  'pages.system.user.form.primaryDept.tooltip':
+    'Used as the default initiating department when starting a workflow',
+  'pages.system.user.form.primaryDept.placeholder':
+    'Defaults to the first department',
+
+  // Departments
+  'pages.system.dept.create.title': 'Create Department',
+  'pages.system.dept.edit.title': 'Edit Department: {name}',
+  'pages.system.dept.search.placeholder': 'Department name / code',
+  'pages.system.dept.column.name': 'Department Name',
+  'pages.system.dept.column.code': 'Department Code',
+  'pages.system.dept.column.leaders': 'Leaders',
+  'pages.system.dept.column.memberCount': 'Members',
+  'pages.system.dept.column.sort': 'Sort',
+  'pages.system.dept.leader.inactive':
+    'This user is no longer active and will be skipped in workflows',
+  'pages.system.dept.action.addChild': 'Add Sub-department',
+  'pages.system.dept.action.members': 'Members',
+  'pages.system.dept.delete.title': 'Delete Department',
+  'pages.system.dept.delete.description':
+    'Delete department "{name}"? A department with sub-departments or members cannot be deleted.',
+  'pages.system.dept.form.parent': 'Parent Department',
+  'pages.system.dept.form.parent.tooltip':
+    'Changing the parent moves the department together with all of its sub-departments',
+  'pages.system.dept.form.parent.placeholder':
+    'Leave empty for a root department',
+  'pages.system.dept.form.code.placeholder':
+    '2-64 letters, digits, underscores or hyphens (optional)',
+  'pages.system.dept.form.code.pattern':
+    '2-64 letters, digits, underscores or hyphens',
+  'pages.system.dept.form.leaders.tooltip':
+    'Several leaders are allowed, kept in the selected order; a leader does not have to be a member of the department',
+  'pages.system.dept.form.leaders.placeholder':
+    'Search and select leaders (up to 20)',
+  'pages.system.dept.form.sort.tooltip':
+    'Sibling departments are ordered by this value, ascending',
+  'pages.system.dept.form.description': 'Description',
+  'pages.system.dept.member.title': 'Department Members: {name}',
+  'pages.system.dept.member.includeSub': 'Include sub-departments',
+  'pages.system.dept.member.add': 'Add Members',
+  'pages.system.dept.member.add.title': 'Add Members: {name}',
+  'pages.system.dept.member.add.users': 'Users',
+  'pages.system.dept.member.add.tooltip':
+    'Users already in the department are skipped; if a user has no primary department yet, this one becomes it',
+  'pages.system.dept.member.add.placeholder':
+    'Search and select users (up to 100 at a time)',
+  'pages.system.dept.member.added': 'Members added',
+  'pages.system.dept.member.remove': 'Remove',
+  'pages.system.dept.member.remove.title': 'Remove from Department',
+  'pages.system.dept.member.remove.description':
+    'Remove "{user}" from department "{dept}"?',
+  'pages.system.dept.member.removed': 'Removed from department',
 
   // Roles
   'pages.system.role.create.title': 'Create role',

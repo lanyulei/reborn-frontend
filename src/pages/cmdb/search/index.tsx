@@ -10,10 +10,10 @@ import { Button, Empty, Input, Segmented, Spin, Tag, Typography } from 'antd';
 import { createStyles } from 'antd-style';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { IconBadge } from '@/components/IconPicker';
 import { type SearchHit, searchCIs } from '@/services/cmdb/ci';
 import { getModel } from '@/services/cmdb/model';
 import { useEnumText, useT } from '@/utils/i18n';
-import { ModelIcon } from '../components/icons';
 import { CMDB_CI_STATUS_META } from '../components/meta';
 import { useCmdbStyles } from '../components/styles';
 
@@ -283,7 +283,7 @@ const SearchPage: React.FC = () => {
                 <div className={styles.list}>
                   {visible.map((hit) => (
                     <div key={hit.ci.id} className={shared.hitRow}>
-                      <ModelIcon
+                      <IconBadge
                         icon={meta[hit.ci.modelCode]?.icon}
                         size={32}
                         muted={hit.ci.status === 'retired'}

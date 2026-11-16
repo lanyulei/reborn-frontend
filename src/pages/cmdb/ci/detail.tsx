@@ -42,6 +42,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { IconBadge } from '@/components/IconPicker';
 import {
   getCI,
   getCIAt,
@@ -83,7 +84,6 @@ import {
 import { toTableResult } from '@/utils/table';
 import { CIForm } from '../components/CIForm';
 import { HistoryDiff, isRelationAction } from '../components/HistoryDiff';
-import { ModelIcon } from '../components/icons';
 import {
   CMDB_ACTION_META,
   CMDB_ANY_MODEL,
@@ -835,7 +835,7 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
   return (
     <PageContainer title={false}>
       <div className={styles.summaryHeader}>
-        <ModelIcon
+        <IconBadge
           icon={model.icon}
           size={48}
           muted={ci.status === 'retired'}

@@ -76,6 +76,66 @@ export interface SystemConfig {
   footer: string;
 }
 
+/** 部门状态：1=启用 0=停用 */
+export type DeptStatus = 0 | 1;
+
+/** DeptLeader 部门负责人（用户展示信息的只读视图） */
+export interface DeptLeader {
+  userId: string;
+  username: string;
+  nickname: string;
+  /** 头像地址；空 = 未设置 */
+  avatar?: string;
+  /** 用户状态；非可用的负责人在流程中会被跳过 */
+  status: UserStatus;
+}
+
+/** Dept 部门实体（出参） */
+export interface SystemDept {
+  id: string;
+  /** 上级部门 ID；空 = 根部门 */
+  parentId?: string;
+  name: string;
+  /** 部门编码；空 = 未设置 */
+  code?: string;
+  /** 同级排序值，升序 */
+  sort?: number;
+  status: DeptStatus;
+  description?: string;
+  /** 部门负责人，按配置顺序 */
+  leaders?: DeptLeader[];
+  /** 直属成员数（不含下级部门） */
+  memberCount?: number;
+  createTime?: string;
+  updateTime?: string;
+}
+
+/** UserDept 用户所属部门（主部门在前） */
+export interface UserDept {
+  id: string;
+  name: string;
+  isPrimary?: boolean;
+}
+
+/** DeptMember 部门成员（最小披露的用户视图） */
+export interface DeptMember {
+  id: string;
+  username: string;
+  nickname: string;
+  avatar?: string;
+  status: UserStatus;
+  /** 该用户的全部所属部门（主部门在前） */
+  depts?: UserDept[];
+}
+
+/** UserDeptAssignment 用户所属部门整组替换载荷（空列表 = 不属于任何部门） */
+export interface UserDeptAssignment {
+  /** 所属部门 ID 全集，去重、最多 20 个 */
+  deptIds: string[];
+  /** 主部门 ID，须在 deptIds 内；不传时取第一个 */
+  primaryDeptId?: string;
+}
+
 /** User 用户实体（出参，不含密码） */
 export interface SystemUser {
   id: string;
@@ -88,6 +148,8 @@ export interface SystemUser {
   status: UserStatus;
   /** 头像地址；空 = 未设置 */
   avatar?: string;
+  /** 所属部门（主部门在前）；仅用户详情与用户列表填充 */
+  depts?: UserDept[];
   createTime?: string;
   updateTime?: string;
 }

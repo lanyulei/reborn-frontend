@@ -1,6 +1,6 @@
 /**
  * 权限目录（前端镜像）：菜单/路由级 + 页面元素级
- * 与后端 backend/core/internal/biz/catalog.go 的目录保持同步，新增菜单或元素两处同改。
+ * 与后端 backend/core/internal/biz/system/catalog.go 的目录保持同步，新增菜单或元素两处同改。
  * 用途：角色权限页授权树数据源；元素码经 /api/v1/me 的 elements 下发，
  * 页面元素显隐用 usePermissions() 判定。
  */
@@ -16,7 +16,15 @@ export type MenuPermissionCode =
   | 'cmdb.audit'
   | 'oncall.calendar'
   | 'oncall.group'
+  | 'workflow.definition'
+  | 'workflow.instance'
+  | 'workflow.config'
+  | 'ticket.mine'
+  | 'ticket.all'
+  | 'ticket.stats'
+  | 'ticket.catalog'
   | 'system.user'
+  | 'system.dept'
   | 'system.role'
   | 'system.login_log'
   | 'system.config'
@@ -39,6 +47,24 @@ export type ElementPermissionCode =
   | 'system.user.status'
   | 'system.user.reset_password'
   | 'system.user.bind_role'
+  | 'workflow.definition.create'
+  | 'workflow.definition.edit'
+  | 'workflow.definition.publish'
+  | 'workflow.definition.delete'
+  | 'workflow.instance.terminate'
+  | 'workflow.instance.reassign'
+  | 'workflow.instance.wait'
+  | 'workflow.instance.handover'
+  | 'workflow.config.calendar'
+  | 'workflow.config.webhook'
+  | 'workflow.config.client'
+  | 'ticket.mine.create'
+  | 'ticket.catalog.category'
+  | 'ticket.catalog.template'
+  | 'system.dept.create'
+  | 'system.dept.edit'
+  | 'system.dept.member'
+  | 'system.dept.delete'
   | 'system.role.create'
   | 'system.role.edit'
   | 'system.role.delete'
@@ -115,7 +141,15 @@ export interface ElementPermissionDef {
 /** 全量菜单权限目录 */
 export const MENU_PERMISSIONS: MenuPermissionDef[] = [
   { code: 'assistant', labelKey: 'menu.assistant', parentKey: 'menu.assistant' },
+  { code: 'workflow.definition', labelKey: 'menu.workflow.definition', parentKey: 'menu.workflow' },
+  { code: 'workflow.instance', labelKey: 'menu.workflow.instance', parentKey: 'menu.workflow' },
+  { code: 'workflow.config', labelKey: 'menu.workflow.config', parentKey: 'menu.workflow' },
+  { code: 'ticket.mine', labelKey: 'menu.ticket.mine', parentKey: 'menu.ticket' },
+  { code: 'ticket.all', labelKey: 'menu.ticket.all', parentKey: 'menu.ticket' },
+  { code: 'ticket.stats', labelKey: 'menu.ticket.stats', parentKey: 'menu.ticket' },
+  { code: 'ticket.catalog', labelKey: 'menu.ticket.catalog', parentKey: 'menu.ticket' },
   { code: 'system.user', labelKey: 'menu.system.user', parentKey: 'menu.system' },
+  { code: 'system.dept', labelKey: 'menu.system.dept', parentKey: 'menu.system' },
   { code: 'system.role', labelKey: 'menu.system.role', parentKey: 'menu.system' },
   { code: 'system.login_log', labelKey: 'menu.system.login-log', parentKey: 'menu.system' },
   { code: 'system.config', labelKey: 'menu.system.config', parentKey: 'menu.system' },
@@ -139,12 +173,30 @@ export const MENU_PERMISSIONS: MenuPermissionDef[] = [
 
 /** 全量元素权限目录 */
 export const ELEMENT_PERMISSIONS: ElementPermissionDef[] = [
+  { code: 'workflow.definition.create', labelKey: 'permission.workflow.definition.create', parentCode: 'workflow.definition' },
+  { code: 'workflow.definition.edit', labelKey: 'permission.workflow.definition.edit', parentCode: 'workflow.definition' },
+  { code: 'workflow.definition.publish', labelKey: 'permission.workflow.definition.publish', parentCode: 'workflow.definition' },
+  { code: 'workflow.definition.delete', labelKey: 'permission.workflow.definition.delete', parentCode: 'workflow.definition' },
+  { code: 'workflow.instance.terminate', labelKey: 'permission.workflow.instance.terminate', parentCode: 'workflow.instance' },
+  { code: 'workflow.instance.reassign', labelKey: 'permission.workflow.instance.reassign', parentCode: 'workflow.instance' },
+  { code: 'workflow.instance.wait', labelKey: 'permission.workflow.instance.wait', parentCode: 'workflow.instance' },
+  { code: 'workflow.instance.handover', labelKey: 'permission.workflow.instance.handover', parentCode: 'workflow.instance' },
+  { code: 'workflow.config.calendar', labelKey: 'permission.workflow.config.calendar', parentCode: 'workflow.config' },
+  { code: 'workflow.config.webhook', labelKey: 'permission.workflow.config.webhook', parentCode: 'workflow.config' },
+  { code: 'workflow.config.client', labelKey: 'permission.workflow.config.client', parentCode: 'workflow.config' },
+  { code: 'ticket.mine.create', labelKey: 'permission.ticket.mine.create', parentCode: 'ticket.mine' },
+  { code: 'ticket.catalog.category', labelKey: 'permission.ticket.catalog.category', parentCode: 'ticket.catalog' },
+  { code: 'ticket.catalog.template', labelKey: 'permission.ticket.catalog.template', parentCode: 'ticket.catalog' },
   { code: 'system.user.create', labelKey: 'permission.system.user.create', parentCode: 'system.user' },
   { code: 'system.user.edit', labelKey: 'permission.system.user.edit', parentCode: 'system.user' },
   { code: 'system.user.status', labelKey: 'permission.system.user.status', parentCode: 'system.user' },
   { code: 'system.user.reset_password', labelKey: 'permission.system.user.reset_password', parentCode: 'system.user' },
   { code: 'system.user.bind_role', labelKey: 'permission.system.user.bind_role', parentCode: 'system.user' },
   { code: 'system.user.delete', labelKey: 'permission.system.user.delete', parentCode: 'system.user' },
+  { code: 'system.dept.create', labelKey: 'permission.system.dept.create', parentCode: 'system.dept' },
+  { code: 'system.dept.edit', labelKey: 'permission.system.dept.edit', parentCode: 'system.dept' },
+  { code: 'system.dept.member', labelKey: 'permission.system.dept.member', parentCode: 'system.dept' },
+  { code: 'system.dept.delete', labelKey: 'permission.system.dept.delete', parentCode: 'system.dept' },
   { code: 'system.role.create', labelKey: 'permission.system.role.create', parentCode: 'system.role' },
   { code: 'system.role.edit', labelKey: 'permission.system.role.edit', parentCode: 'system.role' },
   { code: 'system.role.grant', labelKey: 'permission.system.role.grant', parentCode: 'system.role' },

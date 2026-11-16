@@ -234,6 +234,117 @@ export default [
     ],
   },
   {
+    // 流程中心（管理端）：流程设计、流程监控、流程配置；设计器与流程详情页隐藏于菜单。
+    // 个人待办在工单系统的工单列表里处理
+    path: '/workflow',
+    name: 'workflow',
+    icon: 'apartment',
+    access: 'canWorkflow',
+    routes: [
+      {
+        // 按权限落到第一个可访问的子页（见 src/pages/workflow/index.tsx）
+        path: '/workflow',
+        component: './workflow',
+        hideInMenu: true,
+      },
+      {
+        path: '/workflow/definition',
+        name: 'definition',
+        component: './workflow/definition',
+        access: 'canWorkflowDefinition',
+      },
+      {
+        path: '/workflow/definition/:id',
+        name: 'definition-design',
+        hideInMenu: true,
+        component: './workflow/definition/design',
+        access: 'canWorkflowDefinition',
+      },
+      {
+        path: '/workflow/instance',
+        name: 'instance',
+        component: './workflow/instance',
+        access: 'canWorkflowInstance',
+      },
+      {
+        // 流程详情（查看 / 处理）；不进菜单，可直接用链接打开
+        path: '/workflow/instance/:id',
+        name: 'instance-detail',
+        hideInMenu: true,
+        component: './workflow/instance/detail',
+        access: 'canWorkflow',
+      },
+      {
+        // 流程配置：工作日历、自动任务可调用的 Webhook 端点
+        path: '/workflow/config',
+        name: 'config',
+        component: './workflow/config',
+        access: 'canWorkflowConfig',
+      },
+    ],
+  },
+  {
+    // 工单：提交工单（模板卡片）、工单列表（待办 / 已办 / 我提交的）、全部工单（管理视图）、工单统计、工单模板（分类与模板）
+    path: '/ticket',
+    name: 'ticket',
+    icon: 'solution',
+    access: 'canTicket',
+    routes: [
+      {
+        // 按权限落到第一个可访问的子页（见 src/pages/ticket/index.tsx）
+        path: '/ticket',
+        component: './ticket',
+        hideInMenu: true,
+      },
+      {
+        path: '/ticket/create',
+        name: 'create',
+        component: './ticket/create',
+        access: 'canTicketCreate',
+      },
+      {
+        // 填写并提交某张模板的工单；不进菜单
+        path: '/ticket/create/:templateId',
+        name: 'create-form',
+        hideInMenu: true,
+        component: './ticket/create/form',
+        access: 'canTicketCreate',
+      },
+      {
+        // 工单详情（查看 / 处理）；不进菜单，可直接用链接打开
+        path: '/ticket/detail/:id',
+        name: 'detail',
+        hideInMenu: true,
+        component: './ticket/detail',
+        access: 'canTicket',
+      },
+      {
+        path: '/ticket/mine',
+        name: 'mine',
+        component: './ticket/mine',
+        access: 'canTicketMine',
+      },
+      {
+        path: '/ticket/all',
+        name: 'all',
+        component: './ticket/all',
+        access: 'canTicketAll',
+      },
+      {
+        path: '/ticket/stats',
+        name: 'stats',
+        component: './ticket/stats',
+        access: 'canTicketStats',
+      },
+      {
+        path: '/ticket/catalog',
+        name: 'catalog',
+        component: './ticket/catalog',
+        access: 'canTicketCatalog',
+      },
+    ],
+  },
+  {
     // 智能助手整页：与右下角悬浮弹窗同一 ChatPanel；置于系统管理之上
     path: '/assistant',
     name: 'assistant',
@@ -251,6 +362,13 @@ export default [
         name: 'user',
         component: './system/user',
         access: 'canSystemUser',
+      },
+      {
+        // 部门管理：组织架构树（负责人可多人）；用户所属部门在用户管理中维护
+        path: '/system/dept',
+        name: 'dept',
+        component: './system/dept',
+        access: 'canSystemDept',
       },
       {
         path: '/system/role',

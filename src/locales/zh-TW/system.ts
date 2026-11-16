@@ -42,6 +42,59 @@ export default {
   'pages.system.user.roles.optionBuiltin': '{name}（{code}）· 內建',
   'pages.system.user.roles.success': '角色綁定已儲存',
   'pages.system.user.roles.builtinHint': '內建角色預設綁定，不可解除綁定',
+  'pages.system.user.column.depts': '所屬部門',
+  'pages.system.user.search.dept': '選擇部門（含下級部門）',
+  'pages.system.user.form.depts.tooltip':
+    '可選擇多個部門；選了多個時需指定其中一個為主部門',
+  'pages.system.user.form.depts.placeholder': '請選擇部門（最多 20 個）',
+  'pages.system.user.form.primaryDept': '主部門',
+  'pages.system.user.form.primaryDept.tooltip':
+    '發起流程時預設以主部門為發起部門',
+  'pages.system.user.form.primaryDept.placeholder': '不選則取第一個部門',
+
+  // 部門管理
+  'pages.system.dept.create.title': '新建部門',
+  'pages.system.dept.edit.title': '編輯部門：{name}',
+  'pages.system.dept.search.placeholder': '部門名稱 / 編碼',
+  'pages.system.dept.column.name': '部門名稱',
+  'pages.system.dept.column.code': '部門編碼',
+  'pages.system.dept.column.leaders': '負責人',
+  'pages.system.dept.column.memberCount': '成員數',
+  'pages.system.dept.column.sort': '排序',
+  'pages.system.dept.leader.inactive': '該使用者已非可用狀態，流程中將被略過',
+  'pages.system.dept.action.addChild': '新增下級',
+  'pages.system.dept.action.members': '成員',
+  'pages.system.dept.delete.title': '刪除部門',
+  'pages.system.dept.delete.description':
+    '確定刪除部門「{name}」？存在下級部門或成員時無法刪除。',
+  'pages.system.dept.form.parent': '上級部門',
+  'pages.system.dept.form.parent.tooltip':
+    '調整上級部門會連同其全部下級部門一起移動',
+  'pages.system.dept.form.parent.placeholder': '不選則為根部門',
+  'pages.system.dept.form.code.placeholder':
+    '2-64 位字母/數字/底線/連字號，可選',
+  'pages.system.dept.form.code.pattern': '2-64 位字母/數字/底線/連字號',
+  'pages.system.dept.form.leaders.tooltip':
+    '可設定多人，按選擇順序排列；負責人不要求是本部門成員',
+  'pages.system.dept.form.leaders.placeholder':
+    '搜尋並選擇負責人（最多 20 人）',
+  'pages.system.dept.form.sort.tooltip': '同級部門按數值由小到大排列',
+  'pages.system.dept.form.description': '說明',
+  'pages.system.dept.member.title': '部門成員：{name}',
+  'pages.system.dept.member.includeSub': '包含下級部門',
+  'pages.system.dept.member.add': '新增成員',
+  'pages.system.dept.member.add.title': '新增成員：{name}',
+  'pages.system.dept.member.add.users': '使用者',
+  'pages.system.dept.member.add.tooltip':
+    '已在部門內的使用者會被略過；使用者尚無主部門時，本部門成為其主部門',
+  'pages.system.dept.member.add.placeholder':
+    '搜尋並選擇使用者（單次最多 100 人）',
+  'pages.system.dept.member.added': '成員已新增',
+  'pages.system.dept.member.remove': '移出',
+  'pages.system.dept.member.remove.title': '移出部門',
+  'pages.system.dept.member.remove.description':
+    '確定將「{user}」移出部門「{dept}」？',
+  'pages.system.dept.member.removed': '已移出部門',
 
   // 角色管理
   'pages.system.role.create.title': '新建角色',

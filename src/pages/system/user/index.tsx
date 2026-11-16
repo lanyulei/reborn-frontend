@@ -3,6 +3,7 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   ModalForm,
   PageContainer,
+  ProFormDependency,
   ProFormRadio,
   ProFormSelect,
   ProFormSwitch,
@@ -10,18 +11,27 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import type { MenuProps } from 'antd';
-import { App, Dropdown, Tag } from 'antd';
-import React, { useRef, useState } from 'react';
+import { App, Col, Dropdown, Form, Tag } from 'antd';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { DeptSelect, useDeptList } from '@/components/DeptSelect';
+import { UserDeptTags } from '@/components/DeptSelect/UserDeptTags';
 import { CreateButton } from '@/components/TableActions';
 import {
   GENDER_META,
   GENDER_ORDER,
+  USER_DEPT_MAX,
   USER_STATUS_META,
   USER_STATUS_ORDER,
 } from '@/constants';
 import { usePermissions } from '@/services/system/permissions';
 import { listRoles } from '@/services/system/role';
-import type { Gender, SystemUser, UserStatus } from '@/services/system/typings';
+import type {
+  Gender,
+  SystemUser,
+  UserDept,
+  UserDeptAssignment,
+  UserStatus,
+} from '@/services/system/typings';
 import {
   bindUserRoles,
   createUser,
@@ -45,6 +55,100 @@ import {
 import { fetchAllPages } from '@/utils/paging';
 import { toTableResult } from '@/utils/table';
 
+/**
+ * 表单值 → 所属部门载荷：主部门未选或已不在所选部门内时取第一个。
+ */
+const toDeptAssignment = (
+  deptIds?: string[],
+  primaryDeptId?: string,
+): UserDeptAssignment => {
+  const ids = deptIds ?? [];
+  if (ids.length === 0) return { deptIds: [] };
+  return {
+    deptIds: ids,
+    primaryDeptId:
+      primaryDeptId && ids.includes(primaryDeptId) ? primaryDeptId : ids[0],
+  };
+};
+
+/** 所属部门是否与原值不同（集合或主部门任一变化） */
+const deptsChanged = (next: UserDeptAssignment, prev: UserDept[]): boolean => {
+  const prevIds = prev.map((item) => item.id);
+  if (next.deptIds.length !== prevIds.length) return true;
+  if (next.deptIds.some((id) => !prevIds.includes(id))) return true;
+  return next.primaryDeptId !== prev.find((item) => item.isPrimary)?.id;
+};
+
+/**
+ * 所属部门表单项（新建 / 编辑共用）：部门多选 + 主部门（选了多个部门时出现）。
+ * span 为栅格表单下的列宽；不传则按普通纵向表单渲染。
+ */
+const DeptFields: React.FC<{
+  span?: number;
+  /** 已知的部门名称（编辑回显；主部门选项同样取自它） */
+  knownDepts?: UserDept[];
+}> = ({ span, knownDepts }) => {
+  const t = useT();
+  // 部门名称（主部门选项用）：与 DeptSelect 共享同一份缓存，不会多发请求
+  const depts = useDeptList();
+  const names = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of knownDepts ?? []) map.set(item.id, item.name);
+    for (const item of depts) map.set(item.id, item.name);
+    return map;
+  }, [depts, knownDepts]);
+
+  // 主部门已不在所选部门内时清除，避免界面显示与实际提交不一致
+  const form = Form.useFormInstance();
+  const deptIds = Form.useWatch<string[] | undefined>('deptIds', form);
+  const primaryDeptId = Form.useWatch<string | undefined>(
+    'primaryDeptId',
+    form,
+  );
+  useEffect(() => {
+    if (primaryDeptId && deptIds && !deptIds.includes(primaryDeptId)) {
+      form.setFieldValue('primaryDeptId', undefined);
+    }
+  }, [form, deptIds, primaryDeptId]);
+
+  const deptItem = (
+    <Form.Item
+      name="deptIds"
+      label={t('pages.system.user.column.depts')}
+      tooltip={t('pages.system.user.form.depts.tooltip')}
+    >
+      <DeptSelect
+        multiple
+        maxCount={USER_DEPT_MAX}
+        knownDepts={knownDepts}
+        placeholder={t('pages.system.user.form.depts.placeholder')}
+      />
+    </Form.Item>
+  );
+  return (
+    <>
+      {span ? <Col span={span}>{deptItem}</Col> : deptItem}
+      <ProFormDependency name={['deptIds']}>
+        {({ deptIds }) =>
+          (deptIds?.length ?? 0) > 1 ? (
+            <ProFormSelect
+              colProps={span ? { span } : undefined}
+              name="primaryDeptId"
+              label={t('pages.system.user.form.primaryDept')}
+              tooltip={t('pages.system.user.form.primaryDept.tooltip')}
+              placeholder={t('pages.system.user.form.primaryDept.placeholder')}
+              options={(deptIds as string[]).map((id) => ({
+                value: id,
+                label: names.get(id) ?? id,
+              }))}
+            />
+          ) : null
+        }
+      </ProFormDependency>
+    </>
+  );
+};
+
 const UserList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
   const { message, modal } = App.useApp();
@@ -61,6 +165,8 @@ const UserList: React.FC = () => {
   const [editRow, setEditRow] = useState<SystemUser | null>(null);
   const [resetRow, setResetRow] = useState<SystemUser | null>(null);
   const [roleRow, setRoleRow] = useState<SystemUser | null>(null);
+  // 编辑弹窗打开时拉到的所属部门（回显名称 + 提交时比对是否变化）
+  const [editDepts, setEditDepts] = useState<UserDept[]>([]);
   // 内置角色 ID（角色绑定弹窗加载选项时填充）：提交时并入，保证不可解绑
   const [builtinRoleIds, setBuiltinRoleIds] = useState<string[]>([]);
 
@@ -136,6 +242,20 @@ const UserList: React.FC = () => {
       dataIndex: 'phone',
       // 手机号搜索由「关键字」字段覆盖（后端 keyword 模糊匹配用户名/昵称/邮箱/手机号）
       search: false,
+    },
+    {
+      title: t('pages.system.user.column.depts'),
+      dataIndex: 'deptId',
+      // 筛选：选中部门及其全部下级部门的用户
+      formItemRender: (_, { value, onChange }) => (
+        <DeptSelect
+          allowDisabled
+          value={value}
+          onChange={onChange}
+          placeholder={t('pages.system.user.search.dept')}
+        />
+      ),
+      render: (_, record) => <UserDeptTags depts={record.depts} />,
     },
     {
       title: t('pages.system.user.column.gender'),
@@ -294,6 +414,8 @@ const UserList: React.FC = () => {
               pageSize: params.pageSize,
               keyword: params.keyword || undefined,
               status: params.status as UserStatus | undefined,
+              deptId: params.deptId || undefined,
+              includeSubDepts: params.deptId ? true : undefined,
             });
             return toTableResult(result);
           }}
@@ -321,6 +443,9 @@ const UserList: React.FC = () => {
             phone: values.phone || undefined,
             gender: values.gender,
             isAdmin: values.isAdmin ?? false,
+            depts: values.deptIds?.length
+              ? toDeptAssignment(values.deptIds, values.primaryDeptId)
+              : undefined,
           });
           message.success(t('common.msg.created'));
           reload();
@@ -407,6 +532,7 @@ const UserList: React.FC = () => {
           name="isAdmin"
           label={t('pages.system.user.tag.superAdmin')}
         />
+        <DeptFields span={12} />
       </ModalForm>
 
       {/* 编辑用户（username 不可改） */}
@@ -423,12 +549,15 @@ const UserList: React.FC = () => {
           params={{ id: editRow.id }}
           request={async ({ id }) => {
             const { user } = await getUser(id);
+            setEditDepts(user.depts ?? []);
             return {
               nickname: user.nickname,
               email: user.email,
               phone: user.phone,
               gender: user.gender,
               isAdmin: user.isAdmin,
+              deptIds: (user.depts ?? []).map((item) => item.id),
+              primaryDeptId: user.depts?.find((item) => item.isPrimary)?.id,
             };
           }}
           submitter={submitter.save}
@@ -445,6 +574,12 @@ const UserList: React.FC = () => {
             const phone = values.phone ?? '';
             if (email !== (editRow.email ?? '')) body.email = email;
             if (phone !== (editRow.phone ?? '')) body.phone = phone;
+            // 所属部门仅在变化时提交（整组替换）
+            const depts = toDeptAssignment(
+              values.deptIds,
+              values.primaryDeptId,
+            );
+            if (deptsChanged(depts, editDepts)) body.depts = depts;
             await updateUser(editRow.id, body);
             message.success(t('common.msg.saved'));
             reload();
@@ -477,6 +612,7 @@ const UserList: React.FC = () => {
             name="isAdmin"
             label={t('pages.system.user.tag.superAdmin')}
           />
+          <DeptFields knownDepts={editDepts} />
         </ModalForm>
       )}
 

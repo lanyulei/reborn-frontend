@@ -13,6 +13,7 @@ import { Alert, Card, Empty, Segmented, Spin, Tooltip, Typography } from 'antd';
 import { createStyles, useTheme } from 'antd-style';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { IconGlyph } from '@/components/IconPicker';
 import {
   getNeighbors,
   type TopologyNode,
@@ -21,7 +22,7 @@ import {
 import type { CmdbCIStatus, CmdbModel } from '@/services/cmdb/typings';
 import { useEnumText, useT } from '@/utils/i18n';
 import { useSize } from './charts';
-import { ModelGlyph, UiIcon } from './icons';
+import { UiIcon } from './icons';
 import { CMDB_CI_STATUS_META, CMDB_CI_STATUS_ORDER } from './meta';
 
 /** 画布最小高度（px）；实际高度随视口（挂载时取值） */
@@ -973,7 +974,7 @@ export const TopologyPanel: React.FC<{
                           : token.colorTextSecondary,
                       }}
                     >
-                      <ModelGlyph
+                      <IconGlyph
                         icon={modelByCode.get(n.modelCode)?.icon}
                         size={iconSize}
                       />

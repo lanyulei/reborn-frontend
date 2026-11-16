@@ -8,6 +8,7 @@ import type {
   NotifyTemplateChannelType,
 } from '@/services/notify/typings';
 import type {
+  DeptStatus,
   Gender,
   LoginLogResult,
   RoleStatus,
@@ -212,6 +213,21 @@ export const ROLE_STATUS_META: EnumMeta<RoleStatus> = {
   0: { textId: 'enum.roleStatus.0', status: 'Default' },
 };
 export const ROLE_STATUS_ORDER: readonly RoleStatus[] = [1, 0];
+
+/** 部门状态元数据（启用/停用两态） */
+export const DEPT_STATUS_META: EnumMeta<DeptStatus> = {
+  1: { textId: 'common.status.enabled', status: 'Success' },
+  0: { textId: 'common.status.disabled', status: 'Default' },
+};
+export const DEPT_STATUS_ORDER: readonly DeptStatus[] = [1, 0];
+
+/** 组织架构上限（与后端 proto 校验 / biz 常量一致） */
+export const DEPT_NAME_MAX = 64;
+export const DEPT_DESCRIPTION_MAX = 255;
+export const DEPT_SORT_MAX = 9999;
+export const DEPT_LEADER_MAX = 20;
+export const DEPT_ADD_MEMBER_MAX = 100;
+export const USER_DEPT_MAX = 20;
 
 /** 角色名称最大长度（新建/编辑一致） */
 export const ROLE_NAME_MAX = 64;

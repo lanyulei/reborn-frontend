@@ -11,6 +11,8 @@ import pages from './zh-TW/pages';
 import settingDrawer from './zh-TW/settingDrawer';
 import settings from './zh-TW/settings';
 import system from './zh-TW/system';
+import ticket from './zh-TW/ticket';
+import workflow from './zh-TW/workflow';
 
 export default {
   'navBar.lang': '語言',
@@ -31,4 +33,6 @@ export default {
   ...notify,
   ...cmdb,
   ...oncall,
+  ...ticket,
+  ...workflow,
 };

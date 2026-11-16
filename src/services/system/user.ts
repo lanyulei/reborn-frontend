@@ -8,6 +8,7 @@ import type {
   PagedResult,
   SystemRole,
   SystemUser,
+  UserDeptAssignment,
   UserStatus,
 } from './typings';
 import { authRequest } from './request';
@@ -15,6 +16,10 @@ import { authRequest } from './request';
 export interface ListUsersParams extends PageQuery {
   /** 状态过滤：1=可用 2=停用 3=暂停 4=离职 */
   status?: UserStatus;
+  /** 部门过滤：只返回属于该部门的用户 */
+  deptId?: string;
+  /** 与 deptId 同用：是否包含其全部下级部门的用户 */
+  includeSubDepts?: boolean;
 }
 
 export interface CreateUserParams {
@@ -33,6 +38,8 @@ export interface CreateUserParams {
   isAdmin: boolean;
   /** 未指定默认可用（1） */
   status?: UserStatus;
+  /** 所属部门，可选；与建号同事务写入 */
+  depts?: UserDeptAssignment;
 }
 
 export interface UpdateUserParams {
@@ -41,6 +48,8 @@ export interface UpdateUserParams {
   phone?: string;
   gender?: Gender;
   isAdmin?: boolean;
+  /** 所属部门整组替换；不传 = 不改，deptIds 为空 = 移出全部部门 */
+  depts?: UserDeptAssignment;
 }
 
 /** ListUsers 分页查询用户，page_size 上限 100 */
