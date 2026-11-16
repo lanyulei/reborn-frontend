@@ -21,6 +21,7 @@ import { fetchWorkflowUsers } from '@/pages/workflow/components/meta';
 import { createTemplate, getTemplate, updateTemplate } from '@/services/ticket';
 import type {
   CiLink,
+  FormColumns,
   SlaRule,
   TemplateStatus,
   TicketCategory,
@@ -30,6 +31,7 @@ import { listDefinitions } from '@/services/workflow/definition';
 import { useFormRules, useOptions, useSubmitter, useT } from '@/utils/i18n';
 import { fetchAllPages } from '@/utils/paging';
 import {
+  FORM_COLUMNS,
   TEMPLATE_STATUS_META,
   TEMPLATE_STATUS_ORDER,
   TICKET_ICON,
@@ -58,6 +60,7 @@ interface TemplateValues {
   sort?: number;
   icon?: string;
   description?: string;
+  formColumns?: FormColumns;
   form?: TicketFormField[];
   sla?: SlaRule[];
   slaEscalateTo?: string[];
@@ -110,6 +113,7 @@ export const TemplateDrawer: React.FC<{
           return {
             status: 1,
             sort: 0,
+            formColumns: 1,
             form: [],
             sla: [],
             slaEscalateTo: [],
@@ -143,6 +147,7 @@ export const TemplateDrawer: React.FC<{
           status: template.status ?? 0,
           sort: template.sort ?? 0,
           icon: template.icon ?? '',
+          formColumns: template.formColumns ?? 1,
           description: template.description ?? '',
           form: template.form ?? [],
           sla: template.sla ?? [],
@@ -159,6 +164,7 @@ export const TemplateDrawer: React.FC<{
           status: values.status,
           sort: values.sort ?? 0,
           icon: values.icon ?? '',
+          formColumns: values.formColumns ?? 1,
           description: values.description ?? '',
           form: values.form ?? [],
           sla: values.sla ?? [],
@@ -225,6 +231,25 @@ export const TemplateDrawer: React.FC<{
           },
         ]}
       />
+      <Col span={12}>
+        <Form.Item
+          name="icon"
+          label={t('pages.ticket.template.icon')}
+          tooltip={t('pages.ticket.template.icon.tooltip')}
+        >
+          <IconPicker defaultIcon={TICKET_ICON} />
+        </Form.Item>
+      </Col>
+      <ProFormRadio.Group
+        colProps={HALF}
+        name="formColumns"
+        label={t('pages.ticket.template.formColumns')}
+        tooltip={t('pages.ticket.template.formColumns.tooltip')}
+        options={FORM_COLUMNS.map((value) => ({
+          value,
+          label: t(`pages.ticket.template.formColumns.${value}`),
+        }))}
+      />
       <Col span={24}>
         <Form.Item
           name="form"
@@ -232,15 +257,6 @@ export const TemplateDrawer: React.FC<{
           tooltip={t('pages.ticket.template.form.tooltip')}
         >
           <FieldsEditor />
-        </Form.Item>
-      </Col>
-      <Col span={24}>
-        <Form.Item
-          name="icon"
-          label={t('pages.ticket.template.icon')}
-          tooltip={t('pages.ticket.template.icon.tooltip')}
-        >
-          <IconPicker defaultIcon={TICKET_ICON} />
         </Form.Item>
       </Col>
       <ProFormRadio.Group

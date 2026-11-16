@@ -118,6 +118,11 @@ export default {
     'A disabled template cannot be used for new tickets; existing tickets are unaffected',
   'pages.ticket.template.description.tooltip':
     'Shown in the service list to help requesters pick the right service',
+  'pages.ticket.template.formColumns': 'Form layout',
+  'pages.ticket.template.formColumns.1': 'Single column',
+  'pages.ticket.template.formColumns.2': 'Two columns',
+  'pages.ticket.template.formColumns.tooltip':
+    'How fields are arranged when a ticket is filled in: one field per row, or two fields per row (multi-line text still takes a full row). Changes only affect tickets submitted afterwards.',
   'pages.ticket.template.form': 'Form fields',
   'pages.ticket.template.form.tooltip':
     'What requesters fill in. Changes only affect tickets submitted afterwards.',

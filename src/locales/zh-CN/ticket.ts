@@ -113,6 +113,11 @@ export default {
     '停用后不能再用它提交工单，已有工单不受影响',
   'pages.ticket.template.description.tooltip':
     '展示在提交工单的服务列表里，帮助提单人选对服务',
+  'pages.ticket.template.formColumns': '表单布局',
+  'pages.ticket.template.formColumns.1': '单列',
+  'pages.ticket.template.formColumns.2': '双列',
+  'pages.ticket.template.formColumns.tooltip':
+    '提单人填写表单时字段的排列方式：单列一行一个字段，双列一行两个字段（多行文本仍独占一行）。修改只影响之后提交的工单',
   'pages.ticket.template.form': '表单字段',
   'pages.ticket.template.form.tooltip':
     '提单人需要填写的内容；修改只影响之后提交的工单',

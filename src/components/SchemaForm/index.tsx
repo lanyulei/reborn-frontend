@@ -14,7 +14,7 @@ import {
   ProFormText,
   ProFormTextArea,
 } from '@ant-design/pro-components';
-import { Tag, Tooltip, Typography } from 'antd';
+import { Col, Tag, Tooltip, Typography } from 'antd';
 import dayjs from 'dayjs';
 import type React from 'react';
 import { Fragment, useMemo } from 'react';
@@ -200,6 +200,7 @@ export const SchemaFormItems = <F extends SchemaField>({
   namePath,
   isDisabled,
   renderers,
+  customColSpan,
 }: {
   fields: readonly F[];
   /** 取值对象在表单值里的路径，如 ['attrs'] */
@@ -208,6 +209,12 @@ export const SchemaFormItems = <F extends SchemaField>({
   isDisabled?: (field: F) => boolean | undefined;
   /** 按字段类型注入的渲染器，优先于内置控件 */
   renderers?: Readonly<Record<string, SchemaFieldRenderer<F>>>;
+  /**
+   * 栅格表单（ProForm grid）里自定义渲染器所占的栅格列数。内置控件是 ProForm 控件，列宽随
+   * 表单的 colProps；自定义渲染器若用的是普通 Form.Item（不认 colProps），在这里统一包一层
+   * 栅格列。自定义渲染器本身就是 ProForm 控件、或表单不是栅格布局时不要传。
+   */
+  customColSpan?: number;
 }): React.ReactNode => {
   const t = useT();
   return (
@@ -234,7 +241,14 @@ export const SchemaFormItems = <F extends SchemaField>({
           };
           const item = (() => {
             const custom = renderers?.[f.type];
-            if (custom) return custom(f, common);
+            if (custom) {
+              const node = custom(f, common);
+              return customColSpan ? (
+                <Col span={customColSpan}>{node}</Col>
+              ) : (
+                node
+              );
+            }
             switch (f.type) {
               case 'int':
               case 'float':

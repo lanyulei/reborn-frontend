@@ -12,6 +12,7 @@ import {
 import { UserSelect } from '@/components/UserSelect';
 import { fetchWorkflowUsers } from '@/pages/workflow/components/meta';
 import type {
+  FormColumns,
   TemplateStatus,
   TicketFieldType,
   TicketFormField,
@@ -42,6 +43,12 @@ export const TICKET_PRIORITY_META: Record<
 export const TICKET_PRIORITY_ORDER: readonly TicketPriority[] = [1, 2, 3, 4];
 /** 提单时的缺省优先级：普通 */
 export const TICKET_PRIORITY_DEFAULT: TicketPriority = 2;
+
+/** 表单布局可选值：单列 / 双列 */
+export const FORM_COLUMNS: readonly FormColumns[] = [1, 2];
+
+/** 表单布局 → 每个字段占的栅格列数（24 栅格）：单列占满一行，双列一行两个 */
+export const formColSpan = (columns?: FormColumns) => (columns === 2 ? 12 : 24);
 
 /** 工单模板没有配置图标时用的图标（图标库里的键） */
 export const TICKET_ICON = 'ticket';

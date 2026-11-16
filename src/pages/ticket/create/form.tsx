@@ -18,6 +18,7 @@ import {
   App,
   Button,
   Card,
+  Col,
   Flex,
   Form,
   Result,
@@ -34,6 +35,7 @@ import { useFormRules, useOptions, useT } from '@/utils/i18n';
 import { randomUUID } from '@/utils/uuid';
 import { AttachmentUpload } from '../components/Attachments';
 import {
+  formColSpan,
   TICKET_FIELD_RENDERERS,
   TICKET_PRIORITY_DEFAULT,
   TICKET_PRIORITY_META,
@@ -56,6 +58,7 @@ interface FormValues {
 /** 表单区的阅读宽度：字段不随宽屏无限拉长 */
 const FORM_MAX_WIDTH = 800;
 const CATALOG_PATH = '/ticket/create';
+const FULL = { span: 24 };
 
 const TicketCreateForm: React.FC = () => {
   const { templateId = '' } = useParams<{ templateId: string }>();
@@ -103,6 +106,7 @@ const TicketCreateForm: React.FC = () => {
   }, [templateId]);
 
   const fields = template?.form ?? [];
+  const colSpan = formColSpan(template?.formColumns);
   // 关联资源要在 CMDB 里搜索：没有资源查看权限的人选不了；模板又要求必填时无法提单
   const ciLink = template?.ciLink ?? 0;
   const canPickCI = !!access.canCmdbCI;
@@ -204,6 +208,11 @@ const TicketCreateForm: React.FC = () => {
                 key={template.id}
                 formRef={formRef}
                 submitter={false}
+                // 栅格布局：字段的列宽随模板的表单布局（单列占满一行、双列一行两个）；
+                // 标题、优先级、关联资源、附件始终独占一行
+                grid
+                rowProps={{ gutter: 16 }}
+                colProps={{ span: colSpan }}
                 initialValues={{
                   priority: TICKET_PRIORITY_DEFAULT,
                   // 开关缺省即「否」：不预置的话，未拨动的开关不会随表单提交
@@ -217,6 +226,7 @@ const TicketCreateForm: React.FC = () => {
               >
                 <ProFormText
                   name="title"
+                  colProps={FULL}
                   label={t('pages.ticket.column.title')}
                   rules={[
                     {
@@ -231,6 +241,7 @@ const TicketCreateForm: React.FC = () => {
                 />
                 <ProFormRadio.Group
                   name="priority"
+                  colProps={FULL}
                   label={t('pages.ticket.column.priority')}
                   options={priorityOptions}
                   rules={[rules.select(t('pages.ticket.column.priority'))]}
@@ -239,10 +250,12 @@ const TicketCreateForm: React.FC = () => {
                   fields={fields}
                   namePath={DATA_PATH}
                   renderers={TICKET_FIELD_RENDERERS}
+                  customColSpan={colSpan}
                 />
                 {ciLink !== 0 && canPickCI && (
                   <ProFormSelect
                     name="ciIds"
+                    colProps={FULL}
                     label={t('pages.ticket.resource.label')}
                     placeholder={t('pages.ticket.resource.placeholder')}
                     mode="multiple"
@@ -275,13 +288,15 @@ const TicketCreateForm: React.FC = () => {
                     }
                   />
                 )}
-                <Form.Item
-                  name="fileIds"
-                  label={t('pages.ticket.attachment.label')}
-                  extra={t('pages.ticket.attachment.hint')}
-                >
-                  <AttachmentUpload onUploadingChange={setUploading} />
-                </Form.Item>
+                <Col span={24}>
+                  <Form.Item
+                    name="fileIds"
+                    label={t('pages.ticket.attachment.label')}
+                    extra={t('pages.ticket.attachment.hint')}
+                  >
+                    <AttachmentUpload onUploadingChange={setUploading} />
+                  </Form.Item>
+                </Col>
               </ProForm>
             </div>
           </Card>

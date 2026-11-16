@@ -113,6 +113,11 @@ export default {
     '停用後不能再用它提交工單，既有工單不受影響',
   'pages.ticket.template.description.tooltip':
     '顯示在提交工單的服務列表中，協助提單人選對服務',
+  'pages.ticket.template.formColumns': '表單版面',
+  'pages.ticket.template.formColumns.1': '單欄',
+  'pages.ticket.template.formColumns.2': '雙欄',
+  'pages.ticket.template.formColumns.tooltip':
+    '提單人填寫表單時欄位的排列方式：單欄一列一個欄位，雙欄一列兩個欄位（多行文字仍獨佔一列）。修改只影響之後提交的工單',
   'pages.ticket.template.form': '表單欄位',
   'pages.ticket.template.form.tooltip':
     '提單人需要填寫的內容；修改只影響之後提交的工單',

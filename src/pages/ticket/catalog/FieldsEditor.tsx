@@ -85,7 +85,8 @@ const toField = (values: FieldValues): TicketFormField => ({
       ? {
           minLen: values.minLen ?? undefined,
           maxLen: values.maxLen ?? undefined,
-          pattern: values.pattern || undefined,
+          // 文本框里可能带进换行：正则是单行的，保存时去掉
+          pattern: values.pattern?.replace(/[\r\n]/g, '') || undefined,
         }
       : {}),
   },
@@ -273,56 +274,63 @@ export const FieldsEditor: React.FC<{
             ]}
           />
           <ProFormSelect
-            colProps={HALF}
             name="type"
             label={t('pages.ticket.field.type')}
             allowClear={false}
             options={typeOptions}
             rules={[rules.select(t('pages.ticket.field.type'))]}
           />
-          <ProFormSwitch
-            colProps={HALF}
-            name="required"
-            label={t('pages.ticket.field.required')}
-          />
           <ProFormDependency name={['type']}>
             {({ type }: { type?: TicketFieldType }) => {
+              // 「必填」跟在随类型变化的配置后面；文本类型时与「最大长度」同一行（必填在左）
+              const required = (
+                <ProFormSwitch
+                  colProps={HALF}
+                  name="required"
+                  label={t('pages.ticket.field.required')}
+                />
+              );
               if (type === 'enum') {
                 return (
-                  <ProFormSelect
-                    name="enumValues"
-                    label={t('pages.ticket.field.enumValues')}
-                    placeholder={t('pages.ticket.field.enumValues.placeholder')}
-                    fieldProps={{
-                      mode: 'tags',
-                      maxCount: ENUM_MAX,
-                      open: false,
-                      suffix: null,
-                    }}
-                    rules={[
-                      {
-                        required: true,
-                        type: 'array',
-                        message: t('common.validation.required', {
-                          label: t('pages.ticket.field.enumValues'),
-                        }),
-                      },
-                      {
-                        validator: (_: unknown, items?: string[]) =>
-                          (items ?? []).some(
-                            (v) => !v.trim() || v.length > NAME_MAX,
-                          )
-                            ? Promise.reject(
-                                new Error(
-                                  t('pages.ticket.field.enumValues.invalid', {
-                                    max: NAME_MAX,
-                                  }),
-                                ),
-                              )
-                            : Promise.resolve(),
-                      },
-                    ]}
-                  />
+                  <>
+                    <ProFormSelect
+                      name="enumValues"
+                      label={t('pages.ticket.field.enumValues')}
+                      placeholder={t(
+                        'pages.ticket.field.enumValues.placeholder',
+                      )}
+                      fieldProps={{
+                        mode: 'tags',
+                        maxCount: ENUM_MAX,
+                        open: false,
+                        suffix: null,
+                      }}
+                      rules={[
+                        {
+                          required: true,
+                          type: 'array',
+                          message: t('common.validation.required', {
+                            label: t('pages.ticket.field.enumValues'),
+                          }),
+                        },
+                        {
+                          validator: (_: unknown, items?: string[]) =>
+                            (items ?? []).some(
+                              (v) => !v.trim() || v.length > NAME_MAX,
+                            )
+                              ? Promise.reject(
+                                  new Error(
+                                    t('pages.ticket.field.enumValues.invalid', {
+                                      max: NAME_MAX,
+                                    }),
+                                  ),
+                                )
+                              : Promise.resolve(),
+                        },
+                      ]}
+                    />
+                    {required}
+                  </>
                 );
               }
               if (type && NUMERIC.includes(type)) {
@@ -361,12 +369,14 @@ export const FieldsEditor: React.FC<{
                         />
                       )}
                     </ProFormDependency>
+                    {required}
                   </>
                 );
               }
               if (type && TEXTUAL.includes(type)) {
                 return (
                   <>
+                    {required}
                     <ProFormDigit
                       colProps={HALF}
                       name="maxLen"
@@ -374,17 +384,18 @@ export const FieldsEditor: React.FC<{
                       min={1}
                       fieldProps={{ precision: 0 }}
                     />
-                    <ProFormText
-                      colProps={HALF}
+                    {/* 正则往往较长：独占一行，两行高的文本框 */}
+                    <ProFormTextArea
                       name="pattern"
                       label={t('pages.ticket.field.pattern')}
                       tooltip={t('pages.ticket.field.pattern.tooltip')}
                       rules={[rules.max(PATTERN_MAX)]}
+                      fieldProps={{ rows: 2 }}
                     />
                   </>
                 );
               }
-              return null;
+              return required;
             }}
           </ProFormDependency>
           <ProFormTextArea

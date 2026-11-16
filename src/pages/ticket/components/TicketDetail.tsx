@@ -37,6 +37,7 @@ import type {
 import { useT } from '@/utils/i18n';
 import { AttachmentList } from './Attachments';
 import {
+  formColSpan,
   PriorityTag,
   renderTicketValue,
   SlaTag,
@@ -127,6 +128,7 @@ export const TicketDetail: React.FC<{
     (f) => perms[f.code] === 'required' && isEmpty(ticket?.data?.[f.code]),
   );
   const sla = ticket && ticketSla(ticket);
+  const colSpan = formColSpan(ticket?.formColumns);
 
   const saveForm = async (values: { data?: Record<string, unknown> }) => {
     if (!ticket) return;
@@ -315,6 +317,10 @@ export const TicketDetail: React.FC<{
           {editing ? (
             <ProForm
               formRef={formRef}
+              // 与提单时同一种布局：单列 / 双列
+              grid
+              rowProps={{ gutter: 16 }}
+              colProps={{ span: colSpan }}
               initialValues={{ data: valuesToForm(editable, ticket.data) }}
               submitter={{
                 searchConfig: {
@@ -330,11 +336,13 @@ export const TicketDetail: React.FC<{
                 fields={editable}
                 namePath={DATA_PATH}
                 renderers={ticketFieldRenderers(ticket.data, detail.labels)}
+                customColSpan={colSpan}
               />
             </ProForm>
           ) : (
             <Descriptions
-              column={{ xs: 1, md: 2 }}
+              // 展示也跟随表单布局：单列一行一个字段，双列一行两个（窄屏退回一个）
+              column={ticket.formColumns === 2 ? { xs: 1, md: 2 } : 1}
               size="small"
               items={fields.map((field) => ({
                 key: field.code,

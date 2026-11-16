@@ -45,6 +45,9 @@ export type CiLink = 0 | 1 | 2;
 /** 模板状态：1=启用 0=停用（protojson 省略零值，缺省即 0） */
 export type TemplateStatus = 0 | 1;
 
+/** 表单布局：1=单列（一行一个字段） 2=双列（一行两个字段，多行文本仍独占一行） */
+export type FormColumns = 1 | 2;
+
 /** 工单模板；form 仅详情接口返回 */
 export interface TicketTemplate {
   id: string;
@@ -65,6 +68,8 @@ export interface TicketTemplate {
   /** slaEscalateTo 里用户的显示名（ID → 名称） */
   labels?: Record<string, string>;
   ciLink?: CiLink;
+  /** 表单布局：1=单列 2=双列；缺省单列 */
+  formColumns?: FormColumns;
 }
 
 /** 模板内容（创建 / 整组更新） */
@@ -81,6 +86,7 @@ export interface TicketTemplateSpec {
   sla: SlaRule[];
   slaEscalateTo: string[];
   ciLink: CiLink;
+  formColumns: FormColumns;
 }
 
 /** 工单分类；templates 仅目录接口返回 */
@@ -124,6 +130,8 @@ export interface Ticket {
   rating?: number;
   ratingComment?: string;
   ratingTime?: string;
+  /** 提单时模板的表单布局快照：1=单列 2=双列 */
+  formColumns?: FormColumns;
 }
 
 /** 工单关联的 CMDB 资源（名称为关联时的快照） */
