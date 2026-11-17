@@ -1,5 +1,5 @@
 /** 工单域（TicketCatalogService / TicketService）数据类型，与后端 api/ticket/v1 一致 */
-import type { SchemaFieldRule } from '@/components/SchemaForm';
+import type { FieldWidth, SchemaFieldRule } from '@/components/SchemaForm';
 
 /** 表单字段类型（与后端 internal/pkg/formschema 的类型一一对应） */
 export type TicketFieldType =
@@ -12,7 +12,8 @@ export type TicketFieldType =
   | 'datetime'
   | 'date'
   | 'user'
-  | 'dept';
+  | 'dept'
+  | 'file';
 
 /** 表单字段定义 */
 export interface TicketFormField {
@@ -26,7 +27,7 @@ export interface TicketFormField {
   description?: string;
   /** 下拉选项的展示值（实际值 → 展示值） */
   enumLabels?: Record<string, string>;
-  /** 多选（下拉 / 人员 / 部门）：取值为列表 */
+  /** 多选（下拉 / 人员 / 部门）：取值为列表；附件：可以带多个文件（取值恒为文件 ID 列表） */
   multiple?: boolean;
   /** 提单表单的初始值 */
   defaultValue?: unknown;
@@ -42,6 +43,8 @@ export interface TicketFormField {
   precision?: number;
   /** 显示条件：前面某个单选下拉 / 是否字段取到给定值之一时才显示 */
   showWhen?: { field: string; values: string[] };
+  /** 双列布局下所占的宽度：full 独占一行 / half 占半行；缺省多行文本独占一行、其余占半行 */
+  width?: FieldWidth;
 }
 
 /** 一段时限（workTime：按工作时间计，分钟 / 小时只算工作时段，天 = 工作日） */
@@ -64,7 +67,7 @@ export type CiLink = 0 | 1 | 2;
 /** 模板状态：1=启用 0=停用（protojson 省略零值，缺省即 0） */
 export type TemplateStatus = 0 | 1;
 
-/** 表单布局：1=单列（一行一个字段） 2=双列（一行两个字段，多行文本仍独占一行） */
+/** 表单布局：1=单列（一行一个字段） 2=双列（一行两个字段；多行文本缺省独占一行，各字段可单独设宽度） */
 export type FormColumns = 1 | 2;
 
 /** 工单模板；form 仅详情接口返回 */
@@ -167,7 +170,10 @@ export type TicketFieldPermission =
   | 'editable'
   | 'required';
 
-/** 工单附件（size 为 int64 字符串） */
+/**
+ * 工单的附件（size 为 int64 字符串）：附件字段的取值是文件 ID 列表，名称与大小在这里查；
+ * 不属于任何附件字段的是工单级附件（附件成为字段类型之前提交的工单）
+ */
 export interface TicketFile {
   id: string;
   filename: string;

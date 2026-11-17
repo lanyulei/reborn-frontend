@@ -62,7 +62,8 @@ export default {
   'pages.ticket.create.discard.ok': '放 棄',
   'pages.ticket.attachment.label': '附件',
   'pages.ticket.attachment.upload': '上傳附件',
-  'pages.ticket.attachment.hint': '單一檔案不超過 5 MB，最多 20 個',
+  'pages.ticket.attachment.hint': '單一檔案不超過 5 MB，最多 {max} 個',
+  'pages.ticket.attachment.hint.one': '只能上傳 1 個檔案，不超過 5 MB',
   'pages.ticket.attachment.tooLarge': '「{name}」超過 5 MB，無法上傳',
   'pages.ticket.attachment.tooMany': '最多上傳 {max} 個附件，超出的檔案未上傳',
 
@@ -108,7 +109,7 @@ export default {
   'pages.ticket.template.formColumns.1': '單欄',
   'pages.ticket.template.formColumns.2': '雙欄',
   'pages.ticket.template.formColumns.tooltip':
-    '提單人填寫表單時欄位的排列方式：單欄一列一個欄位，雙欄一列兩個欄位（多行文字仍獨佔一列）。修改只影響之後提交的工單',
+    '提單人填寫表單時欄位的排列方式：單欄一列一個欄位，雙欄一列兩個欄位（多行文字預設獨佔一列，可在欄位裡單獨設定寬度）。修改只影響之後提交的工單',
   'pages.ticket.template.form': '表單欄位',
   'pages.ticket.template.form.tooltip':
     '提單人需要填寫的內容；修改只影響之後提交的工單',
@@ -134,6 +135,8 @@ export default {
   'pages.ticket.field.preview': '預覽表單',
   'pages.ticket.field.copy.name': '{name} 副本',
   'pages.ticket.field.multiple.suffix': '（多選）',
+  'pages.ticket.field.multiple.suffix.file': '（多個）',
+  'pages.ticket.field.file.tooMany': '一張表單最多 {max} 個附件欄位',
   'pages.ticket.field.usage':
     '流程節點「{nodes}」引用了這個欄位（表單權限、分支條件或處理人規則），修改欄位代碼或刪除後這些設定不再生效。',
   'pages.ticket.field.condition.dropped':

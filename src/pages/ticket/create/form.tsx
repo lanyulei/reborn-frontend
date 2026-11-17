@@ -1,7 +1,7 @@
 /**
  * 填写工单页（/ticket/create/:templateId）：填写指定工单模板的表单并提交，
  * 提交后进入该工单的详情页。模板在提交工单页（/ticket/create）里选。
- * 表单项由模板的字段定义驱动（通用 SchemaForm），人员 / 部门字段用工单域的控件。
+ * 表单项由模板的字段定义驱动（通用 SchemaForm），人员 / 部门 / 附件字段用工单域的控件。
  */
 import {
   FooterToolbar,
@@ -13,20 +13,9 @@ import {
   ProFormText,
 } from '@ant-design/pro-components';
 import { history, useAccess, useParams } from '@umijs/max';
-import {
-  Alert,
-  App,
-  Button,
-  Card,
-  Col,
-  Flex,
-  Form,
-  Result,
-  Spin,
-  Typography,
-} from 'antd';
+import { Alert, App, Button, Card, Flex, Result, Spin, Typography } from 'antd';
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   formToValues,
   SchemaFormItems,
@@ -37,14 +26,13 @@ import { createTicket, getTemplate } from '@/services/ticket';
 import type { TicketPriority, TicketTemplate } from '@/services/ticket/typings';
 import { useFormRules, useOptions, useT } from '@/utils/i18n';
 import { randomUUID } from '@/utils/uuid';
-import { AttachmentUpload } from '../components/Attachments';
 import {
   formColSpan,
   renderFormGroup,
-  TICKET_FIELD_RENDERERS,
   TICKET_PRIORITY_DEFAULT,
   TICKET_PRIORITY_META,
   TICKET_PRIORITY_ORDER,
+  ticketFieldRenderers,
 } from '../components/meta';
 
 const TITLE_MAX = 255;
@@ -56,11 +44,10 @@ interface FormValues {
   title: string;
   priority: TicketPriority;
   data?: Record<string, unknown>;
-  fileIds?: string[];
   ciIds?: string[];
 }
 
-/** 表单区的阅读宽度：字段不随宽屏无限拉长 */
+/** 表单区的阅读宽度：字段不随宽屏无限拉长；在卡片里居中，与底部居中的按钮对齐 */
 const FORM_MAX_WIDTH = 800;
 const CATALOG_PATH = '/ticket/create';
 const FULL = { span: 24 };
@@ -79,7 +66,20 @@ const TicketCreateForm: React.FC = () => {
   /** 模板加载失败（不存在、已停用或无权使用） */
   const [failed, setFailed] = useState(false);
   const [template, setTemplate] = useState<TicketTemplate>();
+  /** 是否有附件字段仍在上传；uploadingFields 记着是哪些字段 */
   const [uploading, setUploading] = useState(false);
+  const uploadingFields = useRef(new Set<string>());
+  const renderers = useMemo(
+    () =>
+      ticketFieldRenderers(undefined, undefined, {
+        onUploadingChange: (code, busy) => {
+          if (busy) uploadingFields.current.add(code);
+          else uploadingFields.current.delete(code);
+          setUploading(uploadingFields.current.size > 0);
+        },
+      }),
+    [],
+  );
   const [submitting, setSubmitting] = useState(false);
   // 幂等键：每次进入一张模板的表单对应一个，重复点击提交不会创建两张工单
   const requestId = useRef('');
@@ -97,6 +97,7 @@ const TicketCreateForm: React.FC = () => {
       .then((result) => {
         if (seq !== pickSeq.current) return;
         requestId.current = randomUUID();
+        uploadingFields.current.clear();
         setUploading(false);
         setTemplate(result.template);
       })
@@ -134,7 +135,6 @@ const TicketCreateForm: React.FC = () => {
         title: values.title.trim(),
         priority: values.priority,
         data,
-        fileIds: values.fileIds,
         ciIds: ciLink !== 0 && canPickCI ? values.ciIds : undefined,
         requestId: requestId.current,
       });
@@ -194,7 +194,7 @@ const TicketCreateForm: React.FC = () => {
             style={{ marginBottom: 64 }}
             title={t('pages.ticket.create.titleOf', { name: template.name })}
           >
-            <div style={{ maxWidth: FORM_MAX_WIDTH }}>
+            <div style={{ maxWidth: FORM_MAX_WIDTH, margin: '0 auto' }}>
               {template.description && (
                 <Typography.Paragraph type="secondary">
                   {template.description}
@@ -214,7 +214,7 @@ const TicketCreateForm: React.FC = () => {
                 formRef={formRef}
                 submitter={false}
                 // 栅格布局：字段的列宽随模板的表单布局（单列占满一行、双列一行两个）；
-                // 标题、优先级、关联资源、附件始终独占一行
+                // 标题、优先级、关联资源始终独占一行
                 grid
                 rowProps={{ gutter: 16 }}
                 colProps={{ span: colSpan }}
@@ -250,7 +250,7 @@ const TicketCreateForm: React.FC = () => {
                 <SchemaFormItems
                   fields={fields}
                   namePath={DATA_PATH}
-                  renderers={TICKET_FIELD_RENDERERS}
+                  renderers={renderers}
                   customColSpan={colSpan}
                   renderGroup={renderFormGroup}
                 />
@@ -290,15 +290,6 @@ const TicketCreateForm: React.FC = () => {
                     }
                   />
                 )}
-                <Col span={24}>
-                  <Form.Item
-                    name="fileIds"
-                    label={t('pages.ticket.attachment.label')}
-                    extra={t('pages.ticket.attachment.hint')}
-                  >
-                    <AttachmentUpload onUploadingChange={setUploading} />
-                  </Form.Item>
-                </Col>
               </ProForm>
             </div>
           </Card>

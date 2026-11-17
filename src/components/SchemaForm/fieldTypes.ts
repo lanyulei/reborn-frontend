@@ -15,6 +15,7 @@ export const FIELD_TYPES = [
   'date',
   'user',
   'dept',
+  'file',
   'json',
   'ip',
   'ref',
@@ -34,13 +35,19 @@ export const FIELD_TYPE_META: Record<FieldType, { textId: string }> = {
   date: { textId: 'component.schemaForm.type.date' },
   user: { textId: 'component.schemaForm.type.user' },
   dept: { textId: 'component.schemaForm.type.dept' },
+  file: { textId: 'component.schemaForm.type.file' },
   json: { textId: 'component.schemaForm.type.json' },
   ip: { textId: 'component.schemaForm.type.ip' },
   ref: { textId: 'component.schemaForm.type.ref' },
 };
 
-/** 可以多选的类型 */
-export const MULTIPLE_TYPES: readonly FieldType[] = ['enum', 'user', 'dept'];
+/** 可以多选的类型（附件：可以带多个文件） */
+export const MULTIPLE_TYPES: readonly FieldType[] = [
+  'enum',
+  'user',
+  'dept',
+  'file',
+];
 /** 可以设初始值的类型 */
 export const DEFAULT_TYPES: readonly FieldType[] = [
   'string',
@@ -74,3 +81,7 @@ export const FORMAT_PATTERNS: Record<string, RegExp> = {
 export const TEXTUAL_TYPES: readonly FieldType[] = ['string', 'text'];
 /** 数字类：可配置取值范围 */
 export const NUMERIC_TYPES: readonly FieldType[] = ['int', 'float'];
+
+/** 字段在双列布局下的宽度：full 独占一行 / half 占半行；不设 = 缺省 */
+export const FIELD_WIDTHS = ['full', 'half'] as const;
+export type FieldWidth = (typeof FIELD_WIDTHS)[number];

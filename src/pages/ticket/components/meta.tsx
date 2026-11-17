@@ -1,8 +1,8 @@
 /**
  * 工单域的枚举元数据与表单字段适配：状态 / 优先级 → 徽标与标签色，
- * 以及「人员」「部门」字段的表单控件与展示（通用表单组件经 renderers 注入）。
+ * 以及「人员」「部门」「附件」字段的表单控件与展示（通用表单组件经 renderers 注入）。
  */
-import { Col, Form, Tag } from 'antd';
+import { Col, Form, Tag, Typography } from 'antd';
 import type React from 'react';
 import { DeptSelect } from '@/components/DeptSelect';
 import {
@@ -17,11 +17,17 @@ import type {
   FormColumns,
   TemplateStatus,
   TicketFieldType,
+  TicketFile,
   TicketFormField,
   TicketPriority,
   TicketStatus,
 } from '@/services/ticket/typings';
 import { type EnumMeta, type Translate, useT } from '@/utils/i18n';
+import {
+  ATTACHMENT_MAX,
+  AttachmentList,
+  AttachmentUpload,
+} from './Attachments';
 
 /** 工单状态（由流程同步） */
 export const TICKET_STATUS_META: EnumMeta<TicketStatus> = {
@@ -76,7 +82,10 @@ export const FIELD_TYPE_ORDER: readonly TicketFieldType[] = [
   'date',
   'user',
   'dept',
+  'file',
 ];
+/** 一张表单里附件字段的个数上限（与后端校验一致） */
+export const FILE_FIELD_MAX = 5;
 
 /** 优先级标签 */
 export const PriorityTag: React.FC<{ priority?: TicketPriority }> = ({
@@ -101,14 +110,31 @@ export const renderFormGroup = (title: string): React.ReactNode => (
   </Col>
 );
 
+/** 附件字段取值里的文件 ID（取值恒为列表；不是列表按没有文件算） */
+export const fileIdsOf = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((id): id is string => typeof id === 'string' && id !== '')
+    : [];
+
+/** 附件字段的控件所需的上下文 */
+export interface FileFieldOptions {
+  /** 工单已有的附件（修改已有工单时）：回显文件名 */
+  files?: readonly TicketFile[];
+  /** 某个附件字段是否有文件仍在上传（提交前须等待） */
+  onUploadingChange?: (code: string, uploading: boolean) => void;
+  /** 只看样子：选了文件不上传（模板的表单预览） */
+  dryRun?: boolean;
+}
+
 /**
- * 「人员」「部门」字段的表单控件（值为用户 / 部门 ID，多选时为 ID 列表）。修改已有工单时传入
- * 当前取值与名称（详情的 labels）：交给选择器回显，候选尚未加载 / 当前值不在候选里时不至于
- * 只显示裸 ID。
+ * 「人员」「部门」「附件」字段的表单控件（人员 / 部门的值为 ID，多选时为 ID 列表；附件的值恒为
+ * 文件 ID 列表）。修改已有工单时传入当前取值与名称（详情的 labels、files）：交给控件回显，
+ * 候选尚未加载 / 当前值不在候选里时不至于只显示裸 ID。
  */
 export const ticketFieldRenderers = (
   data?: Record<string, unknown>,
   labels?: Record<string, string>,
+  fileOptions?: FileFieldOptions,
 ): Readonly<Record<string, SchemaFieldRenderer<TicketFormField>>> => {
   /** 字段当前取值的 ID → 名称（没有名称的不给，交由控件自行处理） */
   const known = (field: TicketFormField) => {
@@ -144,11 +170,52 @@ export const ticketFieldRenderers = (
         />
       </Form.Item>
     ),
+    file: (field, props) => {
+      const max = field.multiple ? ATTACHMENT_MAX : 1;
+      return (
+        <Form.Item
+          {...props}
+          // 取值是列表：必填按列表判空
+          rules={props.rules.map((rule) => ({
+            ...rule,
+            type: 'array' as const,
+          }))}
+          extra={<FileHint max={max} />}
+        >
+          <AttachmentUpload
+            max={max}
+            disabled={props.disabled}
+            knownFiles={fileOptions?.files}
+            dryRun={fileOptions?.dryRun}
+            onUploadingChange={
+              fileOptions?.onUploadingChange &&
+              ((uploading) =>
+                fileOptions.onUploadingChange?.(field.code, uploading))
+            }
+          />
+        </Form.Item>
+      );
+    },
   };
 };
 
-/** 提单时的表单控件（没有已有取值） */
-export const TICKET_FIELD_RENDERERS = ticketFieldRenderers();
+/** 附件字段下方的限制说明 */
+const FileHint: React.FC<{ max: number }> = ({ max }) => {
+  const t = useT();
+  return t(
+    max > 1
+      ? 'pages.ticket.attachment.hint'
+      : 'pages.ticket.attachment.hint.one',
+    { max },
+  );
+};
+
+/** 模板里预览表单用的控件：附件只看样子，不真的上传 */
+export const PREVIEW_FIELD_RENDERERS = ticketFieldRenderers(
+  undefined,
+  undefined,
+  { dryRun: true },
+);
 
 /** 详情里的字段取值：人员 / 部门显示名称（labels 为 ID → 名称），其余按类型格式化 */
 export const renderTicketValue = (
@@ -156,7 +223,18 @@ export const renderTicketValue = (
   value: unknown,
   labels: Record<string, string> | undefined,
   t: Translate,
+  files?: readonly TicketFile[],
 ): React.ReactNode => {
+  if (field.type === 'file') {
+    // 只展示详情里确实返回了的文件（已作废的、无权看的不在其中）
+    const ids = fileIdsOf(value);
+    const own = (files ?? []).filter((f) => ids.includes(f.id));
+    return own.length > 0 ? (
+      <AttachmentList files={own} />
+    ) : (
+      <Typography.Text type="secondary">{t('common.empty')}</Typography.Text>
+    );
+  }
   if (field.type === 'user' || field.type === 'dept') {
     const ids = (Array.isArray(value) ? value : [value]).filter(
       (id): id is string => typeof id === 'string' && id !== '',

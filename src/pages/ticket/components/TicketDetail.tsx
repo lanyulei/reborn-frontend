@@ -24,6 +24,7 @@ import dayjs from 'dayjs';
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  fieldColSpan,
   formToValues,
   groupFields,
   hiddenFieldCodes,
@@ -39,6 +40,7 @@ import type {
 import { useT } from '@/utils/i18n';
 import { AttachmentList } from './Attachments';
 import {
+  fileIdsOf,
   formColSpan,
   PriorityTag,
   renderTicketValue,
@@ -81,6 +83,9 @@ export const TicketDetail: React.FC<{
   /** 是否正在修改表单（当前处理人） */
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  /** 修改表单时是否有附件字段仍在上传；uploadingFields 记着是哪些字段 */
+  const [uploading, setUploading] = useState(false);
+  const uploadingFields = useRef(new Set<string>());
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [ratingBusy, setRatingBusy] = useState(false);
@@ -131,12 +136,28 @@ export const TicketDetail: React.FC<{
   );
   const sla = ticket && ticketSla(ticket);
   const colSpan = formColSpan(ticket?.formColumns);
+  // 不属于任何附件字段的文件：工单级附件（附件成为字段类型之前提交的工单），单独列出
+  const fieldFileIds = new Set(
+    fields
+      .filter((f) => f.type === 'file')
+      .flatMap((f) => fileIdsOf(ticket?.data?.[f.code])),
+  );
+  const looseFiles = (detail?.files ?? []).filter(
+    (f) => !fieldFileIds.has(f.id),
+  );
   // 显示条件不满足的字段不展示
   const hidden = hiddenFieldCodes(fields, ticket?.data);
   const visible = fields.filter((f) => !hidden.has(f.code));
 
+  const startEditing = (on: boolean) => {
+    uploadingFields.current.clear();
+    setUploading(false);
+    setEditing(on);
+  };
+
   const saveForm = async (values: { data?: Record<string, unknown> }) => {
-    if (!ticket) return;
+    // 附件仍在上传时不保存（回车提交会绕过置灰的按钮）
+    if (!ticket || uploading) return;
     const next = formToValues(editable, values.data);
     // 只提交改动过的字段；清空的字段传 null
     const changed = Object.fromEntries(
@@ -303,7 +324,7 @@ export const TicketDetail: React.FC<{
             detail.canEditForm &&
             mayHandle &&
             !editing && (
-              <Button size="small" onClick={() => setEditing(true)}>
+              <Button size="small" onClick={() => startEditing(true)}>
                 {t('pages.ticket.form.edit')}
               </Button>
             )
@@ -332,15 +353,22 @@ export const TicketDetail: React.FC<{
                   submitText: t('common.action.save'),
                   resetText: t('common.action.cancel'),
                 },
-                submitButtonProps: { loading: saving },
-                onReset: () => setEditing(false),
+                submitButtonProps: { loading: saving, disabled: uploading },
+                onReset: () => startEditing(false),
               }}
               onFinish={saveForm}
             >
               <SchemaFormItems
                 fields={editable}
                 namePath={DATA_PATH}
-                renderers={ticketFieldRenderers(ticket.data, detail.labels)}
+                renderers={ticketFieldRenderers(ticket.data, detail.labels, {
+                  files: detail.files,
+                  onUploadingChange: (code, busy) => {
+                    if (busy) uploadingFields.current.add(code);
+                    else uploadingFields.current.delete(code);
+                    setUploading(uploadingFields.current.size > 0);
+                  },
+                })}
                 customColSpan={colSpan}
                 // 显示条件的控制字段不一定在可编辑的字段里：用工单现有的取值判断
                 baseValues={ticket.data}
@@ -366,13 +394,14 @@ export const TicketDetail: React.FC<{
                 items={group.fields.map((field) => ({
                   key: field.code,
                   label: field.name,
-                  // 多行文本独占一行
-                  span: field.type === 'text' ? 'filled' : 1,
+                  // 独占一行的字段（缺省是多行文本，可按字段设置）
+                  span: fieldColSpan(field, colSpan) === 24 ? 'filled' : 1,
                   children: renderTicketValue(
                     field,
                     ticket.data?.[field.code],
                     detail.labels,
                     t,
+                    detail.files,
                   ),
                 }))}
               />
@@ -398,9 +427,9 @@ export const TicketDetail: React.FC<{
           </Flex>
         </Card>
       )}
-      {!!detail.files?.length && (
+      {looseFiles.length > 0 && (
         <Card variant="outlined" title={t('pages.ticket.attachment.label')}>
-          <AttachmentList files={detail.files} />
+          <AttachmentList files={looseFiles} />
         </Card>
       )}
       <Card variant="outlined" title={t('pages.ticket.comment.heading')}>

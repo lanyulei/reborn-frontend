@@ -35,6 +35,7 @@ import {
   DEFAULT_TYPES,
   type FieldControl,
   FieldFormItems,
+  type FieldWidth,
   fromEnumPairs,
   groupFields,
   MULTIPLE_TYPES,
@@ -57,9 +58,10 @@ import { fetchAllPages } from '@/utils/paging';
 import {
   FIELD_TYPE_META,
   FIELD_TYPE_ORDER,
+  FILE_FIELD_MAX,
   formColSpan,
+  PREVIEW_FIELD_RENDERERS,
   renderFormGroup,
-  TICKET_FIELD_RENDERERS,
 } from '../components/meta';
 import { fieldUsage } from './fieldUsage';
 
@@ -97,6 +99,7 @@ interface FieldValues {
   unit?: string;
   precision?: number;
   placeholder?: string;
+  width?: FieldWidth;
   /** 是否类型在表单里是 'true' / 'false' */
   defaultValue?: unknown;
   group?: string;
@@ -125,6 +128,7 @@ const toValues = (field: TicketFormField): FieldValues => ({
     typeof field.defaultValue === 'boolean'
       ? String(field.defaultValue)
       : field.defaultValue,
+  width: field.width || undefined,
   group: field.group,
   showWhenField: field.showWhen?.field,
   showWhenValues: field.showWhen?.values,
@@ -186,6 +190,7 @@ const toField = (values: FieldValues): TicketFormField => {
       ? values.placeholder?.trim() || undefined
       : undefined,
     defaultValue: defaultOf(type, values.defaultValue, enumValues, multiple),
+    width: values.width || undefined,
     group: values.group?.trim() || undefined,
     showWhen:
       values.showWhenField && showValues.length > 0
@@ -330,6 +335,11 @@ export const FieldsEditor: React.FC<{
     }
   };
 
+  /** 附件字段是否已到个数上限（except：正在编辑的那个不算） */
+  const fileFieldsFull = (except?: number) =>
+    fields.filter((f, i) => f.type === 'file' && i !== except).length >=
+    FILE_FIELD_MAX;
+
   const moveTo = (from: number, to: number) => {
     if (from === to || to < 0 || to >= fields.length) return;
     const next = [...fields];
@@ -345,6 +355,12 @@ export const FieldsEditor: React.FC<{
 
   const duplicate = (index: number) => {
     const source = fields[index];
+    if (source.type === 'file' && fileFieldsFull()) {
+      message.warning(
+        t('pages.ticket.field.file.tooMany', { max: FILE_FIELD_MAX }),
+      );
+      return;
+    }
     const taken = new Set(fields.map((f) => f.code));
     // 字段码加后缀并保证唯一、不超长
     let code = '';
@@ -441,6 +457,15 @@ export const FieldsEditor: React.FC<{
   const editingField =
     editing?.index !== undefined ? fields[editing.index] : undefined;
   const editingUsage = usageText(editingField?.code);
+  // 附件字段到上限后，类型下拉里不再提供「附件」
+  const typesFull = fileFieldsFull(editing?.index);
+  const types = useMemo(
+    () =>
+      typesFull
+        ? FIELD_TYPE_ORDER.filter((x) => x !== 'file')
+        : FIELD_TYPE_ORDER,
+    [typesFull],
+  );
   const colSpan = formColSpan(columns);
   const full = fields.length >= FIELD_MAX;
 
@@ -594,7 +619,12 @@ export const FieldsEditor: React.FC<{
             render: (_, record) => (
               <Tag>
                 {typeText(record.type)}
-                {record.multiple && t('pages.ticket.field.multiple.suffix')}
+                {record.multiple &&
+                  t(
+                    record.type === 'file'
+                      ? 'pages.ticket.field.multiple.suffix.file'
+                      : 'pages.ticket.field.multiple.suffix',
+                  )}
               </Tag>
             ),
           },
@@ -749,7 +779,7 @@ export const FieldsEditor: React.FC<{
             />
           )}
           <FieldFormItems
-            types={FIELD_TYPE_ORDER}
+            types={types}
             code={{
               pattern: CODE_PATTERN,
               patternMessage: t('pages.ticket.field.code.pattern'),
@@ -823,7 +853,7 @@ export const FieldsEditor: React.FC<{
           <SchemaFormItems
             fields={fields}
             namePath={DATA_PATH}
-            renderers={TICKET_FIELD_RENDERERS}
+            renderers={PREVIEW_FIELD_RENDERERS}
             customColSpan={colSpan}
             renderGroup={renderFormGroup}
           />

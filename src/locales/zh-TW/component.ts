@@ -14,6 +14,7 @@ export default {
   'component.schemaForm.type.datetime': '日期時間',
   'component.schemaForm.type.user': '人員',
   'component.schemaForm.type.dept': '部門',
+  'component.schemaForm.type.file': '附件',
   'component.schemaForm.type.json': 'JSON',
   'component.schemaForm.type.ip': 'IP 位址',
   'component.schemaForm.type.ref': '引用資源',
@@ -49,6 +50,7 @@ export default {
   'component.schemaForm.format.url.invalid':
     '請輸入以 http:// 或 https:// 開頭的連結',
   'component.schemaForm.field.multiple': '允許多選',
+  'component.schemaForm.field.multiple.file': '允許多個檔案',
   'component.schemaForm.field.format': '內容格式',
   'component.schemaForm.field.format.none': '不限',
   'component.schemaForm.field.format.email': '電子郵件',
@@ -65,6 +67,12 @@ export default {
     '填寫時預先填好的值，可以改掉',
   'component.schemaForm.field.bool.true': '是',
   'component.schemaForm.field.bool.false': '否',
+  'component.schemaForm.field.width': '欄位寬度',
+  'component.schemaForm.field.width.tooltip':
+    '只在雙欄佈局下生效。預設：多行文字獨佔一列，其餘欄位佔半列',
+  'component.schemaForm.field.width.auto': '預設',
+  'component.schemaForm.field.width.full': '獨佔一列',
+  'component.schemaForm.field.width.half': '佔半列',
   'component.schemaForm.field.group': '所屬分組',
   'component.schemaForm.field.group.tooltip':
     '相鄰且分組相同的欄位會歸到同一個小標題下',

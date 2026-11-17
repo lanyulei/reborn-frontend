@@ -62,7 +62,8 @@ export default {
   'pages.ticket.create.discard.ok': '放 弃',
   'pages.ticket.attachment.label': '附件',
   'pages.ticket.attachment.upload': '上传附件',
-  'pages.ticket.attachment.hint': '单个文件不超过 5 MB，最多 20 个',
+  'pages.ticket.attachment.hint': '单个文件不超过 5 MB，最多 {max} 个',
+  'pages.ticket.attachment.hint.one': '只能上传 1 个文件，不超过 5 MB',
   'pages.ticket.attachment.tooLarge': '「{name}」超过 5 MB，无法上传',
   'pages.ticket.attachment.tooMany': '最多上传 {max} 个附件，超出的文件未上传',
 
@@ -108,7 +109,7 @@ export default {
   'pages.ticket.template.formColumns.1': '单列',
   'pages.ticket.template.formColumns.2': '双列',
   'pages.ticket.template.formColumns.tooltip':
-    '提单人填写表单时字段的排列方式：单列一行一个字段，双列一行两个字段（多行文本仍独占一行）。修改只影响之后提交的工单',
+    '提单人填写表单时字段的排列方式：单列一行一个字段，双列一行两个字段（多行文本默认独占一行，可在字段里单独设置宽度）。修改只影响之后提交的工单',
   'pages.ticket.template.form': '表单字段',
   'pages.ticket.template.form.tooltip':
     '提单人需要填写的内容；修改只影响之后提交的工单',
@@ -134,6 +135,8 @@ export default {
   'pages.ticket.field.preview': '预览表单',
   'pages.ticket.field.copy.name': '{name} 副本',
   'pages.ticket.field.multiple.suffix': '（多选）',
+  'pages.ticket.field.multiple.suffix.file': '（多个）',
+  'pages.ticket.field.file.tooMany': '一张表单最多 {max} 个附件字段',
   'pages.ticket.field.usage':
     '流程节点「{nodes}」引用了这个字段（表单权限、分支条件或处理人规则），修改字段码或删除后这些配置不再生效。',
   'pages.ticket.field.condition.dropped':

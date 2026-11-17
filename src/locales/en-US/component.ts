@@ -14,6 +14,7 @@ export default {
   'component.schemaForm.type.datetime': 'Date & time',
   'component.schemaForm.type.user': 'User',
   'component.schemaForm.type.dept': 'Department',
+  'component.schemaForm.type.file': 'Attachment',
   'component.schemaForm.type.json': 'JSON',
   'component.schemaForm.type.ip': 'IP address',
   'component.schemaForm.type.ref': 'Resource reference',
@@ -52,6 +53,7 @@ export default {
   'component.schemaForm.format.url.invalid':
     'Enter a link starting with http:// or https://',
   'component.schemaForm.field.multiple': 'Allow multiple',
+  'component.schemaForm.field.multiple.file': 'Allow multiple files',
   'component.schemaForm.field.format': 'Content format',
   'component.schemaForm.field.format.none': 'Any',
   'component.schemaForm.field.format.email': 'Email',
@@ -68,6 +70,12 @@ export default {
     'Pre-filled when the form opens; can be changed',
   'component.schemaForm.field.bool.true': 'Yes',
   'component.schemaForm.field.bool.false': 'No',
+  'component.schemaForm.field.width': 'Field width',
+  'component.schemaForm.field.width.tooltip':
+    'Only applies to the two-column layout. Default: multi-line text takes a full row, other fields take half a row',
+  'component.schemaForm.field.width.auto': 'Default',
+  'component.schemaForm.field.width.full': 'Full row',
+  'component.schemaForm.field.width.half': 'Half row',
   'component.schemaForm.field.group': 'Group',
   'component.schemaForm.field.group.tooltip':
     'Adjacent fields with the same group share one heading',

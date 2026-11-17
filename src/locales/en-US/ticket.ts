@@ -65,7 +65,8 @@ export default {
   'pages.ticket.create.discard.ok': 'Discard',
   'pages.ticket.attachment.label': 'Attachments',
   'pages.ticket.attachment.upload': 'Upload',
-  'pages.ticket.attachment.hint': 'Up to 20 files, 5 MB each',
+  'pages.ticket.attachment.hint': 'Up to {max} files, 5 MB each',
+  'pages.ticket.attachment.hint.one': 'One file only, up to 5 MB',
   'pages.ticket.attachment.tooLarge':
     '"{name}" is larger than 5 MB and cannot be uploaded',
   'pages.ticket.attachment.tooMany':
@@ -113,7 +114,7 @@ export default {
   'pages.ticket.template.formColumns.1': 'Single column',
   'pages.ticket.template.formColumns.2': 'Two columns',
   'pages.ticket.template.formColumns.tooltip':
-    'How fields are arranged when a ticket is filled in: one field per row, or two fields per row (multi-line text still takes a full row). Changes only affect tickets submitted afterwards.',
+    'How fields are arranged when a ticket is filled in: one field per row, or two fields per row (multi-line text takes a full row by default; each field can set its own width). Changes only affect tickets submitted afterwards.',
   'pages.ticket.template.form': 'Form fields',
   'pages.ticket.template.form.tooltip':
     'What requesters fill in. Changes only affect tickets submitted afterwards.',
@@ -143,6 +144,9 @@ export default {
   'pages.ticket.field.preview': 'Preview form',
   'pages.ticket.field.copy.name': '{name} (copy)',
   'pages.ticket.field.multiple.suffix': ' (multiple)',
+  'pages.ticket.field.multiple.suffix.file': ' (multiple)',
+  'pages.ticket.field.file.tooMany':
+    'A form can have at most {max} attachment fields',
   'pages.ticket.field.usage':
     'Workflow step(s) "{nodes}" reference this field (form permissions, branch conditions or assignee rules); changing its code or deleting it will silently break those settings.',
   'pages.ticket.field.condition.dropped':

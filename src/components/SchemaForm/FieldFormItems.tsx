@@ -8,7 +8,7 @@
  *
  * 表单值的字段名：name / code / type / required / description / enumValues（或 enumPairs）/
  * refModel / minLen / maxLen / pattern / min / max；开放扩展配置时另有 multiple / format /
- * unit / precision / placeholder / defaultValue（是否类型为 'true' / 'false'）/ group /
+ * unit / precision / placeholder / defaultValue（是否类型为 'true' / 'false'）/ width / group /
  * showWhenField / showWhenValues。
  */
 import {
@@ -29,6 +29,7 @@ import {
   DEFAULT_TYPES,
   FIELD_FORMATS,
   FIELD_TYPE_META,
+  FIELD_WIDTHS,
   type FieldType,
   FORMAT_PATTERNS,
   MULTIPLE_TYPES,
@@ -75,7 +76,7 @@ export interface FieldFormItemsProps {
   switches?: React.ReactNode;
   /** 「引用资源」类型的候选模型；开放了 ref 类型时须提供 */
   refOptions?: () => Promise<{ label: string; value: string }[]>;
-  /** 开放扩展配置：多选、内容格式、单位与小数位、输入提示、初始值（需要后端支持） */
+  /** 开放扩展配置：多选、内容格式、单位与小数位、输入提示、初始值、字段宽度（需要后端支持） */
   advanced?: boolean;
   /** 已有的分组名称；提供后可以设置字段的所属分组 */
   groupNames?: readonly string[];
@@ -643,7 +644,11 @@ export const FieldFormItems: React.FC<FieldFormItemsProps> = ({
                   <ProFormSwitch
                     colProps={HALF}
                     name="multiple"
-                    label={t('component.schemaForm.field.multiple')}
+                    label={t(
+                      type === 'file'
+                        ? 'component.schemaForm.field.multiple.file'
+                        : 'component.schemaForm.field.multiple',
+                    )}
                   />
                 )}
                 {type === 'string' && (
@@ -724,6 +729,17 @@ export const FieldFormItems: React.FC<FieldFormItemsProps> = ({
                   ) : (
                     <ProFormText colProps={HALF} {...defaultProps} />
                   ))}
+                <ProFormSelect
+                  colProps={HALF}
+                  name="width"
+                  label={t('component.schemaForm.field.width')}
+                  tooltip={t('component.schemaForm.field.width.tooltip')}
+                  placeholder={t('component.schemaForm.field.width.auto')}
+                  options={FIELD_WIDTHS.map((width) => ({
+                    value: width,
+                    label: t(`component.schemaForm.field.width.${width}`),
+                  }))}
+                />
               </>
             );
           }}

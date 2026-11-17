@@ -38,6 +38,7 @@ export {
   FIELD_TYPES,
   type FieldFormat,
   type FieldType,
+  type FieldWidth,
   MULTIPLE_TYPES,
   NUMERIC_TYPES,
   PLACEHOLDER_TYPES,
@@ -88,7 +89,22 @@ export interface SchemaField {
   precision?: number;
   /** 显示条件：控制字段取到给定值之一时才显示 */
   showWhen?: { field: string; values: string[] };
+  /** 多列布局下所占的宽度：full 独占一行 / half 占一列；缺省多行文本、JSON 独占一行 */
+  width?: string;
 }
+
+/**
+ * 字段在栅格表单里占的栅格列数。layoutSpan 是表单布局下一个字段的列数（单列 24、双列 12）：
+ * 单列时都占满一行；多列时按字段的宽度设置，没设的多行文本 / JSON 独占一行、其余占一列。
+ */
+export const fieldColSpan = (
+  field: SchemaField,
+  layoutSpan: number,
+): number => {
+  if (field.width === 'full') return 24;
+  if (field.width === 'half') return layoutSpan;
+  return field.type === 'text' || field.type === 'json' ? 24 : layoutSpan;
+};
 
 /** 字段取值在显示条件里的文本形式（下拉的值 / 是否的 true、false）；其余为空串 */
 export const conditionValue = (value: unknown): string =>
@@ -348,6 +364,7 @@ export const SchemaFormItems = <F extends SchemaField>({
    * 栅格表单（ProForm grid）里自定义渲染器所占的栅格列数。内置控件是 ProForm 控件，列宽随
    * 表单的 colProps；自定义渲染器若用的是普通 Form.Item（不认 colProps），在这里统一包一层
    * 栅格列。自定义渲染器本身就是 ProForm 控件、或表单不是栅格布局时不要传。
+   * 传了即视为表单布局下一个字段的列数：各字段（含内置控件）按自己的宽度设置占列，见 fieldColSpan。
    */
   customColSpan?: number;
   /** 分组标题的渲染；提供后在每段分组的第一个字段前插入标题（标题为空的段不插入） */
@@ -393,15 +410,14 @@ export const SchemaFormItems = <F extends SchemaField>({
           disabled,
           rules,
         };
+        const span = customColSpan ? fieldColSpan(f, customColSpan) : undefined;
+        // 内置控件的列宽：按字段的宽度设置；不是栅格布局时不传，随表单
+        const colProps = span ? { span } : undefined;
         const item = (() => {
           const custom = renderers?.[f.type];
           if (custom) {
             const node = custom(f, common);
-            return customColSpan ? (
-              <Col span={customColSpan}>{node}</Col>
-            ) : (
-              node
-            );
+            return span ? <Col span={span}>{node}</Col> : node;
           }
           switch (f.type) {
             case 'int':
@@ -409,6 +425,7 @@ export const SchemaFormItems = <F extends SchemaField>({
               return (
                 <ProFormDigit
                   {...common}
+                  colProps={colProps}
                   // 不设下限时显式放开：数字控件缺省下限是 0，会把负数改成 0
                   min={f.rule?.min ?? Number.MIN_SAFE_INTEGER}
                   max={f.rule?.max}
@@ -420,11 +437,14 @@ export const SchemaFormItems = <F extends SchemaField>({
                 />
               );
             case 'bool':
-              return <ProFormSwitch {...common} rules={[]} />;
+              return (
+                <ProFormSwitch {...common} colProps={colProps} rules={[]} />
+              );
             case 'enum':
               return (
                 <ProFormSelect
                   {...common}
+                  colProps={colProps}
                   mode={f.multiple ? 'multiple' : undefined}
                   placeholder={placeholder}
                   options={(f.enumValues ?? []).map((v) => ({
@@ -435,11 +455,19 @@ export const SchemaFormItems = <F extends SchemaField>({
               );
             case 'datetime':
               return (
-                <ProFormDateTimePicker {...common} placeholder={placeholder} />
+                <ProFormDateTimePicker
+                  {...common}
+                  colProps={colProps}
+                  placeholder={placeholder}
+                />
               );
             case 'date':
               return (
-                <ProFormDatePicker {...common} placeholder={placeholder} />
+                <ProFormDatePicker
+                  {...common}
+                  colProps={colProps}
+                  placeholder={placeholder}
+                />
               );
             case 'text':
               return (
@@ -450,7 +478,7 @@ export const SchemaFormItems = <F extends SchemaField>({
                     ...(f.rule?.maxLen ? [{ max: f.rule.maxLen }] : []),
                     ...patternRule(f.rule?.pattern),
                   ]}
-                  colProps={{ span: 24 }}
+                  colProps={colProps ?? { span: 24 }}
                   placeholder={placeholder}
                   fieldProps={{ autoSize: { minRows: 3, maxRows: 8 } }}
                 />
@@ -475,7 +503,7 @@ export const SchemaFormItems = <F extends SchemaField>({
                       },
                     },
                   ]}
-                  colProps={{ span: 24 }}
+                  colProps={colProps ?? { span: 24 }}
                   fieldProps={{ autoSize: { minRows: 3, maxRows: 8 } }}
                 />
               );
@@ -483,6 +511,7 @@ export const SchemaFormItems = <F extends SchemaField>({
               return (
                 <ProFormText
                   {...common}
+                  colProps={colProps}
                   rules={[
                     ...rules,
                     {
@@ -496,6 +525,7 @@ export const SchemaFormItems = <F extends SchemaField>({
               return (
                 <ProFormText
                   {...common}
+                  colProps={colProps}
                   placeholder={placeholder}
                   rules={[
                     ...rules,

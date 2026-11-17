@@ -14,6 +14,7 @@ export default {
   'component.schemaForm.type.datetime': '日期时间',
   'component.schemaForm.type.user': '人员',
   'component.schemaForm.type.dept': '部门',
+  'component.schemaForm.type.file': '附件',
   'component.schemaForm.type.json': 'JSON',
   'component.schemaForm.type.ip': 'IP 地址',
   'component.schemaForm.type.ref': '引用资源',
@@ -49,6 +50,7 @@ export default {
   'component.schemaForm.format.url.invalid':
     '请输入以 http:// 或 https:// 开头的链接',
   'component.schemaForm.field.multiple': '允许多选',
+  'component.schemaForm.field.multiple.file': '允许多个文件',
   'component.schemaForm.field.format': '内容格式',
   'component.schemaForm.field.format.none': '不限',
   'component.schemaForm.field.format.email': '邮箱',
@@ -65,6 +67,12 @@ export default {
     '填写时预先填好的值，可以改掉',
   'component.schemaForm.field.bool.true': '是',
   'component.schemaForm.field.bool.false': '否',
+  'component.schemaForm.field.width': '字段宽度',
+  'component.schemaForm.field.width.tooltip':
+    '只在双列布局下生效。默认：多行文本独占一行，其余字段占半行',
+  'component.schemaForm.field.width.auto': '默认',
+  'component.schemaForm.field.width.full': '独占一行',
+  'component.schemaForm.field.width.half': '占半行',
   'component.schemaForm.field.group': '所属分组',
   'component.schemaForm.field.group.tooltip':
     '相邻且分组相同的字段会归到同一个小标题下',
