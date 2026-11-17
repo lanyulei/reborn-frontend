@@ -35,12 +35,15 @@ import {
   findTarget,
   fromGraph,
   locateIssue,
+  type OncallGroupOption,
   RawGraphView,
   stepSummary,
   toGraph,
   walkNodes,
 } from '@/components/FlowDesigner';
 import { UserSelect } from '@/components/UserSelect';
+import { listGroups } from '@/services/oncall/group';
+import { listSchedules } from '@/services/oncall/schedule';
 import { usePermissions } from '@/services/system/permissions';
 import { getErrorMessage } from '@/services/system/request';
 import { listRoles } from '@/services/system/role';
@@ -129,6 +132,8 @@ const DefinitionDesign: React.FC = () => {
   const [resolving, setResolving] = useState(false);
   const [saving, setSaving] = useState(false);
   const [roles, setRoles] = useState<{ code: string; name: string }[]>([]);
+  // 值班组与值班表（值班人规则的候选）
+  const [oncallGroups, setOncallGroups] = useState<OncallGroupOption[]>([]);
   // 绑定了这个流程的工单模板及其表单字段：配置表单权限时按模板挑字段
   const [fieldGroups, setFieldGroups] = useState<FieldGroup[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -170,6 +175,29 @@ const DefinitionDesign: React.FC = () => {
     )
       .then((items) =>
         setRoles(items.map((r) => ({ code: r.code, name: r.name }))),
+      )
+      .catch(() => undefined);
+    // 值班组与其下的值班表：同样静默失败（没有权限时值班人规则只回显已配置的名称）
+    Promise.all([
+      fetchAllPages((page, pageSize) =>
+        listGroups({ page, pageSize }, { silent: true }),
+      ),
+      listSchedules(undefined, { silent: true }),
+    ])
+      .then(([groups, { items }]) =>
+        setOncallGroups(
+          groups.map((g) => ({
+            id: g.id,
+            name: g.name,
+            schedules: (items ?? [])
+              .filter((s) => s.groupId === g.id)
+              .map((s) => ({
+                id: s.id,
+                name: s.config.name,
+                enabled: s.status === 1,
+              })),
+          })),
+        ),
       )
       .catch(() => undefined);
     // 自动任务可选的 Webhook 端点、子流程可选的流程：同样静默失败（配置面板里仍能看到已选值）
@@ -580,6 +608,7 @@ const DefinitionDesign: React.FC = () => {
                       webhooks,
                       definitions,
                       fieldGroups,
+                      oncallGroups,
                     }}
                   />
                 </Drawer>

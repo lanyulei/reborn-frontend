@@ -10,6 +10,7 @@ export type TicketFieldType =
   | 'bool'
   | 'enum'
   | 'datetime'
+  | 'date'
   | 'user'
   | 'dept';
 
@@ -23,6 +24,24 @@ export interface TicketFormField {
   enumValues?: string[];
   rule?: SchemaFieldRule;
   description?: string;
+  /** 下拉选项的展示值（实际值 → 展示值） */
+  enumLabels?: Record<string, string>;
+  /** 多选（下拉 / 人员 / 部门）：取值为列表 */
+  multiple?: boolean;
+  /** 提单表单的初始值 */
+  defaultValue?: unknown;
+  /** 输入框里的示例文字 */
+  placeholder?: string;
+  /** 所属分组的标题 */
+  group?: string;
+  /** 单行文本的内置格式：email / phone / url */
+  format?: string;
+  /** 数字的单位（仅展示） */
+  unit?: string;
+  /** 小数位数上限 */
+  precision?: number;
+  /** 显示条件：前面某个单选下拉 / 是否字段取到给定值之一时才显示 */
+  showWhen?: { field: string; values: string[] };
 }
 
 /** 一段时限（workTime：按工作时间计，分钟 / 小时只算工作时段，天 = 工作日） */

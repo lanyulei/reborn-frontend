@@ -20,10 +20,12 @@ export interface ListGroupsParams extends PageQuery {
 /** ListGroups 分页查询值班分组 */
 export async function listGroups(
   params: ListGroupsParams,
+  options?: { silent?: boolean },
 ): Promise<PagedResult<OncallGroup>> {
   return authRequest<PagedResult<OncallGroup>>('/api/v1/oncall/group', {
     method: 'GET',
     params,
+    silent: options?.silent,
   });
 }
 

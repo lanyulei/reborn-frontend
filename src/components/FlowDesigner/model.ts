@@ -15,7 +15,8 @@ export type AssigneeRuleKind =
   | 'deptLeader'
   | 'deptLeaderOf'
   | 'formUser'
-  | 'formDeptLeader';
+  | 'formDeptLeader'
+  | 'oncall';
 
 export interface AssigneeRule {
   kind: AssigneeRuleKind;
@@ -24,7 +25,10 @@ export interface AssigneeRule {
   deptId?: string;
   level?: number;
   field?: string;
-  /** 仅设计器使用：已选用户 / 角色 / 部门的显示名，卡片摘要与回显用 */
+  /** 值班人规则：值班组与其下的值班表（取流程到达节点那一刻的主、备值班人） */
+  groupId?: string;
+  scheduleId?: string;
+  /** 仅设计器使用：已选用户 / 角色 / 部门 / 值班组 / 值班表的显示名，卡片摘要与回显用 */
   labels?: Record<string, string>;
 }
 
@@ -596,11 +600,13 @@ export const toGraph = (flow: Flow): Record<string, unknown> => {
   };
 };
 
-/** 规则里带显示名的取值（用户 / 角色 / 部门） */
+/** 规则里带显示名的取值（用户 / 角色 / 部门 / 值班组 / 值班表） */
 const labeledKeys = (rule: AssigneeRule): string[] => [
   ...(rule.userIds ?? []),
   ...(rule.roleCodes ?? []),
   ...(rule.deptId ? [rule.deptId] : []),
+  ...(rule.groupId ? [rule.groupId] : []),
+  ...(rule.scheduleId ? [rule.scheduleId] : []),
 ];
 /** 显示名在共享表里的键：按规则类型区分，避免用户 ID 与角色编码撞名 */
 const labelKey = (kind: AssigneeRuleKind, key: string) => `${kind}:${key}`;

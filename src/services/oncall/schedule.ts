@@ -21,10 +21,12 @@ import type {
 /** ListSchedules 查询值班表（可按分组过滤），不分页 */
 export async function listSchedules(
   groupId?: string,
+  options?: { silent?: boolean },
 ): Promise<{ items: OncallSchedule[] }> {
   return authRequest<{ items: OncallSchedule[] }>('/api/v1/oncall/schedule', {
     method: 'GET',
     params: { groupId: groupId || undefined },
+    silent: options?.silent,
   });
 }
 

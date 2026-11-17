@@ -256,7 +256,7 @@ export const TemplateDrawer: React.FC<{
           label={t('pages.ticket.template.form')}
           tooltip={t('pages.ticket.template.form.tooltip')}
         >
-          <FieldsEditor />
+          <FieldsEditor templateId={templateId || undefined} />
         </Form.Item>
       </Col>
       <ProFormRadio.Group

@@ -2,14 +2,16 @@
  * 工单域的枚举元数据与表单字段适配：状态 / 优先级 → 徽标与标签色，
  * 以及「人员」「部门」字段的表单控件与展示（通用表单组件经 renderers 注入）。
  */
-import { Form, Tag } from 'antd';
+import { Col, Form, Tag } from 'antd';
 import type React from 'react';
 import { DeptSelect } from '@/components/DeptSelect';
 import {
   renderSchemaValue,
+  FIELD_TYPE_META as SCHEMA_FIELD_TYPE_META,
   type SchemaFieldRenderer,
 } from '@/components/SchemaForm';
 import { UserSelect } from '@/components/UserSelect';
+import { SectionTitle } from '@/pages/workflow/components/InstanceDetail';
 import { fetchWorkflowUsers } from '@/pages/workflow/components/meta';
 import type {
   FormColumns,
@@ -60,18 +62,9 @@ export const TEMPLATE_STATUS_META: EnumMeta<TemplateStatus> = {
 };
 export const TEMPLATE_STATUS_ORDER: readonly TemplateStatus[] = [1, 0];
 
-/** 表单字段类型 */
-export const FIELD_TYPE_META: Record<TicketFieldType, { textId: string }> = {
-  string: { textId: 'enum.ticket.fieldType.string' },
-  text: { textId: 'enum.ticket.fieldType.text' },
-  int: { textId: 'enum.ticket.fieldType.int' },
-  float: { textId: 'enum.ticket.fieldType.float' },
-  bool: { textId: 'enum.ticket.fieldType.bool' },
-  enum: { textId: 'enum.ticket.fieldType.enum' },
-  datetime: { textId: 'enum.ticket.fieldType.datetime' },
-  user: { textId: 'enum.ticket.fieldType.user' },
-  dept: { textId: 'enum.ticket.fieldType.dept' },
-};
+/** 表单字段类型：名称取自公共字段库，这里只声明工单开放哪些类型 */
+export const FIELD_TYPE_META: Record<TicketFieldType, { textId: string }> =
+  SCHEMA_FIELD_TYPE_META;
 export const FIELD_TYPE_ORDER: readonly TicketFieldType[] = [
   'string',
   'text',
@@ -80,6 +73,7 @@ export const FIELD_TYPE_ORDER: readonly TicketFieldType[] = [
   'bool',
   'enum',
   'datetime',
+  'date',
   'user',
   'dept',
 ];
@@ -97,62 +91,64 @@ export const PriorityTag: React.FC<{ priority?: TicketPriority }> = ({
   );
 };
 
-/** 「人员」「部门」字段的表单控件（值为用户 / 部门 ID） */
-export const TICKET_FIELD_RENDERERS: Readonly<
-  Record<string, SchemaFieldRenderer<TicketFormField>>
-> = {
-  user: (_field, props) => (
-    <Form.Item {...props}>
-      <UserSelect fetchUsers={fetchWorkflowUsers} disabled={props.disabled} />
-    </Form.Item>
-  ),
-  dept: (_field, props) => (
-    <Form.Item {...props}>
-      <DeptSelect disabled={props.disabled} />
-    </Form.Item>
-  ),
-};
+/** 多选人员 / 部门的个数上限（与后端一致） */
+const MULTIPLE_MAX = 50;
+
+/** 表单里的分组标题（独占一行） */
+export const renderFormGroup = (title: string): React.ReactNode => (
+  <Col span={24}>
+    <SectionTitle>{title}</SectionTitle>
+  </Col>
+);
 
 /**
- * 修改已有工单时的表单控件：把当前取值的名称（详情的 labels）交给选择器回显，
- * 候选尚未加载 / 当前值不在候选里时不至于只显示裸 ID。
+ * 「人员」「部门」字段的表单控件（值为用户 / 部门 ID，多选时为 ID 列表）。修改已有工单时传入
+ * 当前取值与名称（详情的 labels）：交给选择器回显，候选尚未加载 / 当前值不在候选里时不至于
+ * 只显示裸 ID。
  */
 export const ticketFieldRenderers = (
-  data: Record<string, unknown> | undefined,
-  labels: Record<string, string> | undefined,
+  data?: Record<string, unknown>,
+  labels?: Record<string, string>,
 ): Readonly<Record<string, SchemaFieldRenderer<TicketFormField>>> => {
   /** 字段当前取值的 ID → 名称（没有名称的不给，交由控件自行处理） */
   const known = (field: TicketFormField) => {
-    const id = data?.[field.code];
-    const label = typeof id === 'string' ? labels?.[id] : undefined;
-    return typeof id === 'string' && label ? { id, label } : undefined;
+    const value = data?.[field.code];
+    const ids = Array.isArray(value) ? value : [value];
+    return ids.flatMap((id) => {
+      const label = typeof id === 'string' ? labels?.[id] : undefined;
+      return typeof id === 'string' && label ? [{ id, label }] : [];
+    });
   };
   return {
-    user: (field, props) => {
-      const current = known(field);
-      return (
-        <Form.Item {...props}>
-          <UserSelect
-            fetchUsers={fetchWorkflowUsers}
-            disabled={props.disabled}
-            knownUsers={current && [current]}
-          />
-        </Form.Item>
-      );
-    },
-    dept: (field, props) => {
-      const current = known(field);
-      return (
-        <Form.Item {...props}>
-          <DeptSelect
-            disabled={props.disabled}
-            knownDepts={current && [{ id: current.id, name: current.label }]}
-          />
-        </Form.Item>
-      );
-    },
+    user: (field, props) => (
+      <Form.Item {...props}>
+        <UserSelect
+          fetchUsers={fetchWorkflowUsers}
+          disabled={props.disabled}
+          multiple={field.multiple}
+          maxCount={field.multiple ? MULTIPLE_MAX : undefined}
+          knownUsers={known(field)}
+        />
+      </Form.Item>
+    ),
+    dept: (field, props) => (
+      <Form.Item {...props}>
+        <DeptSelect
+          disabled={props.disabled}
+          multiple={field.multiple}
+          maxCount={field.multiple ? MULTIPLE_MAX : undefined}
+          knownDepts={known(field).map(({ id, label }) => ({
+            id,
+            name: label,
+          }))}
+        />
+      </Form.Item>
+    ),
   };
 };
+
+/** 提单时的表单控件（没有已有取值） */
+export const TICKET_FIELD_RENDERERS = ticketFieldRenderers();
 
 /** 详情里的字段取值：人员 / 部门显示名称（labels 为 ID → 名称），其余按类型格式化 */
 export const renderTicketValue = (
@@ -161,12 +157,11 @@ export const renderTicketValue = (
   labels: Record<string, string> | undefined,
   t: Translate,
 ): React.ReactNode => {
-  if (
-    (field.type === 'user' || field.type === 'dept') &&
-    typeof value === 'string' &&
-    value !== ''
-  ) {
-    return labels?.[value] ?? value;
+  if (field.type === 'user' || field.type === 'dept') {
+    const ids = (Array.isArray(value) ? value : [value]).filter(
+      (id): id is string => typeof id === 'string' && id !== '',
+    );
+    if (ids.length > 0) return ids.map((id) => labels?.[id] ?? id).join('、');
   }
   if (field.type === 'bool' && typeof value === 'boolean') {
     return t(value ? 'pages.ticket.bool.true' : 'pages.ticket.bool.false');
@@ -177,6 +172,18 @@ export const renderTicketValue = (
       <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
         {value}
       </span>
+    );
+  }
+  if (
+    field.format === 'url' &&
+    typeof value === 'string' &&
+    /^https?:\/\//.test(value)
+  ) {
+    // 只给 http(s) 链接加跳转；新窗口打开且不带来源信息
+    return (
+      <a href={value} target="_blank" rel="noopener noreferrer">
+        {value}
+      </a>
     );
   }
   return renderSchemaValue(field, value, t);

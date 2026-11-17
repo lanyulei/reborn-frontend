@@ -23,15 +23,6 @@ export default {
   'enum.ticket.priority.2': 'Normal',
   'enum.ticket.priority.3': 'High',
   'enum.ticket.priority.4': 'Urgent',
-  'enum.ticket.fieldType.string': 'Text',
-  'enum.ticket.fieldType.text': 'Long text',
-  'enum.ticket.fieldType.int': 'Integer',
-  'enum.ticket.fieldType.float': 'Decimal',
-  'enum.ticket.fieldType.bool': 'Yes / No',
-  'enum.ticket.fieldType.enum': 'Dropdown',
-  'enum.ticket.fieldType.datetime': 'Date & time',
-  'enum.ticket.fieldType.user': 'User',
-  'enum.ticket.fieldType.dept': 'Department',
 
   // Ticket lists and detail
   'pages.ticket.view.todo': 'To Do',
@@ -142,8 +133,6 @@ export default {
   'pages.ticket.field.edit': 'Edit Field',
   'pages.ticket.field.empty':
     'No fields yet. Requesters only fill in the title and priority.',
-  'pages.ticket.field.name': 'Field name',
-  'pages.ticket.field.code': 'Field code',
   'pages.ticket.field.code.tooltip':
     'Workflow conditions refer to this value as form.<code>',
   'pages.ticket.field.code.pattern':
@@ -151,20 +140,29 @@ export default {
   'pages.ticket.field.code.reserved':
     '"priority" is reserved for the ticket priority',
   'pages.ticket.field.code.duplicate': 'This code is already used',
-  'pages.ticket.field.type': 'Type',
-  'pages.ticket.field.required': 'Required',
-  'pages.ticket.field.enumValues': 'Options',
-  'pages.ticket.field.enumValues.placeholder': 'Type and press Enter to add',
-  'pages.ticket.field.enumValues.invalid':
-    'Each option must be 1-{max} characters',
-  'pages.ticket.field.min': 'Minimum',
-  'pages.ticket.field.max': 'Maximum',
-  'pages.ticket.field.max.invalid': 'Maximum must not be less than minimum',
-  'pages.ticket.field.maxLen': 'Max length',
-  'pages.ticket.field.pattern': 'Pattern (regex)',
-  'pages.ticket.field.pattern.tooltip':
-    'Input must match this regular expression; leave empty for no check',
-  'pages.ticket.field.description': 'Help text',
+  'pages.ticket.field.preview': 'Preview form',
+  'pages.ticket.field.copy.name': '{name} (copy)',
+  'pages.ticket.field.multiple.suffix': ' (multiple)',
+  'pages.ticket.field.usage':
+    'Workflow step(s) "{nodes}" reference this field (form permissions, branch conditions or assignee rules); changing its code or deleting it will silently break those settings.',
+  'pages.ticket.field.condition.dropped':
+    'Removed the display condition of {n} field(s) because it no longer holds',
+  'pages.ticket.field.delete.dependents':
+    'The display condition of "{names}" depends on it and will be removed as well.',
+  'pages.ticket.field.insertBelow': 'Insert a field below',
+  'pages.ticket.field.drag': 'Drag to reorder',
+  'pages.ticket.field.search': 'Search by field name or code',
+  'pages.ticket.field.search.empty': 'No matching fields',
+  'pages.ticket.field.tag.condition': 'Conditional',
+  'pages.ticket.field.tag.condition.tip': 'Shown when "{field}" is {values}',
+  'pages.ticket.field.tag.default': 'Initial value',
+  'pages.ticket.field.tag.default.tip': 'Initial value: {value}',
+  'pages.ticket.field.group.split':
+    'Fields of group "{names}" are separated by other fields, so the form will show the same group heading more than once.',
+  'pages.ticket.field.group.merge': 'Bring group fields together',
+  'pages.ticket.field.group.rename': 'Rename group',
+  'pages.ticket.field.group.rename.tip':
+    'Applies to every field in this group; leave empty to remove the group.',
   'pages.ticket.field.moveUp': 'Move up',
   'pages.ticket.field.moveDown': 'Move down',
   'pages.ticket.field.delete.title': 'Delete field',

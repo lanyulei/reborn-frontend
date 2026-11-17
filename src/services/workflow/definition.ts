@@ -47,7 +47,10 @@ export async function listDefinitions(
 }
 
 /** GetDefinition 流程定义详情（含草稿流程图与校验问题） */
-export async function getDefinition(id: string): Promise<{
+export async function getDefinition(
+  id: string,
+  options?: { silent?: boolean },
+): Promise<{
   definition: WorkflowDefinition;
   draft?: Record<string, unknown>;
   issues?: GraphIssue[];
@@ -56,7 +59,7 @@ export async function getDefinition(id: string): Promise<{
     definition: WorkflowDefinition;
     draft?: Record<string, unknown>;
     issues?: GraphIssue[];
-  }>(`${BASE}/${id}`, { method: 'GET' });
+  }>(`${BASE}/${id}`, { method: 'GET', silent: options?.silent });
   return { ...result, definition: normalize(result.definition) };
 }
 

@@ -7,6 +7,7 @@ export {
   type FieldGroup,
   type FlowConfigDeps,
   findTarget,
+  type OncallGroupOption,
 } from './ConfigPanel';
 export {
   FlowCanvas,

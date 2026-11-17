@@ -25,6 +25,8 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   formToValues,
+  groupFields,
+  hiddenFieldCodes,
   SchemaFormItems,
   valuesToForm,
 } from '@/components/SchemaForm';
@@ -129,6 +131,9 @@ export const TicketDetail: React.FC<{
   );
   const sla = ticket && ticketSla(ticket);
   const colSpan = formColSpan(ticket?.formColumns);
+  // 显示条件不满足的字段不展示
+  const hidden = hiddenFieldCodes(fields, ticket?.data);
+  const visible = fields.filter((f) => !hidden.has(f.code));
 
   const saveForm = async (values: { data?: Record<string, unknown> }) => {
     if (!ticket) return;
@@ -337,26 +342,41 @@ export const TicketDetail: React.FC<{
                 namePath={DATA_PATH}
                 renderers={ticketFieldRenderers(ticket.data, detail.labels)}
                 customColSpan={colSpan}
+                // 显示条件的控制字段不一定在可编辑的字段里：用工单现有的取值判断
+                baseValues={ticket.data}
               />
             </ProForm>
           ) : (
-            <Descriptions
-              // 展示也跟随表单布局：单列一行一个字段，双列一行两个（窄屏退回一个）
-              column={ticket.formColumns === 2 ? { xs: 1, md: 2 } : 1}
-              size="small"
-              items={fields.map((field) => ({
-                key: field.code,
-                label: field.name,
-                // 多行文本独占一行
-                span: field.type === 'text' ? 'filled' : 1,
-                children: renderTicketValue(
-                  field,
-                  ticket.data?.[field.code],
-                  detail.labels,
-                  t,
-                ),
-              }))}
-            />
+            // 按分组分段展示；显示条件不满足的字段不展示
+            groupFields(visible).map((group, index) => (
+              <Descriptions
+                // biome-ignore lint/suspicious/noArrayIndexKey: 分组按位置切分，没有稳定标识
+                key={index}
+                title={
+                  group.title ? (
+                    <Typography.Text type="secondary">
+                      {group.title}
+                    </Typography.Text>
+                  ) : undefined
+                }
+                style={index > 0 ? { marginTop: 12 } : undefined}
+                // 展示也跟随表单布局：单列一行一个字段，双列一行两个（窄屏退回一个）
+                column={ticket.formColumns === 2 ? { xs: 1, md: 2 } : 1}
+                size="small"
+                items={group.fields.map((field) => ({
+                  key: field.code,
+                  label: field.name,
+                  // 多行文本独占一行
+                  span: field.type === 'text' ? 'filled' : 1,
+                  children: renderTicketValue(
+                    field,
+                    ticket.data?.[field.code],
+                    detail.labels,
+                    t,
+                  ),
+                }))}
+              />
+            ))
           )}
         </Card>
       )}

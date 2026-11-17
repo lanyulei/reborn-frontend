@@ -1,6 +1,7 @@
 /**
  * CMDB 枚举元数据：只存结构与 i18n 键，文案经 utils/i18n 的 hook 解析。
  */
+import { FIELD_TYPE_META } from '@/components/SchemaForm';
 import type {
   CmdbCardinality,
   CmdbCIStatus,
@@ -38,17 +39,8 @@ export const CMDB_MODEL_STATUS_META: EnumMeta<CmdbModelStatus> = {
 };
 export const CMDB_MODEL_STATUS_ORDER: readonly CmdbModelStatus[] = [1, 2];
 
-export const CMDB_FIELD_TYPE_META: EnumMeta<CmdbFieldType> = {
-  string: { textId: 'enum.cmdb.fieldType.string' },
-  int: { textId: 'enum.cmdb.fieldType.int' },
-  float: { textId: 'enum.cmdb.fieldType.float' },
-  bool: { textId: 'enum.cmdb.fieldType.bool' },
-  enum: { textId: 'enum.cmdb.fieldType.enum' },
-  datetime: { textId: 'enum.cmdb.fieldType.datetime' },
-  json: { textId: 'enum.cmdb.fieldType.json' },
-  ip: { textId: 'enum.cmdb.fieldType.ip' },
-  ref: { textId: 'enum.cmdb.fieldType.ref' },
-};
+/** 字段类型：名称取自公共字段库，这里只声明 CMDB 开放哪些类型 */
+export const CMDB_FIELD_TYPE_META: EnumMeta<CmdbFieldType> = FIELD_TYPE_META;
 export const CMDB_FIELD_TYPE_ORDER: readonly CmdbFieldType[] = [
   'string',
   'int',

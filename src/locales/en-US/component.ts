@@ -4,6 +4,96 @@ export default {
   'component.tagSelect.all': 'All',
   'component.deptSelect.disabled': '{name} (disabled)',
   'component.userDeptTags.primary': 'Primary department',
+  // 字段类型（全站统一的名称）
+  'component.schemaForm.type.string': 'Single-line text',
+  'component.schemaForm.type.text': 'Multi-line text',
+  'component.schemaForm.type.int': 'Integer',
+  'component.schemaForm.type.float': 'Decimal',
+  'component.schemaForm.type.bool': 'Yes / No',
+  'component.schemaForm.type.enum': 'Dropdown',
+  'component.schemaForm.type.datetime': 'Date & time',
+  'component.schemaForm.type.user': 'User',
+  'component.schemaForm.type.dept': 'Department',
+  'component.schemaForm.type.json': 'JSON',
+  'component.schemaForm.type.ip': 'IP address',
+  'component.schemaForm.type.ref': 'Resource reference',
+  // 字段配置
+  'component.schemaForm.field.name': 'Field name',
+  'component.schemaForm.field.code': 'Field code',
+  'component.schemaForm.field.type': 'Field type',
+  'component.schemaForm.field.required': 'Required',
+  'component.schemaForm.field.options': 'Options',
+  'component.schemaForm.field.options.placeholder':
+    'Type and press Enter to add',
+  'component.schemaForm.field.options.invalid':
+    'Each option must be 1-{max} characters',
+  'component.schemaForm.field.options.tooltip':
+    'The actual value is what gets stored and filtered; the display value is only shown in the UI',
+  'component.schemaForm.field.options.add': 'Add option',
+  'component.schemaForm.field.options.value': 'Actual value',
+  'component.schemaForm.field.options.label': 'Display value',
+  'component.schemaForm.field.options.label.tip':
+    'Shown instead of the actual value when set',
+  'component.schemaForm.field.refModel': 'Referenced model',
+  'component.schemaForm.field.min': 'Minimum',
+  'component.schemaForm.field.max': 'Maximum',
+  'component.schemaForm.field.max.invalid':
+    'Maximum cannot be less than minimum',
+  'component.schemaForm.field.minLen': 'Min length',
+  'component.schemaForm.field.maxLen': 'Max length',
+  'component.schemaForm.field.pattern': 'Format check (regex)',
+  'component.schemaForm.field.pattern.tooltip':
+    'Input must match this regular expression; leave empty to skip the check',
+  'component.schemaForm.field.pattern.invalid': 'Invalid regular expression',
+  'component.schemaForm.field.description': 'Help text',
+  'component.schemaForm.type.date': 'Date',
+  'component.schemaForm.format.email.invalid': 'Enter a valid email address',
+  'component.schemaForm.format.phone.invalid': 'Enter a valid phone number',
+  'component.schemaForm.format.url.invalid':
+    'Enter a link starting with http:// or https://',
+  'component.schemaForm.field.multiple': 'Allow multiple',
+  'component.schemaForm.field.format': 'Content format',
+  'component.schemaForm.field.format.none': 'Any',
+  'component.schemaForm.field.format.email': 'Email',
+  'component.schemaForm.field.format.phone': 'Phone',
+  'component.schemaForm.field.format.url': 'Link',
+  'component.schemaForm.field.unit': 'Unit',
+  'component.schemaForm.field.unit.placeholder': 'e.g. GB',
+  'component.schemaForm.field.precision': 'Decimal places',
+  'component.schemaForm.field.placeholder': 'Placeholder',
+  'component.schemaForm.field.placeholder.tooltip':
+    'Grey example text shown inside the input',
+  'component.schemaForm.field.defaultValue': 'Initial value',
+  'component.schemaForm.field.defaultValue.tooltip':
+    'Pre-filled when the form opens; can be changed',
+  'component.schemaForm.field.bool.true': 'Yes',
+  'component.schemaForm.field.bool.false': 'No',
+  'component.schemaForm.field.group': 'Group',
+  'component.schemaForm.field.group.tooltip':
+    'Adjacent fields with the same group share one heading',
+  'component.schemaForm.field.group.placeholder': 'Type or pick a group name',
+  'component.schemaForm.field.showWhen': 'Display condition',
+  'component.schemaForm.field.showWhen.tooltip':
+    'Shown only when an earlier field has one of the chosen values; not required while hidden',
+  'component.schemaForm.field.showWhen.field': 'Always shown',
+  'component.schemaForm.field.showWhen.values': 'Is one of',
+  'component.schemaForm.field.showWhen.values.required':
+    'Select at least one value',
+  'component.schemaForm.field.options.duplicate':
+    'Actual value "{value}" is duplicated',
+  'component.schemaForm.field.options.bulk': 'Add in bulk',
+  'component.schemaForm.field.options.bulk.tip':
+    'One option per line; write "actual value|display value" to set a display value. Actual values that already exist are skipped.',
+  'component.schemaForm.field.options.bulk.overflow':
+    'At most {max} options are allowed; {n} were not added',
+  'component.schemaForm.field.pattern.unsupported':
+    'Lookarounds such as (?=…) or (?!…) and backreferences such as \\1 are not supported',
+  'component.schemaForm.field.defaultValue.range':
+    'The initial value is outside the minimum and maximum',
+  'component.schemaForm.field.defaultValue.length':
+    'The length of the initial value violates the length limit',
+  'component.schemaForm.field.defaultValue.pattern':
+    'The initial value does not match the format check regex',
   'component.schemaForm.json.invalid': 'Must be valid JSON',
   'component.schemaForm.ip.invalid': 'Must be a valid IP address',
 
@@ -74,6 +164,13 @@ export default {
   'component.flow.rule.deptLeaderOf': 'Leader of Department',
   'component.flow.rule.formUser': 'User in Form',
   'component.flow.rule.formDeptLeader': 'Leader of Form Department',
+  'component.flow.rule.oncall': 'On-call',
+  'component.flow.rule.oncall.group': 'Select on-call group',
+  'component.flow.rule.oncall.schedule': 'Select schedule',
+  'component.flow.rule.oncall.disabled': '{name} (disabled)',
+  'component.flow.rule.oncall.text': 'On-call: {group} / {schedule}',
+  'component.flow.rule.oncall.skipHint':
+    'There is no handler when the schedule has a gap, is disabled, or the on-call person is the initiator; Skip would bypass this approval step',
   'component.flow.rule.user.placeholder': 'Search and select users',
   'component.flow.rule.role.placeholder': 'Select roles',
   'component.flow.rule.role.text': 'Roles: {names}',

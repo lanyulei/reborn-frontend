@@ -64,6 +64,7 @@ const RULE_KINDS: readonly AssigneeRuleKind[] = [
   'deptLeaderOf',
   'formUser',
   'formDeptLeader',
+  'oncall',
 ];
 
 const CONDITION_OPS = ['==', '!=', '>', '>=', '<', '<=', 'contains'] as const;
@@ -95,10 +96,21 @@ export interface FlowConfigDeps {
   /** 可作为子流程发起的流程（不含当前流程自身） */
   definitions?: readonly { key: string; name: string }[];
   /**
+   * 值班组及其下的值班表（值班人规则的候选）；不传或为空时只能看到已配置的名称、改不了选择
+   */
+  oncallGroups?: readonly OncallGroupOption[];
+  /**
    * 使用该流程的表单（如绑定了它的工单模板）及各自的字段：配置表单权限时先选表单、
    * 再从它的字段里选；不传或为空则手工填写字段码
    */
   fieldGroups?: readonly FieldGroup[];
+}
+
+/** 一个值班组及其下的值班表 */
+export interface OncallGroupOption {
+  id: string;
+  name: string;
+  schedules: readonly { id: string; name: string; enabled: boolean }[];
 }
 
 /** 一张使用该流程的表单及其字段 */
@@ -301,6 +313,68 @@ const RuleValue: React.FC<{
           onChange={(field) => onChange({ ...rule, field })}
         />
       );
+    case 'oncall': {
+      const groups = deps.oncallGroups ?? [];
+      const group = groups.find((g) => g.id === rule.groupId);
+      const schedule = group?.schedules.find((s) => s.id === rule.scheduleId);
+      /** 候选里没有（无权查看 / 已删除）时，用随图保存的名称回显 */
+      const known = (id?: string) => (id ? (rule.labels?.[id] ?? id) : '');
+      return (
+        <Flex gap={8} style={fill}>
+          <Select
+            style={{ flex: 1, minWidth: 0 }}
+            value={rule.groupId}
+            placeholder={t('component.flow.rule.oncall.group')}
+            aria-label={t('component.flow.rule.oncall.group')}
+            showSearch={{ optionFilterProp: 'label' }}
+            labelRender={({ label, value }) => label ?? known(String(value))}
+            options={groups.map((g) => ({ value: g.id, label: g.name }))}
+            // 换了值班组：值班表清空重选
+            onChange={(groupId: string) =>
+              onChange({
+                ...rule,
+                groupId,
+                scheduleId: undefined,
+                labels: {
+                  [groupId]: groups.find((g) => g.id === groupId)?.name ?? '',
+                },
+              })
+            }
+          />
+          <Select
+            style={{ flex: 1, minWidth: 0 }}
+            value={rule.scheduleId}
+            disabled={!rule.groupId}
+            // 已选的值班表被停用后流程走到这里会没有处理人：标出来
+            status={schedule && !schedule.enabled ? 'warning' : undefined}
+            placeholder={t('component.flow.rule.oncall.schedule')}
+            aria-label={t('component.flow.rule.oncall.schedule')}
+            showSearch={{ optionFilterProp: 'label' }}
+            labelRender={({ label, value }) => label ?? known(String(value))}
+            options={(group?.schedules ?? []).map((s) => ({
+              value: s.id,
+              label: s.enabled
+                ? s.name
+                : t('component.flow.rule.oncall.disabled', { name: s.name }),
+            }))}
+            onChange={(scheduleId: string) =>
+              onChange({
+                ...rule,
+                scheduleId,
+                labels: {
+                  ...(rule.groupId
+                    ? { [rule.groupId]: known(rule.groupId) }
+                    : {}),
+                  [scheduleId]:
+                    group?.schedules.find((s) => s.id === scheduleId)?.name ??
+                    '',
+                },
+              })
+            }
+          />
+        </Flex>
+      );
+    }
     default:
       return (
         <Typography.Text type="secondary" style={fill}>
@@ -839,9 +913,18 @@ const StepForm: React.FC<{
                   label: t(`component.flow.rule.${kind}`),
                 }))}
                 onChange={(kind: AssigneeRuleKind) =>
-                  setRule(index, {
-                    kind,
-                    level: kind === 'deptLeader' ? 1 : undefined,
+                  // 一次更新里改完：连续两次 update 都基于同一份旧状态，后一次会盖掉前一次
+                  update((n) => {
+                    n.assignee.rules[index] = {
+                      kind,
+                      level: kind === 'deptLeader' ? 1 : undefined,
+                    };
+                    if (kind === 'oncall') {
+                      // 值班人取主、备两人：缺省或签（谁处理都行）；排班有空档时不要悄悄
+                      // 跳过审批，缺省转交流程管理员。两项之后都可以再改
+                      if (n.kind === 'task') n.assignee.mode = 'any';
+                      n.assignee.onEmpty = 'admin';
+                    }
                   })
                 }
               />
@@ -898,6 +981,13 @@ const StepForm: React.FC<{
       <Form.Item
         label={t('component.flow.field.onEmpty')}
         tooltip={t('component.flow.field.onEmpty.tooltip')}
+        extra={
+          // 值班表有空档、被停用或值班人就是发起人时会没有处理人：选了自动跳过的提醒一句
+          node.assignee.rules.some((r) => r.kind === 'oncall') &&
+          (node.assignee.onEmpty ?? 'skip') === 'skip'
+            ? t('component.flow.rule.oncall.skipHint')
+            : undefined
+        }
       >
         <Radio.Group
           value={node.assignee.onEmpty ?? 'skip'}

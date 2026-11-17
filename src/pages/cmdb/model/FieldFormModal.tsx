@@ -1,34 +1,36 @@
 /**
- * 字段新建 / 编辑抽屉（自 FieldDrawer 抽出，供模型详情页复用）。
+ * 字段新建 / 编辑抽屉（供模型详情页复用）：通用的配置项来自公共字段库，这里只补 CMDB 专有的
+ * 分组、排序、归属与列表展示 / 索引 / 敏感开关，并负责保存。
  * 编码与数据类型创建后不可改（历史数据可解释）。
  * 分组（详情布局分区）不入字段接口，保存后经 onSuccess 交由页面落位布局。
  */
 import {
   DrawerForm,
-  ProForm,
-  ProFormDependency,
   ProFormDigit,
-  ProFormList,
   ProFormSelect,
   ProFormSwitch,
-  ProFormText,
-  ProFormTextArea,
 } from '@ant-design/pro-components';
 import { App } from 'antd';
 import type React from 'react';
+import { FieldFormItems } from '@/components/SchemaForm';
 import { createField, listAllModels, updateField } from '@/services/cmdb/model';
 import type {
   CmdbField,
   CmdbFieldOwner,
   CmdbFieldType,
 } from '@/services/cmdb/typings';
-import { useFormRules, useOptions, useSubmitter, useT } from '@/utils/i18n';
+import { useOptions, useSubmitter, useT } from '@/utils/i18n';
 import {
   CMDB_FIELD_OWNER_META,
   CMDB_FIELD_OWNER_ORDER,
-  CMDB_FIELD_TYPE_META,
   CMDB_FIELD_TYPE_ORDER,
 } from '../components/meta';
+
+/** 与后端校验一致 */
+const CODE_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
+const DESCRIPTION_MAX = 256;
+const ENUM_MAX = 100;
+const HALF = { span: 12 };
 
 interface FieldFormValues {
   code: string;
@@ -108,62 +110,20 @@ export const FieldFormModal: React.FC<{
 }) => {
   const t = useT();
   const { message } = App.useApp();
-  const rules = useFormRules();
   const submitter = useSubmitter();
-  const typeOptions = useOptions(CMDB_FIELD_TYPE_META, CMDB_FIELD_TYPE_ORDER);
   const ownerOptions = useOptions(
     CMDB_FIELD_OWNER_META,
     CMDB_FIELD_OWNER_ORDER,
   );
   const editing = !!field;
 
-  const formItems = (isEdit: boolean) => (
+  /** CMDB 专有的配置项：字段分组、排序、归属 */
+  const afterType = (
     <>
-      <ProFormText
-        name="code"
-        colProps={{ span: 12 }}
-        label={t('pages.cmdb.field.column.code')}
-        disabled={isEdit}
-        rules={
-          isEdit
-            ? []
-            : [
-                rules.required(t('pages.cmdb.field.column.code')),
-                {
-                  pattern: /^[a-z][a-z0-9_]{0,63}$/,
-                  message: t('pages.cmdb.field.form.code.pattern'),
-                },
-              ]
-        }
-      />
-      <ProFormText
-        name="name"
-        colProps={{ span: 12 }}
-        label={t('pages.cmdb.field.column.name')}
-        rules={[
-          rules.required(t('pages.cmdb.field.column.name')),
-          rules.max(64),
-        ]}
-      />
-      <ProFormText
-        name="description"
-        colProps={{ span: 24 }}
-        label={t('pages.cmdb.field.form.description')}
-        rules={[rules.max(256)]}
-      />
-      <ProFormSelect
-        name="type"
-        colProps={{ span: 12 }}
-        label={t('pages.cmdb.field.column.type')}
-        options={typeOptions}
-        disabled={isEdit}
-        rules={[rules.select(t('pages.cmdb.field.column.type'))]}
-        allowClear={false}
-      />
       {groupOptions.length > 0 && (
         <ProFormSelect
           name="group"
-          colProps={{ span: 12 }}
+          colProps={HALF}
           label={t('pages.cmdb.field.form.group')}
           options={[
             ...groupOptions,
@@ -177,163 +137,35 @@ export const FieldFormModal: React.FC<{
       )}
       <ProFormDigit
         name="sort"
-        colProps={{ span: 12 }}
+        colProps={HALF}
         label={t('pages.cmdb.field.column.sort')}
       />
       <ProFormSelect
         name="owner"
-        colProps={{ span: 12 }}
+        colProps={HALF}
         label={t('pages.cmdb.field.column.owner')}
         options={ownerOptions}
         allowClear={false}
       />
-      <ProFormDependency name={['type']}>
-        {({ type }) => (
-          <>
-            {type === 'enum' && (
-              <ProFormList
-                name="enumPairs"
-                colProps={{ span: 24 }}
-                label={t('pages.cmdb.field.form.enumValues')}
-                tooltip={t('pages.cmdb.field.form.enumValues.tooltip')}
-                min={1}
-                max={100}
-                creatorButtonProps={{
-                  creatorButtonText: t('pages.cmdb.field.form.enumValues.add'),
-                }}
-                rules={[
-                  {
-                    validator: (_: unknown, rows?: { value?: string }[]) =>
-                      rows?.some((r) => r.value && r.value.trim() !== '')
-                        ? Promise.resolve()
-                        : Promise.reject(
-                            new Error(t('pages.cmdb.field.form.enumValues')),
-                          ),
-                  },
-                ]}
-              >
-                <ProForm.Group rowProps={{ gutter: 16 }}>
-                  <ProFormText
-                    name="value"
-                    colProps={{ span: 12 }}
-                    label={t('pages.cmdb.field.form.enumValues.value')}
-                    rules={[
-                      rules.required(
-                        t('pages.cmdb.field.form.enumValues.value'),
-                      ),
-                      { max: 64 },
-                    ]}
-                  />
-                  <ProFormText
-                    name="label"
-                    colProps={{ span: 12 }}
-                    label={t('pages.cmdb.field.form.enumValues.label')}
-                    tooltip={t('pages.cmdb.field.form.enumValues.label.tip')}
-                    rules={[{ max: 64 }]}
-                  />
-                </ProForm.Group>
-              </ProFormList>
-            )}
-            {type === 'ref' && (
-              <ProFormSelect
-                name="refModel"
-                colProps={{ span: 12 }}
-                label={t('pages.cmdb.field.form.refModel')}
-                disabled={isEdit}
-                showSearch
-                request={async () => {
-                  const result = await listAllModels();
-                  return result.items.map((m) => ({
-                    label: `${m.name} (${m.code})`,
-                    value: m.code,
-                  }));
-                }}
-                rules={
-                  isEdit
-                    ? []
-                    : [rules.select(t('pages.cmdb.field.form.refModel'))]
-                }
-              />
-            )}
-            {type === 'string' && (
-              <>
-                <ProFormTextArea
-                  name="pattern"
-                  colProps={{ span: 24 }}
-                  label={t('pages.cmdb.field.form.pattern')}
-                  fieldProps={{ autoSize: { minRows: 2, maxRows: 6 } }}
-                  rules={[
-                    {
-                      // 后端是 Go（RE2）语法，前端只能做粗校验：能被 JS 解析的一定先拦下
-                      // 明显写错的；RE2 特有写法（如 (?i)）放行，由后端最终校验
-                      validator: (_: unknown, value?: string) => {
-                        if (!value || /\(\?[a-zA-Z]/.test(value)) {
-                          return Promise.resolve();
-                        }
-                        try {
-                          new RegExp(value);
-                          return Promise.resolve();
-                        } catch {
-                          return Promise.reject(
-                            new Error(
-                              t('pages.cmdb.field.form.pattern.invalid'),
-                            ),
-                          );
-                        }
-                      },
-                    },
-                  ]}
-                />
-                <ProFormDigit
-                  name="minLen"
-                  colProps={{ span: 12 }}
-                  label={t('pages.cmdb.field.form.minLen')}
-                  min={0}
-                />
-                <ProFormDigit
-                  name="maxLen"
-                  colProps={{ span: 12 }}
-                  label={t('pages.cmdb.field.form.maxLen')}
-                  min={0}
-                />
-              </>
-            )}
-            {(type === 'int' || type === 'float') && (
-              <>
-                <ProFormDigit
-                  name="min"
-                  colProps={{ span: 12 }}
-                  label={t('pages.cmdb.field.form.min')}
-                />
-                <ProFormDigit
-                  name="max"
-                  colProps={{ span: 12 }}
-                  label={t('pages.cmdb.field.form.max')}
-                />
-              </>
-            )}
-          </>
-        )}
-      </ProFormDependency>
-      <ProFormSwitch
-        name="required"
-        colProps={{ span: 12 }}
-        label={t('pages.cmdb.field.column.required')}
-      />
+    </>
+  );
+  /** CMDB 专有的开关：列表展示、索引、敏感 */
+  const switches = (
+    <>
       <ProFormSwitch
         name="listVisible"
-        colProps={{ span: 12 }}
+        colProps={HALF}
         label={t('pages.cmdb.field.column.listVisible')}
       />
       <ProFormSwitch
         name="indexed"
-        colProps={{ span: 12 }}
+        colProps={HALF}
         label={t('pages.cmdb.field.column.indexed')}
         tooltip={t('pages.cmdb.field.form.indexed.tooltip')}
       />
       <ProFormSwitch
         name="sensitive"
-        colProps={{ span: 12 }}
+        colProps={HALF}
         label={t('pages.cmdb.field.column.sensitive')}
         tooltip={t('pages.cmdb.field.form.sensitive.tooltip')}
       />
@@ -412,7 +244,29 @@ export const FieldFormModal: React.FC<{
         return true;
       }}
     >
-      {formItems(editing)}
+      <FieldFormItems
+        types={CMDB_FIELD_TYPE_ORDER}
+        // 编码与数据类型创建后不可改（历史数据可解释）
+        lockIdentity={editing}
+        code={{
+          pattern: CODE_PATTERN,
+          patternMessage: t('pages.cmdb.field.form.code.pattern'),
+        }}
+        descriptionMax={DESCRIPTION_MAX}
+        enumMode="pairs"
+        enumMax={ENUM_MAX}
+        minLen
+        requiredPlacement="switches"
+        afterType={afterType}
+        switches={switches}
+        refOptions={async () => {
+          const result = await listAllModels();
+          return result.items.map((m) => ({
+            label: `${m.name} (${m.code})`,
+            value: m.code,
+          }));
+        }}
+      />
     </DrawerForm>
   );
 };

@@ -27,7 +27,11 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { formToValues, SchemaFormItems } from '@/components/SchemaForm';
+import {
+  formToValues,
+  SchemaFormItems,
+  schemaInitialValues,
+} from '@/components/SchemaForm';
 import { listCIs } from '@/services/cmdb/ci';
 import { createTicket, getTemplate } from '@/services/ticket';
 import type { TicketPriority, TicketTemplate } from '@/services/ticket/typings';
@@ -36,6 +40,7 @@ import { randomUUID } from '@/utils/uuid';
 import { AttachmentUpload } from '../components/Attachments';
 import {
   formColSpan,
+  renderFormGroup,
   TICKET_FIELD_RENDERERS,
   TICKET_PRIORITY_DEFAULT,
   TICKET_PRIORITY_META,
@@ -215,12 +220,8 @@ const TicketCreateForm: React.FC = () => {
                 colProps={{ span: colSpan }}
                 initialValues={{
                   priority: TICKET_PRIORITY_DEFAULT,
-                  // 开关缺省即「否」：不预置的话，未拨动的开关不会随表单提交
-                  data: Object.fromEntries(
-                    fields
-                      .filter((f) => f.type === 'bool')
-                      .map((f) => [f.code, false]),
-                  ),
+                  // 开关缺省为「否」，再叠加模板里配置的初始值
+                  data: schemaInitialValues(fields),
                 }}
                 onFinish={submit}
               >
@@ -251,6 +252,7 @@ const TicketCreateForm: React.FC = () => {
                   namePath={DATA_PATH}
                   renderers={TICKET_FIELD_RENDERERS}
                   customColSpan={colSpan}
+                  renderGroup={renderFormGroup}
                 />
                 {ciLink !== 0 && canPickCI && (
                   <ProFormSelect

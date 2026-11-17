@@ -1,5 +1,6 @@
 /**
- * 元数据驱动的动态字段渲染（通用）：字段定义 → 表格列（useSchemaColumns）、
+ * 表单字段库（通用）：字段类型清单（fieldTypes）、字段配置表单项（FieldFormItems），以及
+ * 元数据驱动的动态字段渲染——字段定义 → 表格列（useSchemaColumns）、
  * 表单项（SchemaFormItems）与表单值 / 取值互转（valuesToForm / formToValues）。
  * 组件不依赖任何业务域：需要业务数据的字段类型（如「引用」要搜索对端资源）经
  * renderers 由调用方注入；域专有的禁用规则经 isDisabled 注入。
@@ -7,7 +8,9 @@
  */
 import type { ProColumns } from '@ant-design/pro-components';
 import {
+  ProFormDatePicker,
   ProFormDateTimePicker,
+  ProFormDependency,
   ProFormDigit,
   ProFormSelect,
   ProFormSwitch,
@@ -19,6 +22,27 @@ import dayjs from 'dayjs';
 import type React from 'react';
 import { Fragment, useMemo } from 'react';
 import { type Translate, useT } from '@/utils/i18n';
+import { FORMAT_PATTERNS } from './fieldTypes';
+
+export {
+  type FieldControl,
+  FieldFormItems,
+  type FieldFormItemsProps,
+  fromEnumPairs,
+  toEnumPairs,
+} from './FieldFormItems';
+export {
+  DEFAULT_TYPES,
+  FIELD_FORMATS,
+  FIELD_TYPE_META,
+  FIELD_TYPES,
+  type FieldFormat,
+  type FieldType,
+  MULTIPLE_TYPES,
+  NUMERIC_TYPES,
+  PLACEHOLDER_TYPES,
+  TEXTUAL_TYPES,
+} from './fieldTypes';
 
 /** 字段校验规则 */
 export interface SchemaFieldRule {
@@ -48,7 +72,90 @@ export interface SchemaField {
   deprecated?: boolean;
   /** 是否在列表中展示 */
   listVisible?: boolean;
+  /** 多选（下拉 / 人员 / 部门）：取值为列表 */
+  multiple?: boolean;
+  /** 表单的初始值 */
+  defaultValue?: unknown;
+  /** 输入框里的示例文字 */
+  placeholder?: string;
+  /** 所属分组的标题：相邻且同组的字段归到一个小标题下 */
+  group?: string;
+  /** 单行文本的内置格式：email / phone / url */
+  format?: string;
+  /** 数字的单位（仅展示） */
+  unit?: string;
+  /** 小数位数上限 */
+  precision?: number;
+  /** 显示条件：控制字段取到给定值之一时才显示 */
+  showWhen?: { field: string; values: string[] };
 }
+
+/** 字段取值在显示条件里的文本形式（下拉的值 / 是否的 true、false）；其余为空串 */
+export const conditionValue = (value: unknown): string =>
+  typeof value === 'string'
+    ? value
+    : typeof value === 'boolean'
+      ? String(value)
+      : '';
+
+/**
+ * 按显示条件算出这份取值下不显示的字段（控制字段本身不显示时，受它控制的也不显示）。
+ * 控制字段排在被控制的字段前面，顺序走一遍即可。与后端同一口径。
+ */
+export const hiddenFieldCodes = (
+  fields: readonly SchemaField[],
+  values: Record<string, unknown> | undefined,
+): Set<string> => {
+  const hidden = new Set<string>();
+  for (const f of fields) {
+    const w = f.showWhen;
+    if (!w) continue;
+    if (
+      hidden.has(w.field) ||
+      !w.values.includes(conditionValue(values?.[w.field]))
+    ) {
+      hidden.add(f.code);
+    }
+  }
+  return hidden;
+};
+
+/** 把字段按分组切成段：相邻且分组标题相同的归为一段（标题为空 = 不分组） */
+export const groupFields = <F extends SchemaField>(
+  fields: readonly F[],
+): { title: string; fields: F[] }[] => {
+  const out: { title: string; fields: F[] }[] = [];
+  for (const f of fields) {
+    const title = f.group ?? '';
+    const last = out[out.length - 1];
+    if (last && last.title === title) last.fields.push(f);
+    else out.push({ title, fields: [f] });
+  }
+  return out;
+};
+
+/** 各字段的初始值（字段码 → 值）；没有配置初始值的字段不出现 */
+export const schemaDefaults = (
+  fields: readonly SchemaField[],
+): Record<string, unknown> =>
+  Object.fromEntries(
+    fields
+      .filter((f) => f.defaultValue !== undefined && f.defaultValue !== null)
+      .map((f) => [f.code, f.defaultValue]),
+  );
+
+/**
+ * 新表单的初始取值：开关缺省即「否」（不预置的话，未拨动的开关不会随表单提交，以它为控制
+ * 字段的显示条件也判不出「否」），再叠加字段配置的初始值。提单页与表单预览共用。
+ */
+export const schemaInitialValues = (
+  fields: readonly SchemaField[],
+): Record<string, unknown> => ({
+  ...Object.fromEntries(
+    fields.filter((f) => f.type === 'bool').map((f) => [f.code, false]),
+  ),
+  ...schemaDefaults(fields),
+});
 
 const IP_PATTERN =
   /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}|[0-9a-fA-F:]+)$/;
@@ -64,7 +171,25 @@ export const renderSchemaValue = (
       <Typography.Text type="secondary">{t('common.empty')}</Typography.Text>
     );
   }
+  // 多选：逐项展示（下拉用展示值）
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return (
+        <Typography.Text type="secondary">{t('common.empty')}</Typography.Text>
+      );
+    }
+    return field.type === 'enum'
+      ? value.map((v) => (
+          <Tag key={String(v)}>
+            {field.enumLabels?.[String(v)] ?? String(v)}
+          </Tag>
+        ))
+      : value.map(String).join('、');
+  }
   switch (field.type) {
+    case 'int':
+    case 'float':
+      return field.unit ? `${String(value)} ${field.unit}` : String(value);
     case 'bool':
       return value ? 'true' : 'false';
     case 'datetime':
@@ -148,11 +273,19 @@ export const formToValues = (
   for (const f of fields) {
     if (f.deprecated) continue;
     const v = values?.[f.code];
-    if (v === undefined || v === null || v === '') {
+    if (
+      v === undefined ||
+      v === null ||
+      v === '' ||
+      (Array.isArray(v) && v.length === 0)
+    ) {
       out[f.code] = null;
       continue;
     }
     switch (f.type) {
+      case 'date':
+        out[f.code] = dayjs(v as string).format('YYYY-MM-DD');
+        break;
       case 'json':
         out[f.code] = typeof v === 'string' ? JSON.parse(v) : v;
         break;
@@ -185,7 +318,7 @@ export interface SchemaItemProps {
   label: string;
   tooltip?: string;
   disabled?: boolean;
-  rules: { required: boolean; message: string }[];
+  rules: { required: boolean; message: string; type?: 'array' }[];
 }
 
 /** 自定义字段渲染器：按字段类型注入（如 ref → 搜索对端资源的下拉） */
@@ -201,6 +334,8 @@ export const SchemaFormItems = <F extends SchemaField>({
   isDisabled,
   renderers,
   customColSpan,
+  renderGroup,
+  baseValues,
 }: {
   fields: readonly F[];
   /** 取值对象在表单值里的路径，如 ['attrs'] */
@@ -215,131 +350,213 @@ export const SchemaFormItems = <F extends SchemaField>({
    * 栅格列。自定义渲染器本身就是 ProForm 控件、或表单不是栅格布局时不要传。
    */
   customColSpan?: number;
+  /** 分组标题的渲染；提供后在每段分组的第一个字段前插入标题（标题为空的段不插入） */
+  renderGroup?: (title: string) => React.ReactNode;
+  /**
+   * 表单之外的取值：显示条件的控制字段不在这次渲染的字段里时（如只编辑部分字段），
+   * 用它判断是否显示
+   */
+  baseValues?: Record<string, unknown>;
 }): React.ReactNode => {
   const t = useT();
+  const active = fields.filter((f) => !f.deprecated);
+  const byCode = new Map(active.map((f) => [f.code, f]));
+  /** 字段的显示条件链：自己的控制字段、控制字段的控制字段…… */
+  const chainOf = (f: F): { field: string; values: string[] }[] => {
+    const chain: { field: string; values: string[] }[] = [];
+    for (let w = f.showWhen; w && chain.length < 20; ) {
+      chain.push(w);
+      w = byCode.get(w.field)?.showWhen;
+    }
+    return chain;
+  };
   return (
     <>
-      {fields
-        .filter((f) => !f.deprecated)
-        .map((f) => {
-          const name = [...namePath, f.code];
-          const disabled = isDisabled?.(f);
-          const rules = f.required
-            ? [
-                {
-                  required: true,
-                  message: t('common.validation.required', { label: f.name }),
-                },
-              ]
-            : [];
-          const common: SchemaItemProps = {
-            name,
-            label: f.name,
-            tooltip: f.description || undefined,
-            disabled,
-            rules,
-          };
-          const item = (() => {
-            const custom = renderers?.[f.type];
-            if (custom) {
-              const node = custom(f, common);
-              return customColSpan ? (
-                <Col span={customColSpan}>{node}</Col>
-              ) : (
-                node
+      {active.map((f, index) => {
+        const name = [...namePath, f.code];
+        const disabled = isDisabled?.(f);
+        const rules: SchemaItemProps['rules'] = f.required
+          ? [
+              {
+                required: true,
+                message: t('common.validation.required', { label: f.name }),
+                // 多选的值是列表：按列表判空
+                ...(f.multiple ? { type: 'array' as const } : {}),
+              },
+            ]
+          : [];
+        const placeholder = f.placeholder || undefined;
+        const common: SchemaItemProps = {
+          name,
+          label: f.name,
+          tooltip: f.description || undefined,
+          disabled,
+          rules,
+        };
+        const item = (() => {
+          const custom = renderers?.[f.type];
+          if (custom) {
+            const node = custom(f, common);
+            return customColSpan ? (
+              <Col span={customColSpan}>{node}</Col>
+            ) : (
+              node
+            );
+          }
+          switch (f.type) {
+            case 'int':
+            case 'float':
+              return (
+                <ProFormDigit
+                  {...common}
+                  // 不设下限时显式放开：数字控件缺省下限是 0，会把负数改成 0
+                  min={f.rule?.min ?? Number.MIN_SAFE_INTEGER}
+                  max={f.rule?.max}
+                  placeholder={placeholder}
+                  fieldProps={{
+                    precision: f.type === 'int' ? 0 : f.precision,
+                    suffix: f.unit || undefined,
+                  }}
+                />
               );
-            }
-            switch (f.type) {
-              case 'int':
-              case 'float':
-                return (
-                  <ProFormDigit
-                    {...common}
-                    // 不设下限时显式放开：数字控件缺省下限是 0，会把负数改成 0
-                    min={f.rule?.min ?? Number.MIN_SAFE_INTEGER}
-                    max={f.rule?.max}
-                    fieldProps={{ precision: f.type === 'int' ? 0 : undefined }}
-                  />
-                );
-              case 'bool':
-                return <ProFormSwitch {...common} rules={[]} />;
-              case 'enum':
-                return (
-                  <ProFormSelect
-                    {...common}
-                    options={(f.enumValues ?? []).map((v) => ({
-                      label: f.enumLabels?.[v] ?? v,
-                      value: v,
-                    }))}
-                  />
-                );
-              case 'datetime':
-                return <ProFormDateTimePicker {...common} />;
-              case 'text':
-                return (
-                  <ProFormTextArea
-                    {...common}
-                    rules={[
-                      ...rules,
-                      ...(f.rule?.maxLen ? [{ max: f.rule.maxLen }] : []),
-                      ...patternRule(f.rule?.pattern),
-                    ]}
-                    colProps={{ span: 24 }}
-                    fieldProps={{ autoSize: { minRows: 3, maxRows: 8 } }}
-                  />
-                );
-              case 'json':
-                return (
-                  <ProFormTextArea
-                    {...common}
-                    rules={[
-                      ...rules,
-                      {
-                        validator: (_: unknown, value?: string) => {
-                          if (!value) return Promise.resolve();
-                          try {
-                            JSON.parse(value);
-                            return Promise.resolve();
-                          } catch {
-                            return Promise.reject(
-                              new Error(t('component.schemaForm.json.invalid')),
-                            );
-                          }
-                        },
+            case 'bool':
+              return <ProFormSwitch {...common} rules={[]} />;
+            case 'enum':
+              return (
+                <ProFormSelect
+                  {...common}
+                  mode={f.multiple ? 'multiple' : undefined}
+                  placeholder={placeholder}
+                  options={(f.enumValues ?? []).map((v) => ({
+                    label: f.enumLabels?.[v] ?? v,
+                    value: v,
+                  }))}
+                />
+              );
+            case 'datetime':
+              return (
+                <ProFormDateTimePicker {...common} placeholder={placeholder} />
+              );
+            case 'date':
+              return (
+                <ProFormDatePicker {...common} placeholder={placeholder} />
+              );
+            case 'text':
+              return (
+                <ProFormTextArea
+                  {...common}
+                  rules={[
+                    ...rules,
+                    ...(f.rule?.maxLen ? [{ max: f.rule.maxLen }] : []),
+                    ...patternRule(f.rule?.pattern),
+                  ]}
+                  colProps={{ span: 24 }}
+                  placeholder={placeholder}
+                  fieldProps={{ autoSize: { minRows: 3, maxRows: 8 } }}
+                />
+              );
+            case 'json':
+              return (
+                <ProFormTextArea
+                  {...common}
+                  rules={[
+                    ...rules,
+                    {
+                      validator: (_: unknown, value?: string) => {
+                        if (!value) return Promise.resolve();
+                        try {
+                          JSON.parse(value);
+                          return Promise.resolve();
+                        } catch {
+                          return Promise.reject(
+                            new Error(t('component.schemaForm.json.invalid')),
+                          );
+                        }
                       },
-                    ]}
-                    colProps={{ span: 24 }}
-                    fieldProps={{ autoSize: { minRows: 3, maxRows: 8 } }}
-                  />
+                    },
+                  ]}
+                  colProps={{ span: 24 }}
+                  fieldProps={{ autoSize: { minRows: 3, maxRows: 8 } }}
+                />
+              );
+            case 'ip':
+              return (
+                <ProFormText
+                  {...common}
+                  rules={[
+                    ...rules,
+                    {
+                      pattern: IP_PATTERN,
+                      message: t('component.schemaForm.ip.invalid'),
+                    },
+                  ]}
+                />
+              );
+            default:
+              return (
+                <ProFormText
+                  {...common}
+                  placeholder={placeholder}
+                  rules={[
+                    ...rules,
+                    ...(f.rule?.maxLen ? [{ max: f.rule.maxLen }] : []),
+                    ...patternRule(f.rule?.pattern),
+                    ...(f.format && FORMAT_PATTERNS[f.format]
+                      ? [
+                          {
+                            pattern: FORMAT_PATTERNS[f.format],
+                            message: t(
+                              `component.schemaForm.format.${f.format}.invalid`,
+                            ),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              );
+          }
+        })();
+        const title = f.group ?? '';
+        const heading =
+          renderGroup &&
+          title &&
+          title !== (active[index - 1]?.group ?? '') &&
+          renderGroup(title);
+        const chain = chainOf(f);
+        if (chain.length === 0) {
+          return (
+            <Fragment key={f.id ?? f.code}>
+              {heading}
+              {item}
+            </Fragment>
+          );
+        }
+        // 有显示条件：随控制字段的取值显示 / 隐藏（隐藏时表单项卸载，不参与提交与校验）
+        const inForm = chain.filter((w) => byCode.has(w.field));
+        return (
+          <Fragment key={f.id ?? f.code}>
+            {heading}
+            <ProFormDependency name={inForm.map((w) => [...namePath, w.field])}>
+              {(deps: Record<string, unknown>) => {
+                const scoped = namePath.reduce<unknown>(
+                  (acc, key) => (acc as Record<string, unknown>)?.[key],
+                  deps,
+                ) as Record<string, unknown> | undefined;
+                const shown = chain.every((w) =>
+                  w.values.includes(
+                    conditionValue(
+                      byCode.has(w.field)
+                        ? scoped?.[w.field]
+                        : baseValues?.[w.field],
+                    ),
+                  ),
                 );
-              case 'ip':
-                return (
-                  <ProFormText
-                    {...common}
-                    rules={[
-                      ...rules,
-                      {
-                        pattern: IP_PATTERN,
-                        message: t('component.schemaForm.ip.invalid'),
-                      },
-                    ]}
-                  />
-                );
-              default:
-                return (
-                  <ProFormText
-                    {...common}
-                    rules={[
-                      ...rules,
-                      ...(f.rule?.maxLen ? [{ max: f.rule.maxLen }] : []),
-                      ...patternRule(f.rule?.pattern),
-                    ]}
-                  />
-                );
-            }
-          })();
-          return <Fragment key={f.id ?? f.code}>{item}</Fragment>;
-        })}
+                return shown ? item : null;
+              }}
+            </ProFormDependency>
+          </Fragment>
+        );
+      })}
     </>
   );
 };

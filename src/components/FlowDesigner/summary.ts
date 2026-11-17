@@ -36,6 +36,8 @@ export const ruleComplete = (rule: AssigneeRule): boolean => {
     case 'formUser':
     case 'formDeptLeader':
       return !!rule.field;
+    case 'oncall':
+      return !!rule.groupId && !!rule.scheduleId;
     default:
       return false;
   }
@@ -68,6 +70,11 @@ export const ruleText = (rule: AssigneeRule, t: Translate): string => {
     case 'formDeptLeader':
       return t('component.flow.rule.formDeptLeader.text', {
         field: rule.field,
+      });
+    case 'oncall':
+      return t('component.flow.rule.oncall.text', {
+        group: rule.labels?.[rule.groupId ?? ''] ?? rule.groupId,
+        schedule: rule.labels?.[rule.scheduleId ?? ''] ?? rule.scheduleId,
       });
     default:
       return '';
