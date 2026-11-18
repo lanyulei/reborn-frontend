@@ -80,5 +80,87 @@ export default function access(
     canOncallCalendar: has('oncall.calendar'),
     canOncallGroup: has('oncall.group'),
     canOncall: has('oncall.calendar') || has('oncall.group'),
+    canMonitorAlert: has('monitor.alert'),
+    canMonitorRule: has('monitor.rule'),
+    canMonitorMute: has('monitor.mute'),
+    canMonitorSubscription: has('monitor.subscription'),
+    canMonitorEscalation: has('monitor.escalation'),
+    canMonitorRecord: has('monitor.record'),
+    canMonitorDatasource: has('monitor.datasource'),
+    canMonitorExplore: has('monitor.explore'),
+    canMonitorStats: has('monitor.stats'),
+    canMonitorEngine: has('monitor.engine'),
+    // 菜单分组入口：分组内任一页面可见即可进入（页签再按各页权限过滤）
+    canMonitorNotice: has('monitor.subscription') || has('monitor.escalation'),
+    canMonitorMetric:
+      has('monitor.explore') ||
+      has('monitor.record') ||
+      has('monitor.datasource'),
+    canMonitorInsight: has('monitor.stats') || has('monitor.engine'),
+    canMonitor:
+      has('monitor.alert') ||
+      has('monitor.rule') ||
+      has('monitor.mute') ||
+      has('monitor.subscription') ||
+      has('monitor.escalation') ||
+      has('monitor.record') ||
+      has('monitor.datasource') ||
+      has('monitor.explore') ||
+      has('monitor.stats') ||
+      has('monitor.engine'),
+    canJobTemplate: has('job.template'),
+    canJobExecution: has('job.execution'),
+    canJobProject: has('job.project'),
+    canJobCredential: has('job.credential'),
+    canJobRunner: has('job.runner'),
+    canJobAdhoc: has('job.adhoc'),
+    canJobScript: has('job.script'),
+    canJobSchedule: has('job.schedule'),
+    canJobTrigger: has('job.trigger'),
+    canJobPolicy: has('job.policy'),
+    canJobStats: has('job.stats'),
+    canJobLibrary: has('job.template') || has('job.script'),
+    canJobHistory: has('job.execution') || has('job.stats'),
+    canJobAutomation: has('job.schedule') || has('job.trigger'),
+    canJobResource:
+      has('job.project') || has('job.credential') || has('job.runner'),
+    canJob:
+      has('job.template') ||
+      has('job.execution') ||
+      has('job.project') ||
+      has('job.credential') ||
+      has('job.runner') ||
+      has('job.adhoc') ||
+      has('job.script') ||
+      has('job.schedule') ||
+      has('job.trigger') ||
+      has('job.policy') ||
+      has('job.stats'),
+    canK8sCluster: has('k8s.cluster'),
+    canK8sWorkload: has('k8s.workload'),
+    canK8sConfig: has('k8s.config'),
+    canK8sResource: has('k8s.resource'),
+    canK8sApp: has('k8s.app'),
+    canK8sAudit: has('k8s.audit'),
+    canK8sChange: has('k8s.change'),
+    canK8sOverview: has('k8s.overview'),
+    canK8sEvent: has('k8s.event'),
+    canK8sInspection: has('k8s.inspection'),
+    canK8sKubeconfig: has('k8s.kubeconfig'),
+    canK8sOps: has('k8s.event') || has('k8s.inspection'),
+    canK8sSecurity:
+      has('k8s.change') || has('k8s.kubeconfig') || has('k8s.audit'),
+    canK8s:
+      has('k8s.cluster') ||
+      has('k8s.workload') ||
+      has('k8s.config') ||
+      has('k8s.resource') ||
+      has('k8s.app') ||
+      has('k8s.overview') ||
+      has('k8s.event') ||
+      has('k8s.inspection') ||
+      has('k8s.kubeconfig') ||
+      has('k8s.change') ||
+      has('k8s.audit'),
   };
 }

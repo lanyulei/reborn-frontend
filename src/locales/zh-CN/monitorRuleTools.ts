@@ -1,0 +1,117 @@
+export default {
+  'pages.monitor.rule.template.action': '从模板创建',
+  'pages.monitor.rule.template.title': '从内置模板创建规则',
+  'pages.monitor.rule.template.import': '导入',
+  'pages.monitor.rule.template.listFailed': '模板包列表加载失败',
+  'pages.monitor.rule.template.detailFailed':
+    '模板包内容加载失败，请换一个模板包或稍后重试',
+  'pages.monitor.rule.template.empty': '暂无内置模板',
+  'pages.monitor.rule.template.noRules': '该模板包没有规则',
+  'pages.monitor.rule.template.ruleCount': '{count} 条',
+  'pages.monitor.rule.template.column.for': '持续时长',
+  'pages.monitor.rule.template.source': '模板包：{name}（{count} 条规则）',
+  'pages.monitor.rule.template.category.host': '主机',
+  'pages.monitor.rule.template.category.middleware': '中间件',
+  'pages.monitor.rule.template.category.database': '数据库',
+  'pages.monitor.rule.template.category.platform': '本平台自监控',
+  'pages.monitor.rule.template.category.other': '其他',
+  'pages.monitor.rule.simulate.title': '模拟触发',
+  'pages.monitor.rule.simulate.close': '关闭',
+  'pages.monitor.rule.simulate.run': '开始模拟',
+  'pages.monitor.rule.simulate.runAndSend': '开始模拟并发送测试通知',
+  'pages.monitor.rule.simulate.failed': '模拟失败',
+  'pages.monitor.rule.simulate.noDatasource':
+    '规则的数据源范围内没有可用的数据源，无法模拟',
+  'pages.monitor.rule.simulate.datasource.hint.all':
+    '规则适用于全部数据源：任选一个已启用的数据源执行查询',
+  'pages.monitor.rule.simulate.datasource.hint.listed':
+    '只能选规则指定的数据源',
+  'pages.monitor.rule.simulate.sampleLabels': '样例标签',
+  'pages.monitor.rule.simulate.sampleLabels.rule':
+    '标签名须以字母或下划线开头、只含字母数字下划线且不重复（至多 128 字符），取值至多 256 字符',
+  'pages.monitor.rule.simulate.sampleValue': '样例取值',
+  'pages.monitor.rule.simulate.sample.hint':
+    '查询没有结果时用它合成一个事件；规则的附加标签会自动合并',
+  'pages.monitor.rule.simulate.dryRun': '干跑',
+  'pages.monitor.rule.simulate.dryRun.on': '只返回各阶段的结果，不发送任何通知',
+  'pages.monitor.rule.simulate.dryRun.off':
+    '本次模拟会真实发送一条带 [TEST] 标记的通知；发送后自动恢复为干跑',
+  'pages.monitor.rule.simulate.send.confirm.title':
+    '关闭干跑并真实发送测试通知？',
+  'pages.monitor.rule.simulate.send.confirm.content':
+    '模拟时会向解析出的通知对象真实发送一条标题带 [TEST] 的通知，对方会实际收到。订阅者不会收到，也不会触发升级与事件动作。',
+  'pages.monitor.rule.simulate.send.confirm.ok': '真实发送',
+  'pages.monitor.rule.simulate.noRoute':
+    '通知管理里没有路由能匹配这条规则的告警事件',
+  'pages.monitor.rule.simulate.noRoute.description':
+    '即使规则触发，通知也不会被投递。请到「通知管理 → 路由」为监控告警事件配置路由。',
+  'pages.monitor.rule.simulate.notInEffect':
+    '此刻不在规则的生效时间内：评估引擎现在不会评估这条规则，以下各阶段仍照常模拟',
+  'pages.monitor.rule.simulate.synthetic':
+    '查询没有返回结果，以下事件是用样例标签与样例取值合成的',
+  'pages.monitor.rule.simulate.sent': '测试通知已写入通知管道',
+  'pages.monitor.rule.simulate.notSent':
+    '没有发送测试通知，原因见「发送测试通知」阶段的说明',
+  'pages.monitor.rule.simulate.stages': '处理阶段',
+  'pages.monitor.rule.simulate.stage.query': '查询',
+  'pages.monitor.rule.simulate.stage.effective': '生效时间',
+  'pages.monitor.rule.simulate.stage.relabel': '标签改写',
+  'pages.monitor.rule.simulate.stage.ci': '关联资源与富化',
+  'pages.monitor.rule.simulate.stage.drop': '条件丢弃',
+  'pages.monitor.rule.simulate.stage.scope': '资源范围',
+  'pages.monitor.rule.simulate.stage.level_inhibit': '级别抑制',
+  'pages.monitor.rule.simulate.stage.inhibit': '规则间抑制与拓扑抑制',
+  'pages.monitor.rule.simulate.stage.mute': '屏蔽',
+  'pages.monitor.rule.simulate.stage.notify': '通知对象与订阅',
+  'pages.monitor.rule.simulate.stage.send': '发送测试通知',
+  'pages.monitor.rule.simulate.status.pass': '通过',
+  'pages.monitor.rule.simulate.status.warn': '注意',
+  'pages.monitor.rule.simulate.status.block': '拦截',
+  'pages.monitor.rule.simulate.status.error': '出错',
+  'pages.monitor.rule.simulate.status.skip': '跳过',
+  'pages.monitor.rule.simulate.queries': '查询结果',
+  'pages.monitor.rule.simulate.query.index': '查询',
+  'pages.monitor.rule.simulate.query.series': '序列数',
+  'pages.monitor.rule.simulate.query.truncated': '已截断',
+  'pages.monitor.rule.simulate.query.duration': '耗时',
+  'pages.monitor.rule.simulate.query.error': '错误',
+  'pages.monitor.rule.simulate.events':
+    '事件（显示 {shown} 个，共 {total} 个）',
+  'pages.monitor.rule.simulate.event.outcome': '去向',
+  'pages.monitor.rule.simulate.event.ci': '关联资源',
+  'pages.monitor.rule.simulate.event.fingerprint': '指纹',
+  'pages.monitor.rule.simulate.event.labels': '最终标签',
+  'pages.monitor.rule.simulate.event.sourceLabels':
+    '改写前的标签（序列标签 + 规则附加标签）',
+  'pages.monitor.rule.simulate.event.legend':
+    '绿色 = 改写 / 富化新增，橙色 = 取值被改写，删除线 = 被去掉',
+  'pages.monitor.rule.simulate.event.added': '改写 / 富化新增',
+  'pages.monitor.rule.simulate.event.changed': '取值被改写，原值：{from}',
+  'pages.monitor.rule.simulate.event.removed': '被改写去掉',
+  'pages.monitor.rule.simulate.outcome.notify': '会通知',
+  'pages.monitor.rule.simulate.outcome.dropped': '被条件丢弃',
+  'pages.monitor.rule.simulate.outcome.out_of_scope': '不在资源范围内',
+  'pages.monitor.rule.simulate.outcome.level_inhibited': '被更高级别抑制',
+  'pages.monitor.rule.simulate.outcome.inhibited': '被抑制',
+  'pages.monitor.rule.simulate.outcome.muted_event': '被屏蔽（不产生事件）',
+  'pages.monitor.rule.simulate.outcome.muted_notify': '被屏蔽（只屏蔽通知）',
+  'pages.monitor.rule.simulate.outcome.maintenance': '资源维护中（只屏蔽通知）',
+  'pages.monitor.rule.simulate.ciStatus.matched': '已关联',
+  'pages.monitor.rule.simulate.ciStatus.disabled': '规则关闭了关联',
+  'pages.monitor.rule.simulate.ciStatus.no_label': '没有用于关联的标签',
+  'pages.monitor.rule.simulate.ciStatus.not_found': '没有对应的资源',
+  'pages.monitor.rule.simulate.ciStatus.ambiguous': '对应到多个资源',
+  'pages.monitor.rule.simulate.ciStatus.unavailable': '资源索引尚未就绪',
+  'pages.monitor.rule.simulate.recipients': '通知对象',
+  'pages.monitor.rule.simulate.recipients.empty':
+    '事件不带收件人，交由通知管理的路由与订阅决定',
+  'pages.monitor.rule.simulate.subscriptions': '命中的订阅',
+  'pages.monitor.rule.simulate.subscriptions.empty': '没有命中的订阅',
+  'pages.monitor.rule.simulate.subscriptions.noRecipients': '没有额外的接收方',
+  'pages.monitor.rule.simulate.escalation': '升级策略各级',
+  'pages.monitor.rule.simulate.escalation.empty': '规则没有引用升级策略',
+  'pages.monitor.rule.simulate.escalation.level':
+    '第 {level} 级 · 持续 {minutes} 分钟后',
+  'pages.monitor.rule.simulate.escalation.noRecipients':
+    '此刻没有解析出通知对象',
+};

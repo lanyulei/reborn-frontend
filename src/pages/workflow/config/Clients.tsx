@@ -20,6 +20,7 @@ import {
   DeleteConfirmLink,
 } from '@/components/TableActions';
 import { UserSelect } from '@/components/UserSelect';
+import { fetchWorkflowUsers } from '@/components/UserSelect/sources';
 import { usePermissions } from '@/services/system/permissions';
 import {
   createClient,
@@ -41,7 +42,6 @@ import { fetchAllPages } from '@/utils/paging';
 import {
   DEFINITION_STATUS_META,
   DEFINITION_STATUS_ORDER,
-  fetchWorkflowUsers,
 } from '../components/meta';
 
 const NAME_MAX = 64;

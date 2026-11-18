@@ -32,6 +32,7 @@ import {
 import type React from 'react';
 import { useRef, useState } from 'react';
 import { CreateButton } from '@/components/TableActions';
+import { HALF } from '@/constants/layout';
 import { JsonView } from '@/pages/notify/components/JsonView';
 import {
   type CmdbProvider,
@@ -61,8 +62,6 @@ import {
 import { toTableResult } from '@/utils/table';
 import { CISelect } from '../components/CISelect';
 import { WebhookModal } from './WebhookModal';
-
-const HALF = { span: 12 };
 
 export const CMDB_PROVIDER_META: EnumMeta<CmdbProvider> = {
   aliyun: { textId: 'enum.cmdb.provider.aliyun', status: 'Processing' },

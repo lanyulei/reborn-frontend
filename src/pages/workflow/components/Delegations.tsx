@@ -14,6 +14,7 @@ import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
 import { UserSelect } from '@/components/UserSelect';
+import { fetchWorkflowUsers } from '@/components/UserSelect/sources';
 import {
   createDelegation,
   deleteDelegation,
@@ -21,7 +22,6 @@ import {
 } from '@/services/workflow/config';
 import type { WorkflowDelegation } from '@/services/workflow/typings';
 import { useFormRules, useSubmitter, useT } from '@/utils/i18n';
-import { fetchWorkflowUsers } from './meta';
 
 const REASON_MAX = 255;
 const TIME_FORMAT = 'YYYY-MM-DD HH:mm';

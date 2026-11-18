@@ -13,6 +13,7 @@ import {
 import { App } from 'antd';
 import type React from 'react';
 import { FieldFormItems } from '@/components/SchemaForm';
+import { HALF } from '@/constants/layout';
 import { createField, listAllModels, updateField } from '@/services/cmdb/model';
 import type {
   CmdbField,
@@ -30,7 +31,6 @@ import {
 const CODE_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 const DESCRIPTION_MAX = 256;
 const ENUM_MAX = 100;
-const HALF = { span: 12 };
 
 interface FieldFormValues {
   code: string;

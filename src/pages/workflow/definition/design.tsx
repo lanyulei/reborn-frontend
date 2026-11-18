@@ -42,6 +42,7 @@ import {
   walkNodes,
 } from '@/components/FlowDesigner';
 import { UserSelect } from '@/components/UserSelect';
+import { fetchWorkflowUsers } from '@/components/UserSelect/sources';
 import { listGroups } from '@/services/oncall/group';
 import { listSchedules } from '@/services/oncall/schedule';
 import { usePermissions } from '@/services/system/permissions';
@@ -62,7 +63,6 @@ import type {
 } from '@/services/workflow/typings';
 import { useT } from '@/utils/i18n';
 import { fetchAllPages } from '@/utils/paging';
-import { fetchWorkflowUsers } from '../components/meta';
 import { Simulate } from './Simulate';
 import { VersionCompare } from './VersionCompare';
 

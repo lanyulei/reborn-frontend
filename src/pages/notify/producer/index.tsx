@@ -18,6 +18,7 @@ import {
   DeleteConfirmLink,
 } from '@/components/TableActions';
 import { ENABLED_META, NOTIFY_EVENT_PATTERN_REGEX } from '@/constants';
+import { FULL, HALF } from '@/constants/layout';
 import { useBizScope } from '@/services/notify/hooks';
 import type { ProducerSpecPayload } from '@/services/notify/producer';
 import {
@@ -39,8 +40,6 @@ import {
 } from '../components/bizScope';
 
 /** 两列栅格：半行 / 整行 */
-const HALF = { span: 12 };
-const FULL = { span: 24 };
 
 /** 来源表单值（过期时间为 dayjs，提交转 RFC3339；不填 = 永不过期；biz 仅创建） */
 interface ProducerFormValues {

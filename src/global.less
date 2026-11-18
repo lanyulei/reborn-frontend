@@ -131,6 +131,27 @@ body .ant-pro-card.ant-pro-card-border {
   border-color: color-mix(in srgb, var(--ant-color-border) 25%, var(--ant-color-border-secondary));
 }
 
+// 表格外边框：只框住表格本体（表头 + 表体 + 页脚），不含分页与工具栏。颜色与白底卡片的
+// 外边框同一档（见上），圆角随表格自身的圆角。已开启 bordered（自带网格线与外框）的表格不重复加。
+// 最后一行原有的下分隔线与外框重叠成双线：去掉，并把最后一行两端的单元格收成圆角，免得
+// 悬停 / 选中的底色从圆角处溢出；有页脚或总结栏时它们在最后一行下方，分隔线保留。
+.ant-table-wrapper .ant-table:not(.ant-table-bordered) {
+  border: 1px solid color-mix(in srgb, var(--ant-color-border) 25%, var(--ant-color-border-secondary));
+  border-radius: var(--ant-border-radius-lg);
+
+  &:not(:has(> .ant-table-footer, .ant-table-summary)) .ant-table-tbody > tr:last-child > td {
+    border-bottom: 0;
+
+    &:first-child {
+      border-end-start-radius: var(--ant-border-radius-lg);
+    }
+
+    &:last-child {
+      border-end-end-radius: var(--ant-border-radius-lg);
+    }
+  }
+}
+
 .ant-pro-page-container > div.ant-page-header.ant-pro-page-container-warp-page-header.ant-page-header-has-breadcrumb.ant-page-header-has-footer.ant-page-header-ghost > div > div > div.ant-tabs-nav {
   margin-bottom: 0;
 }

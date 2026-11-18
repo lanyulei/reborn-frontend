@@ -22,6 +22,7 @@ import {
   NOTIFY_CHANNEL_TYPE_META,
   NOTIFY_WEBHOOK_TIMEOUT_DEFAULT_S,
 } from '@/constants';
+import { FULL, HALF } from '@/constants/layout';
 import {
   createChannel,
   deleteChannel,
@@ -51,8 +52,6 @@ import {
 } from '../components/bizScope';
 
 /** 两列栅格：半行 / 整行 */
-const HALF = { span: 12 };
-const FULL = { span: 24 };
 
 /** 渠道表单值（扁平结构，按 type 取对应分支字段；int64 限流以 number 承接、提交转字符串） */
 interface ChannelFormValues {

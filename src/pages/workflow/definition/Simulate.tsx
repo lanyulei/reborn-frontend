@@ -29,11 +29,11 @@ import {
   toGraph,
 } from '@/components/FlowDesigner';
 import { UserSelect } from '@/components/UserSelect';
+import { fetchWorkflowUsers } from '@/components/UserSelect/sources';
 import { getErrorMessage } from '@/services/system/request';
 import { simulateDefinition } from '@/services/workflow/definition';
 import type { SimulatedStep } from '@/services/workflow/typings';
 import { useT } from '@/utils/i18n';
-import { fetchWorkflowUsers } from '../components/meta';
 
 const useStyles = createStyles(({ token, css }) => ({
   canvas: css`

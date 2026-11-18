@@ -5,7 +5,7 @@
 import { PaperClipOutlined, UploadOutlined } from '@ant-design/icons';
 import { App, Button, Flex, Typography, Upload, type UploadFile } from 'antd';
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   downloadFile,
   FILE_MAX_SIZE,
@@ -13,30 +13,12 @@ import {
   uploadFile,
 } from '@/services/file';
 import type { TicketFile } from '@/services/ticket/typings';
+import { saveBlob } from '@/utils/download';
+import { formatBytes } from '@/utils/format';
 import { useT } from '@/utils/i18n';
 
 /** 一个附件字段的文件数上限（与后端校验一致）：允许多个文件时 */
 export const ATTACHMENT_MAX = 10;
-
-/** 字节数 → 可读大小 */
-const formatSize = (size?: string): string => {
-  const n = Number(size ?? 0);
-  if (!Number.isFinite(n) || n <= 0) return '';
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
-};
-
-/** 触发浏览器保存 */
-const saveBlob = (blob: Blob, filename: string) => {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  // 稍后再释放：个别浏览器在点击后立即释放会中断下载
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-};
 
 /** 携带登录态取回文件内容后保存；失败提示由请求层统一弹出 */
 const download = async (id: string, filename: string) => {
@@ -142,6 +124,26 @@ export const AttachmentUpload: React.FC<AttachmentUploadProps> = ({
   );
 };
 
+/**
+ * 一张表单里各附件字段的上传状态：有任一字段仍在上传时 uploading 为真（提交前须等待）。
+ * onChange 交给各字段的上传控件回报；reset 在换一张表单 / 重新进入编辑时清零。
+ * 两个回调都是稳定引用。
+ */
+export const useUploadingFields = () => {
+  const [uploading, setUploading] = useState(false);
+  const fields = useRef(new Set<string>());
+  const onChange = useCallback((code: string, busy: boolean) => {
+    if (busy) fields.current.add(code);
+    else fields.current.delete(code);
+    setUploading(fields.current.size > 0);
+  }, []);
+  const reset = useCallback(() => {
+    fields.current.clear();
+    setUploading(false);
+  }, []);
+  return { uploading, onChange, reset };
+};
+
 /** 下载列表：携带登录态取回内容后保存 */
 export const AttachmentList: React.FC<{ files: readonly TicketFile[] }> = ({
   files,
@@ -163,7 +165,7 @@ export const AttachmentList: React.FC<{ files: readonly TicketFile[] }> = ({
             {file.filename}
           </Typography.Link>
           <Typography.Text type="secondary">
-            {formatSize(file.size)}
+            {formatBytes(file.size)}
           </Typography.Text>
         </Flex>
       ))}

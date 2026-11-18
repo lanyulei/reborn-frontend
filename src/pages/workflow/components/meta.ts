@@ -1,9 +1,6 @@
 /**
- * 流程域的枚举元数据与候选数据适配：状态 → 徽标 / 标签色、动作 → 时间线颜色，
- * 以及把流程域的候选接口适配成通用选择器 / 设计器需要的形状。
+ * 流程域的枚举元数据：状态 → 徽标 / 标签色、动作 → 时间线颜色。
  */
-import { userLabel } from '@/components/UserSelect';
-import { listWorkflowUserCandidates } from '@/services/workflow/runtime';
 import type {
   AssigneeStatus,
   DefinitionStatus,
@@ -68,10 +65,4 @@ export const HISTORY_ACTION_COLOR: Record<HistoryAction, string> = {
   service: 'green',
   serviceFailed: 'red',
   subProcess: 'blue',
-};
-
-/** 流程域的用户候选（转办 / 改派 / 设计器选人；稳定引用，可直接传给 UserSelect） */
-export const fetchWorkflowUsers = async (keyword: string) => {
-  const { items } = await listWorkflowUserCandidates(keyword);
-  return (items ?? []).map((u) => ({ id: u.id, label: userLabel(u) }));
 };

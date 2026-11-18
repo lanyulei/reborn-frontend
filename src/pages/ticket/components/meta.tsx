@@ -10,9 +10,9 @@ import {
   FIELD_TYPE_META as SCHEMA_FIELD_TYPE_META,
   type SchemaFieldRenderer,
 } from '@/components/SchemaForm';
+import { SectionTitle } from '@/components/SectionTitle';
 import { UserSelect } from '@/components/UserSelect';
-import { SectionTitle } from '@/pages/workflow/components/InstanceDetail';
-import { fetchWorkflowUsers } from '@/pages/workflow/components/meta';
+import { fetchWorkflowUsers } from '@/components/UserSelect/sources';
 import type {
   FormColumns,
   TemplateStatus,

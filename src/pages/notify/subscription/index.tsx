@@ -18,6 +18,7 @@ import {
   NOTIFY_SUBSCRIBABLE_CHANNEL_TYPES,
   NOTIFY_TEMPLATE_CHANNEL_META,
 } from '@/constants';
+import { FULL, HALF } from '@/constants/layout';
 import {
   deleteSubscription,
   listSubscriptions,
@@ -40,8 +41,6 @@ import { parseBoolParam, toTableResult } from '@/utils/table';
 import { BIZ_ID_PATTERN } from '../components/bizScope';
 
 /** 两列栅格：半行 / 整行 */
-const HALF = { span: 12 };
-const FULL = { span: 24 };
 
 /** 机器人渠道定义：偏好字段 / 目标群字段 / 渠道键（文案取模板渠道枚举） */
 const ROBOT_FIELDS = [

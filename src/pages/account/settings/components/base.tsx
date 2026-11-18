@@ -4,6 +4,7 @@ import { useModel } from '@umijs/max';
 import { App, Avatar, Button, Space, Typography } from 'antd';
 import React, { startTransition, useRef, useState } from 'react';
 import { GENDER_META, GENDER_ORDER } from '@/constants';
+import { FULL, HALF } from '@/constants/layout';
 import { uploadMyAvatar } from '@/services/system/auth';
 import type { Gender } from '@/services/system/typings';
 import { type UpdateUserParams, updateUser } from '@/services/system/user';
@@ -20,8 +21,6 @@ interface BaseFormValues {
 const AVATAR_ACCEPT = 'image/png,image/jpeg,image/webp';
 const AVATAR_MAX_BYTES = 1024 * 1024;
 /** 两列栅格：用户名/昵称一行，邮箱/手机号一行；性别独占一行 */
-const HALF = { span: 12 };
-const FULL = { span: 24 };
 
 /** 基本设置：头像上传 + 编辑本人资料（nickname/gender/email/phone） */
 const BaseView: React.FC = () => {

@@ -1,0 +1,178 @@
+/**
+ * 监控告警域请求包装：在 authRequest 之上补两件事——
+ * 1. 查询串里的数组按「重复键」序列化（statuses=1&statuses=2），与后端 repeated 查询参数的绑定方式一致；
+ * 2. 错误提示按后端的 MONITOR_* reason 映射成当前语言的文案（后端 message 是英文）；
+ *    不认识的 reason 回退到后端 message。
+ */
+import type { RequestOptions } from '@@/plugin-request/request';
+import { message } from 'antd';
+import { authRequest, getErrorMessage } from '@/services/system/request';
+import { getAccessToken } from '@/utils/auth';
+import { t } from '@/utils/i18n';
+
+/**
+ * 有对应文案的错误码（后端 monitor.v1.ErrorReason，文案键 pages.monitor.error.<reason>）。
+ * true = 后端 message 带有具体原因（哪一项不合法、被谁引用、上游返回了什么），附在文案之后。
+ */
+const REASON_WITH_DETAIL: Record<string, boolean> = {
+  MONITOR_FORBIDDEN: false,
+  MONITOR_VERSION_CONFLICT: false,
+  MONITOR_TIME_RANGE_INVALID: true,
+  MONITOR_SECRET_UNAVAILABLE: false,
+  MONITOR_NOT_IMPLEMENTED: false,
+  MONITOR_DATASOURCE_NOT_FOUND: false,
+  MONITOR_DATASOURCE_NAME_EXISTS: false,
+  MONITOR_DATASOURCE_INVALID: true,
+  MONITOR_DATASOURCE_IN_USE: true,
+  MONITOR_DATASOURCE_DISABLED: false,
+  MONITOR_DATASOURCE_UNREACHABLE: true,
+  MONITOR_QUERY_INVALID: true,
+  MONITOR_QUERY_BUSY: false,
+  MONITOR_DATASOURCE_SECRET_REQUIRED: false,
+  MONITOR_DATASOURCE_ADDRESS_BLOCKED: false,
+  MONITOR_GROUP_NOT_FOUND: false,
+  MONITOR_GROUP_NAME_EXISTS: false,
+  MONITOR_GROUP_IN_USE: false,
+  MONITOR_GROUP_INVALID: true,
+  MONITOR_ROLE_SCOPE_INVALID: true,
+  MONITOR_RULE_NOT_FOUND: false,
+  MONITOR_RULE_NAME_EXISTS: false,
+  MONITOR_RULE_INVALID: true,
+  MONITOR_RULE_VERSION_NOT_FOUND: false,
+  MONITOR_RULE_BATCH_INVALID: true,
+  MONITOR_RULE_IMPORT_INVALID: true,
+  MONITOR_RULE_TEMPLATE_NOT_FOUND: false,
+  MONITOR_SIMULATE_INVALID: true,
+  MONITOR_ALERT_NOT_FOUND: false,
+  MONITOR_ALERT_NOT_FIRING: false,
+  MONITOR_ALERT_ALREADY_ACKED: false,
+  MONITOR_ALERT_ACTION_INVALID: true,
+  MONITOR_ALERT_TICKET_EXISTS: false,
+  MONITOR_ALERT_VIEW_NOT_FOUND: false,
+  MONITOR_ALERT_VIEW_NAME_EXISTS: false,
+  MONITOR_ALERT_VIEW_INVALID: true,
+  MONITOR_MUTE_NOT_FOUND: false,
+  MONITOR_MUTE_INVALID: true,
+  MONITOR_SUBSCRIPTION_NOT_FOUND: false,
+  MONITOR_SUBSCRIPTION_INVALID: true,
+  MONITOR_ESCALATION_NOT_FOUND: false,
+  MONITOR_ESCALATION_NAME_EXISTS: false,
+  MONITOR_ESCALATION_INVALID: true,
+  MONITOR_ESCALATION_IN_USE: false,
+  MONITOR_INHIBIT_NOT_FOUND: false,
+  MONITOR_INHIBIT_INVALID: true,
+  MONITOR_RECORD_RULE_NOT_FOUND: false,
+  MONITOR_RECORD_RULE_NAME_EXISTS: false,
+  MONITOR_RECORD_RULE_INVALID: true,
+  MONITOR_RECORD_RULE_NO_WRITE_URL: false,
+};
+
+/**
+ * reason + 后端 message → 当前语言的提示（批量操作的逐条结果也用它）。
+ * 不认识的 reason 原样返回后端 message。
+ */
+export const monitorReasonText = (
+  reason: string | undefined,
+  detail: string | undefined,
+  metadata?: Record<string, string>,
+): string | undefined => {
+  if (!reason || !(reason in REASON_WITH_DETAIL)) return detail;
+  // 分组仍被屏蔽规则 / 订阅引用：附加信息里带数量
+  if (
+    reason === 'MONITOR_GROUP_IN_USE' &&
+    (metadata?.mute_count || metadata?.subscription_count)
+  ) {
+    return t('pages.monitor.error.MONITOR_GROUP_IN_USE.refs', {
+      mutes: Number(metadata.mute_count ?? 0),
+      subscriptions: Number(metadata.subscription_count ?? 0),
+    });
+  }
+  // 已被他人认领：附加信息里带认领人
+  if (reason === 'MONITOR_ALERT_ALREADY_ACKED' && metadata?.ack_user_name) {
+    return t('pages.monitor.error.MONITOR_ALERT_ALREADY_ACKED.by', {
+      name: metadata.ack_user_name,
+    });
+  }
+  // 升级策略仍被规则引用：附加信息里带规则数
+  if (reason === 'MONITOR_ESCALATION_IN_USE' && metadata?.rule_count) {
+    return t('pages.monitor.error.MONITOR_ESCALATION_IN_USE.refs', {
+      count: Number(metadata.rule_count),
+    });
+  }
+  const text = t(`pages.monitor.error.${reason}`);
+  return REASON_WITH_DETAIL[reason] && detail
+    ? t('pages.monitor.error.withDetail', { text, detail })
+    : text;
+};
+
+/** 取后端 Kratos Status 的 reason（网络错误等无响应体时为 undefined） */
+export const getErrorReason = (error: unknown): string | undefined =>
+  (error as { response?: { data?: { reason?: string } } } | undefined)?.response
+    ?.data?.reason;
+
+/** 请求失败的提示文案：MONITOR_* reason 取对应文案，其余沿用后端 message */
+export const getMonitorErrorMessage = (
+  error: unknown,
+  fallback?: string,
+): string => {
+  const data = (
+    error as {
+      response?: {
+        data?: {
+          reason?: string;
+          message?: string;
+          metadata?: Record<string, string>;
+        };
+      };
+    }
+  )?.response?.data;
+  return (
+    monitorReasonText(data?.reason, data?.message, data?.metadata) ||
+    getErrorMessage(error, fallback)
+  );
+};
+
+/** 查询参数 → 查询串：数组展开为重复键，undefined / null / 空串跳过 */
+const serializeParams = (params: Record<string, unknown>): string => {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params ?? {})) {
+    for (const item of Array.isArray(value) ? value : [value]) {
+      if (item !== undefined && item !== null && item !== '') {
+        search.append(key, String(item));
+      }
+    }
+  }
+  return search.toString();
+};
+
+interface MonitorRequestOptions extends RequestOptions {
+  /** 静默：失败不弹提示，由调用方自行展示 */
+  silent?: boolean;
+}
+
+export async function monitorRequest<T>(
+  url: string,
+  options: MonitorRequestOptions = {},
+): Promise<T> {
+  const { silent, ...rest } = options;
+  try {
+    return await authRequest<T>(url, {
+      ...rest,
+      paramsSerializer: serializeParams,
+      silent: true,
+    });
+  } catch (error) {
+    const status = (error as { response?: { status?: number } })?.response
+      ?.status;
+    if (silent) throw error;
+    if (status !== 401) {
+      message.error(getMonitorErrorMessage(error));
+    } else if (getAccessToken() !== null) {
+      // 401 走到这里有两种情况：authRequest 已清空令牌并跳转登录（不再提示）；或刷新令牌遇到
+      // 暂时性故障、令牌仍保留——共享请求层此时提示「请求失败，请重试」，这里因恒以 silent 调用
+      // authRequest 而要自己补上同一句
+      message.error(t('app.request.retry'));
+    }
+    throw error;
+  }
+}

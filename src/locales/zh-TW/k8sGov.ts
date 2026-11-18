@@ -1,0 +1,145 @@
+/** 容器平台 · 治理（限时 kubeconfig、巡检、终端录制回放、调试容器、文件传输、告警规则模板） */
+export default {
+  'menu.k8s.inspection': '巡檢',
+  'menu.k8s.kubeconfig': '訪問憑證',
+  'permission.k8s.workload.debug': '調試容器',
+  'permission.k8s.workload.file': '文件傳輸',
+  'permission.k8s.audit.replay': '回放終端錄製',
+  'permission.k8s.inspection.run': '立即巡檢',
+  'permission.k8s.kubeconfig.issue': '簽發 kubeconfig',
+  'pages.k8s.action.debug': '調試容器',
+  'pages.k8s.action.debug.title': '在 {name} 中啟動調試容器？',
+  'pages.k8s.action.debug.content':
+    '將在該 Pod 中添加一個臨時容器並進入它，用於排查沒有 shell 的容器。臨時容器無法單獨刪除，會保留到 Pod 重建。',
+  'pages.k8s.action.file': '文件傳輸',
+  'pages.k8s.exec.debug': '調試',
+  'pages.k8s.file.title': '文件傳輸 · {pod}',
+  'pages.k8s.file.hint':
+    '容器內需有 tar；單次上限 100 MB，傳輸記入審計（不記內容）。',
+  'pages.k8s.file.download': '下載',
+  'pages.k8s.file.download.path': '容器內的文件或目錄',
+  'pages.k8s.file.download.help': '填寫絕對路徑；目錄會打包為 tar 下載',
+  'pages.k8s.file.downloaded': '已下載（{size}）',
+  'pages.k8s.file.upload': '上傳',
+  'pages.k8s.file.upload.dir': '上傳到目錄',
+  'pages.k8s.file.upload.choose': '選擇文件',
+  'pages.k8s.file.uploaded': '已上傳到 {path}',
+  'pages.k8s.file.path.invalid':
+    '請輸入規範的絕對路徑（不含 . 、.. 與重複的斜杠）',
+  'pages.k8s.file.tooLarge': '文件超過 100 MB 的傳輸上限',
+  'pages.k8s.error.fileTooLarge': '文件超過傳輸大小上限',
+  'pages.k8s.error.approvalRequired': '該集羣的變更需審批',
+  'pages.k8s.error.kubeTokenLimit':
+    '未失效的 kubeconfig 數量已達上限，請先吊銷不再使用的',
+  'pages.k8s.error.inspectionBusy': '該集羣已有待執行或執行中的巡檢',
+  'pages.k8s.record.replay': '回放',
+  'pages.k8s.record.title': '終端回放 · {pod}（{user}）',
+  'pages.k8s.record.hint':
+    '只錄製終端輸出，不錄製鍵盤輸入；空閒間隔已壓縮，本次回放已記入審計。',
+  'pages.k8s.record.truncated':
+    '輸出超過錄製上限，回放不完整；只錄製輸出，不錄製鍵盤輸入。',
+  'pages.k8s.record.failed': '無法讀取錄製內容',
+  'pages.k8s.audit.action.debug': '調試容器',
+  'pages.k8s.audit.action.file_upload': '上傳文件',
+  'pages.k8s.audit.action.file_download': '下載文件',
+  'pages.k8s.audit.action.exec_replay': '回放終端錄製',
+  'pages.k8s.audit.action.kubeconfig_issue': '簽發 kubeconfig',
+  'pages.k8s.audit.action.kubeconfig_revoke': '吊銷 kubeconfig',
+  'pages.k8s.audit.action.inspect': '手動巡檢',
+  'pages.k8s.kubeconfig.issue': '簽發 kubeconfig',
+  'pages.k8s.kubeconfig.hint':
+    '權限與你的平臺權限一致；到期、吊銷或賬號停用後立即失效，寫操作記入審計。',
+  'pages.k8s.kubeconfig.ttl': '有效期',
+  'pages.k8s.kubeconfig.ttl.hours': '{n} 小時',
+  'pages.k8s.kubeconfig.ttl.days': '{n} 天',
+  'pages.k8s.kubeconfig.note': '用途備註',
+  'pages.k8s.kubeconfig.once':
+    '內容只顯示這一次，請立即保存。有效期至 {time}。',
+  'pages.k8s.kubeconfig.usage':
+    '用法：kubectl --kubeconfig <文件> get pods；不支持 port-forward / proxy，需審批的集羣不可變更。',
+  'pages.k8s.kubeconfig.saved': '我已保存',
+  'pages.k8s.kubeconfig.copied': '已複製',
+  'pages.k8s.kubeconfig.copyFailed': '複製失敗，請手動選擇複製',
+  'pages.k8s.kubeconfig.download': '下載',
+  'pages.k8s.kubeconfig.status': '狀態',
+  'pages.k8s.kubeconfig.active': '有效',
+  'pages.k8s.kubeconfig.revoked': '已吊銷',
+  'pages.k8s.kubeconfig.expired': '已過期',
+  'pages.k8s.kubeconfig.createTime': '簽發時間',
+  'pages.k8s.kubeconfig.expireTime': '過期時間',
+  'pages.k8s.kubeconfig.lastUsed': '最近使用',
+  'pages.k8s.kubeconfig.neverUsed': '從未使用',
+  'pages.k8s.kubeconfig.revoke': '吊銷',
+  'pages.k8s.kubeconfig.revoke.title': '吊銷這份 kubeconfig？',
+  'pages.k8s.kubeconfig.revoke.content':
+    '吊銷後立即失效，正在使用它的 kubectl 會被拒絕，且無法恢復。',
+  'pages.k8s.kubeconfig.revoke.done': '已吊銷',
+  'pages.k8s.kubeconfig.activeOnly': '只看有效的',
+  'pages.k8s.kubeconfig.all': '全部用戶',
+  'pages.k8s.inspection.run': '立即巡檢',
+  'pages.k8s.inspection.run.title': '立即巡檢集羣 {name}？',
+  'pages.k8s.inspection.run.content':
+    '巡檢會分頁讀取集羣的節點、工作負載、Pod 與 TLS 證書，大集羣需要幾分鐘。',
+  'pages.k8s.inspection.run.started': '巡檢已開始',
+  'pages.k8s.inspection.running': '巡檢進行中',
+  'pages.k8s.inspection.pending': '這次巡檢尚未完成，完成後自動顯示結果。',
+  'pages.k8s.inspection.failed': '巡檢失敗',
+  'pages.k8s.inspection.none': '暫無巡檢記錄',
+  'pages.k8s.inspection.empty':
+    '暫無巡檢記錄；系統每天自動巡檢一次，也可立即巡檢。',
+  'pages.k8s.inspection.trigger.1': '定時',
+  'pages.k8s.inspection.trigger.2': '手動',
+  'pages.k8s.inspection.status.1': '待執行',
+  'pages.k8s.inspection.status.2': '執行中',
+  'pages.k8s.inspection.status.3': '完成',
+  'pages.k8s.inspection.status.4': '失敗',
+  'pages.k8s.inspection.score': '得分',
+  'pages.k8s.inspection.score.n': '{n} 分',
+  'pages.k8s.inspection.severity.critical': '嚴重',
+  'pages.k8s.inspection.severity.warning': '警告',
+  'pages.k8s.inspection.severity.info': '提示',
+  'pages.k8s.inspection.objects': '檢查範圍',
+  'pages.k8s.inspection.objects.detail':
+    '{nodes} 個節點 · {workloads} 個工作負載 · {pods} 個 Pod · {certs} 張證書',
+  'pages.k8s.inspection.partial':
+    '集羣對象數超過了巡檢的遍歷上限，結果不完整。',
+  'pages.k8s.inspection.scoped':
+    '上方的統計是整個集羣的口徑；下方只列出你有權限的命名空間與集羣級的發現項。',
+  'pages.k8s.inspection.findings': '發現項',
+  'pages.k8s.inspection.clean': '沒有發現問題',
+  'pages.k8s.inspection.message': '說明',
+  'pages.k8s.inspection.more':
+    '顯示 {shown} 條，共 {total} 條（每個檢查項至多保留 500 條，或其餘不在你的數據範圍內）',
+  'pages.k8s.inspection.check.no_requests': '未設置資源請求',
+  'pages.k8s.inspection.check.no_requests.desc':
+    '容器沒有設置 CPU 或內存請求：調度器無法為它預留資源，節點資源緊張時最先被驅逐。',
+  'pages.k8s.inspection.check.no_limits': '未設置內存限制',
+  'pages.k8s.inspection.check.no_limits.desc':
+    '容器沒有內存限制：內存泄漏時會擠佔同節點上的其他工作負載。',
+  'pages.k8s.inspection.check.image_latest': '鏡像使用 latest 或未指定標籤',
+  'pages.k8s.inspection.check.image_latest.desc':
+    '鏡像標籤不固定：重建 Pod 時可能拉到不同的版本，也無法準確回滾。',
+  'pages.k8s.inspection.check.single_replica': '只有一個副本',
+  'pages.k8s.inspection.check.single_replica.desc':
+    'Deployment / StatefulSet 只有一個副本：節點故障或滾動發佈時服務會中斷。',
+  'pages.k8s.inspection.check.no_probe': '缺少探針',
+  'pages.k8s.inspection.check.no_probe.desc':
+    '容器既沒有就緒探針也沒有存活探針：未準備好就會接到流量，卡死後也不會被重啓。',
+  'pages.k8s.inspection.check.cert_expiring': 'TLS 證書即將到期或已過期',
+  'pages.k8s.inspection.check.cert_expiring.desc':
+    '類型為 kubernetes.io/tls 的 Secret 中的證書已過期，或將在 30 天內到期。',
+  'pages.k8s.inspection.check.pod_restarts': 'Pod 頻繁重啓',
+  'pages.k8s.inspection.check.pod_restarts.desc': '容器累計重啓 10 次及以上。',
+  'pages.k8s.inspection.check.pvc_pending': 'PVC 長時間 Pending',
+  'pages.k8s.inspection.check.pvc_pending.desc':
+    'PVC 處於 Pending 超過 1 小時：通常是沒有匹配的存儲類或容量不足。',
+  'pages.k8s.inspection.check.node_unhealthy': '節點不健康',
+  'pages.k8s.inspection.check.node_unhealthy.desc':
+    '節點 NotReady，或存在內存 / 磁盤 / PID 壓力。',
+  'pages.k8s.inspection.check.version_skew': '節點版本偏差',
+  'pages.k8s.inspection.check.version_skew.desc':
+    '節點的 kubelet 版本比控制面落後 2 個及以上次版本，或比控制面更新。',
+  'pages.k8s.ruleTemplate.use': '使用 K8s 告警規則模板',
+  'pages.k8s.ruleTemplate.loaded': '已填入 {n} 條 K8s 告警規則，可在預覽裏取捨',
+  'pages.k8s.alertLink': '在容器平臺查看對應資源',
+};

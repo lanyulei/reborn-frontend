@@ -21,6 +21,7 @@ import { Col, Tag, Tooltip, Typography } from 'antd';
 import dayjs from 'dayjs';
 import type React from 'react';
 import { Fragment, useMemo } from 'react';
+import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
 import { type Translate, useT } from '@/utils/i18n';
 import { FORMAT_PATTERNS } from './fieldTypes';
 
@@ -210,7 +211,7 @@ export const renderSchemaValue = (
       return value ? 'true' : 'false';
     case 'datetime':
       return dayjs(String(value)).isValid()
-        ? dayjs(String(value)).format('YYYY-MM-DD HH:mm:ss')
+        ? dayjs(String(value)).format(DATE_TIME_SECONDS_FORMAT)
         : String(value);
     case 'json':
       return (

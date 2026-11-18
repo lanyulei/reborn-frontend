@@ -21,11 +21,13 @@ import {
   SchemaFormItems,
   schemaInitialValues,
 } from '@/components/SchemaForm';
+import { FULL } from '@/constants/layout';
 import { listCIs } from '@/services/cmdb/ci';
 import { createTicket, getTemplate } from '@/services/ticket';
 import type { TicketPriority, TicketTemplate } from '@/services/ticket/typings';
 import { useFormRules, useOptions, useT } from '@/utils/i18n';
 import { randomUUID } from '@/utils/uuid';
+import { useUploadingFields } from '../components/Attachments';
 import {
   formColSpan,
   renderFormGroup,
@@ -50,7 +52,6 @@ interface FormValues {
 /** 表单区的阅读宽度：字段不随宽屏无限拉长；在卡片里居中，与底部居中的按钮对齐 */
 const FORM_MAX_WIDTH = 800;
 const CATALOG_PATH = '/ticket/create';
-const FULL = { span: 24 };
 
 const TicketCreateForm: React.FC = () => {
   const { templateId = '' } = useParams<{ templateId: string }>();
@@ -66,19 +67,15 @@ const TicketCreateForm: React.FC = () => {
   /** 模板加载失败（不存在、已停用或无权使用） */
   const [failed, setFailed] = useState(false);
   const [template, setTemplate] = useState<TicketTemplate>();
-  /** 是否有附件字段仍在上传；uploadingFields 记着是哪些字段 */
-  const [uploading, setUploading] = useState(false);
-  const uploadingFields = useRef(new Set<string>());
+  /** 是否有附件字段仍在上传 */
+  const {
+    uploading,
+    onChange: onUploadingChange,
+    reset: resetUploading,
+  } = useUploadingFields();
   const renderers = useMemo(
-    () =>
-      ticketFieldRenderers(undefined, undefined, {
-        onUploadingChange: (code, busy) => {
-          if (busy) uploadingFields.current.add(code);
-          else uploadingFields.current.delete(code);
-          setUploading(uploadingFields.current.size > 0);
-        },
-      }),
-    [],
+    () => ticketFieldRenderers(undefined, undefined, { onUploadingChange }),
+    [onUploadingChange],
   );
   const [submitting, setSubmitting] = useState(false);
   // 幂等键：每次进入一张模板的表单对应一个，重复点击提交不会创建两张工单
@@ -97,8 +94,7 @@ const TicketCreateForm: React.FC = () => {
       .then((result) => {
         if (seq !== pickSeq.current) return;
         requestId.current = randomUUID();
-        uploadingFields.current.clear();
-        setUploading(false);
+        resetUploading();
         setTemplate(result.template);
       })
       // 失败提示由请求层统一弹出；页面给出返回入口
@@ -109,7 +105,7 @@ const TicketCreateForm: React.FC = () => {
       // 离开或换模板后，丢弃还在路上的响应
       pickSeq.current += 1;
     };
-  }, [templateId]);
+  }, [templateId, resetUploading]);
 
   const fields = template?.form ?? [];
   const colSpan = formColSpan(template?.formColumns);

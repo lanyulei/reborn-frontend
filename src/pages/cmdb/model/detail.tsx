@@ -703,62 +703,59 @@ const ModelDetailPage: React.FC = () => {
             key: 'relations',
             label: t('pages.cmdb.modelDetail.tab.relations'),
             children: (
-              // 仅补表格最外层边框（单元格不加线）
-              <div className={pageStyles.tableWrap}>
-                <ProTable<CmdbRelationType>
-                  cardBordered
-                  rowKey="code"
-                  search={false}
-                  options={false}
-                  pagination={false}
-                  dataSource={myRelations}
-                  columns={[
-                    {
-                      title: t('pages.cmdb.relationType.column.code'),
-                      dataIndex: 'code',
-                      copyable: true,
-                    },
-                    {
-                      title: t('pages.cmdb.relationType.column.name'),
-                      dataIndex: 'name',
-                    },
-                    {
-                      title: t('pages.cmdb.relationType.column.srcModel'),
-                      dataIndex: 'srcModel',
-                      render: (_, r) => modelName(r.srcModel),
-                    },
-                    {
-                      title: t('pages.cmdb.relationType.column.forwardName'),
-                      dataIndex: 'forwardName',
-                    },
-                    {
-                      title: t('pages.cmdb.relationType.column.dstModel'),
-                      dataIndex: 'dstModel',
-                      render: (_, r) => modelName(r.dstModel),
-                    },
-                    {
-                      title: t('pages.cmdb.relationType.column.backwardName'),
-                      dataIndex: 'backwardName',
-                    },
-                    {
-                      title: t('pages.cmdb.relationType.column.cardinality'),
-                      dataIndex: 'cardinality',
-                      render: (_, r) => (
-                        <Tag>{cardinalityText(r.cardinality)}</Tag>
-                      ),
-                    },
-                    {
-                      title: t('pages.cmdb.relationType.column.onDelete'),
-                      dataIndex: 'onDelete',
-                      render: (_, r) => onDeleteText(r.onDelete),
-                    },
-                    {
-                      title: t('pages.cmdb.relationType.column.relationCount'),
-                      dataIndex: 'relationCount',
-                    },
-                  ]}
-                />
-              </div>
+              <ProTable<CmdbRelationType>
+                cardBordered
+                rowKey="code"
+                search={false}
+                options={false}
+                pagination={false}
+                dataSource={myRelations}
+                columns={[
+                  {
+                    title: t('pages.cmdb.relationType.column.code'),
+                    dataIndex: 'code',
+                    copyable: true,
+                  },
+                  {
+                    title: t('pages.cmdb.relationType.column.name'),
+                    dataIndex: 'name',
+                  },
+                  {
+                    title: t('pages.cmdb.relationType.column.srcModel'),
+                    dataIndex: 'srcModel',
+                    render: (_, r) => modelName(r.srcModel),
+                  },
+                  {
+                    title: t('pages.cmdb.relationType.column.forwardName'),
+                    dataIndex: 'forwardName',
+                  },
+                  {
+                    title: t('pages.cmdb.relationType.column.dstModel'),
+                    dataIndex: 'dstModel',
+                    render: (_, r) => modelName(r.dstModel),
+                  },
+                  {
+                    title: t('pages.cmdb.relationType.column.backwardName'),
+                    dataIndex: 'backwardName',
+                  },
+                  {
+                    title: t('pages.cmdb.relationType.column.cardinality'),
+                    dataIndex: 'cardinality',
+                    render: (_, r) => (
+                      <Tag>{cardinalityText(r.cardinality)}</Tag>
+                    ),
+                  },
+                  {
+                    title: t('pages.cmdb.relationType.column.onDelete'),
+                    dataIndex: 'onDelete',
+                    render: (_, r) => onDeleteText(r.onDelete),
+                  },
+                  {
+                    title: t('pages.cmdb.relationType.column.relationCount'),
+                    dataIndex: 'relationCount',
+                  },
+                ]}
+              />
             ),
           },
           {

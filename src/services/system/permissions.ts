@@ -16,6 +16,38 @@ export type MenuPermissionCode =
   | 'cmdb.audit'
   | 'oncall.calendar'
   | 'oncall.group'
+  | 'monitor.alert'
+  | 'monitor.rule'
+  | 'monitor.mute'
+  | 'monitor.subscription'
+  | 'monitor.escalation'
+  | 'monitor.record'
+  | 'monitor.datasource'
+  | 'monitor.explore'
+  | 'monitor.stats'
+  | 'monitor.engine'
+  | 'job.template'
+  | 'job.execution'
+  | 'job.project'
+  | 'job.credential'
+  | 'job.runner'
+  | 'job.adhoc'
+  | 'job.script'
+  | 'job.schedule'
+  | 'job.trigger'
+  | 'job.policy'
+  | 'job.stats'
+  | 'k8s.cluster'
+  | 'k8s.workload'
+  | 'k8s.config'
+  | 'k8s.resource'
+  | 'k8s.app'
+  | 'k8s.audit'
+  | 'k8s.change'
+  | 'k8s.overview'
+  | 'k8s.event'
+  | 'k8s.inspection'
+  | 'k8s.kubeconfig'
   | 'workflow.definition'
   | 'workflow.instance'
   | 'workflow.config'
@@ -116,7 +148,104 @@ export type ElementPermissionCode =
   | 'oncall.group.delete'
   | 'oncall.group.member'
   | 'oncall.group.schedule'
-  | 'oncall.group.share';
+  | 'oncall.group.share'
+  | 'monitor.alert.ack'
+  | 'monitor.alert.comment'
+  | 'monitor.alert.close'
+  | 'monitor.alert.ticket'
+  | 'monitor.alert.view'
+  | 'monitor.rule.create'
+  | 'monitor.rule.edit'
+  | 'monitor.rule.delete'
+  | 'monitor.rule.toggle'
+  | 'monitor.rule.import'
+  | 'monitor.rule.export'
+  | 'monitor.rule.group'
+  | 'monitor.rule.scope'
+  | 'monitor.rule.simulate'
+  | 'monitor.mute.create'
+  | 'monitor.mute.edit'
+  | 'monitor.mute.delete'
+  | 'monitor.mute.inhibit_create'
+  | 'monitor.mute.inhibit_edit'
+  | 'monitor.mute.inhibit_delete'
+  | 'monitor.subscription.create'
+  | 'monitor.subscription.edit'
+  | 'monitor.subscription.delete'
+  | 'monitor.escalation.create'
+  | 'monitor.escalation.edit'
+  | 'monitor.escalation.delete'
+  | 'monitor.record.create'
+  | 'monitor.record.edit'
+  | 'monitor.record.delete'
+  | 'monitor.datasource.create'
+  | 'monitor.datasource.edit'
+  | 'monitor.datasource.delete'
+  | 'monitor.datasource.test'
+  | 'job.template.create'
+  | 'job.template.edit'
+  | 'job.template.delete'
+  | 'job.template.run'
+  | 'job.execution.cancel'
+  | 'job.project.create'
+  | 'job.project.edit'
+  | 'job.project.delete'
+  | 'job.credential.create'
+  | 'job.credential.edit'
+  | 'job.credential.delete'
+  | 'job.runner.create'
+  | 'job.runner.edit'
+  | 'job.runner.delete'
+  | 'job.runner.token'
+  | 'job.adhoc.run'
+  | 'job.script.create'
+  | 'job.script.edit'
+  | 'job.script.delete'
+  | 'job.schedule.create'
+  | 'job.schedule.edit'
+  | 'job.schedule.delete'
+  | 'job.trigger.create'
+  | 'job.trigger.edit'
+  | 'job.trigger.delete'
+  | 'job.trigger.token'
+  | 'job.policy.rule'
+  | 'job.policy.edit'
+  | 'k8s.cluster.create'
+  | 'k8s.cluster.edit'
+  | 'k8s.cluster.delete'
+  | 'k8s.cluster.agent'
+  | 'k8s.cluster.node_schedule'
+  | 'k8s.cluster.node_drain'
+  | 'k8s.cluster.node_edit'
+  | 'k8s.cluster.namespace_create'
+  | 'k8s.cluster.namespace_edit'
+  | 'k8s.cluster.namespace_delete'
+  | 'k8s.workload.create'
+  | 'k8s.workload.edit'
+  | 'k8s.workload.delete'
+  | 'k8s.workload.scale'
+  | 'k8s.workload.restart'
+  | 'k8s.workload.rollback'
+  | 'k8s.workload.log'
+  | 'k8s.workload.exec'
+  | 'k8s.workload.debug'
+  | 'k8s.workload.file'
+  | 'k8s.audit.replay'
+  | 'k8s.change.cancel'
+  | 'k8s.change.bypass'
+  | 'k8s.inspection.run'
+  | 'k8s.kubeconfig.issue'
+  | 'k8s.config.create'
+  | 'k8s.config.edit'
+  | 'k8s.config.delete'
+  | 'k8s.config.secret_reveal'
+  | 'k8s.resource.create'
+  | 'k8s.resource.edit'
+  | 'k8s.resource.delete'
+  | 'k8s.app.repo'
+  | 'k8s.app.install'
+  | 'k8s.app.upgrade'
+  | 'k8s.app.uninstall';
 
 /** 菜单权限定义 */
 export interface MenuPermissionDef {
@@ -169,6 +298,38 @@ export const MENU_PERMISSIONS: MenuPermissionDef[] = [
   { code: 'cmdb.audit', labelKey: 'menu.cmdb.audit', parentKey: 'menu.cmdb' },
   { code: 'oncall.calendar', labelKey: 'menu.oncall.calendar', parentKey: 'menu.oncall' },
   { code: 'oncall.group', labelKey: 'menu.oncall.group', parentKey: 'menu.oncall' },
+  { code: 'monitor.alert', labelKey: 'menu.monitor.alert', parentKey: 'menu.monitor' },
+  { code: 'monitor.rule', labelKey: 'menu.monitor.rule', parentKey: 'menu.monitor' },
+  { code: 'monitor.mute', labelKey: 'menu.monitor.mute', parentKey: 'menu.monitor' },
+  { code: 'monitor.subscription', labelKey: 'menu.monitor.subscription', parentKey: 'menu.monitor' },
+  { code: 'monitor.escalation', labelKey: 'menu.monitor.escalation', parentKey: 'menu.monitor' },
+  { code: 'monitor.record', labelKey: 'menu.monitor.record', parentKey: 'menu.monitor' },
+  { code: 'monitor.datasource', labelKey: 'menu.monitor.datasource', parentKey: 'menu.monitor' },
+  { code: 'monitor.explore', labelKey: 'menu.monitor.explore', parentKey: 'menu.monitor' },
+  { code: 'monitor.stats', labelKey: 'menu.monitor.stats', parentKey: 'menu.monitor' },
+  { code: 'monitor.engine', labelKey: 'menu.monitor.engine', parentKey: 'menu.monitor' },
+  { code: 'job.template', labelKey: 'menu.job.template', parentKey: 'menu.job' },
+  { code: 'job.execution', labelKey: 'menu.job.execution', parentKey: 'menu.job' },
+  { code: 'job.project', labelKey: 'menu.job.project', parentKey: 'menu.job' },
+  { code: 'job.credential', labelKey: 'menu.job.credential', parentKey: 'menu.job' },
+  { code: 'job.runner', labelKey: 'menu.job.runner', parentKey: 'menu.job' },
+  { code: 'job.adhoc', labelKey: 'menu.job.adhoc', parentKey: 'menu.job' },
+  { code: 'job.script', labelKey: 'menu.job.script', parentKey: 'menu.job' },
+  { code: 'job.schedule', labelKey: 'menu.job.schedule', parentKey: 'menu.job' },
+  { code: 'job.trigger', labelKey: 'menu.job.trigger', parentKey: 'menu.job' },
+  { code: 'job.policy', labelKey: 'menu.job.policy', parentKey: 'menu.job' },
+  { code: 'job.stats', labelKey: 'menu.job.stats', parentKey: 'menu.job' },
+  { code: 'k8s.overview', labelKey: 'menu.k8s.overview', parentKey: 'menu.k8s' },
+  { code: 'k8s.cluster', labelKey: 'menu.k8s.cluster', parentKey: 'menu.k8s' },
+  { code: 'k8s.workload', labelKey: 'menu.k8s.workload', parentKey: 'menu.k8s' },
+  { code: 'k8s.config', labelKey: 'menu.k8s.config', parentKey: 'menu.k8s' },
+  { code: 'k8s.resource', labelKey: 'menu.k8s.resource', parentKey: 'menu.k8s' },
+  { code: 'k8s.app', labelKey: 'menu.k8s.app', parentKey: 'menu.k8s' },
+  { code: 'k8s.event', labelKey: 'menu.k8s.event', parentKey: 'menu.k8s' },
+  { code: 'k8s.inspection', labelKey: 'menu.k8s.inspection', parentKey: 'menu.k8s' },
+  { code: 'k8s.kubeconfig', labelKey: 'menu.k8s.kubeconfig', parentKey: 'menu.k8s' },
+  { code: 'k8s.change', labelKey: 'menu.k8s.change', parentKey: 'menu.k8s' },
+  { code: 'k8s.audit', labelKey: 'menu.k8s.audit', parentKey: 'menu.k8s' },
 ];
 
 /** 全量元素权限目录 */
@@ -249,6 +410,103 @@ export const ELEMENT_PERMISSIONS: ElementPermissionDef[] = [
   { code: 'oncall.group.member', labelKey: 'permission.oncall.group.member', parentCode: 'oncall.group' },
   { code: 'oncall.group.schedule', labelKey: 'permission.oncall.group.schedule', parentCode: 'oncall.group' },
   { code: 'oncall.group.share', labelKey: 'permission.oncall.group.share', parentCode: 'oncall.group' },
+  { code: 'monitor.alert.ack', labelKey: 'permission.monitor.alert.ack', parentCode: 'monitor.alert' },
+  { code: 'monitor.alert.comment', labelKey: 'permission.monitor.alert.comment', parentCode: 'monitor.alert' },
+  { code: 'monitor.alert.close', labelKey: 'permission.monitor.alert.close', parentCode: 'monitor.alert' },
+  { code: 'monitor.alert.ticket', labelKey: 'permission.monitor.alert.ticket', parentCode: 'monitor.alert' },
+  { code: 'monitor.alert.view', labelKey: 'permission.monitor.alert.view', parentCode: 'monitor.alert' },
+  { code: 'monitor.rule.create', labelKey: 'permission.monitor.rule.create', parentCode: 'monitor.rule' },
+  { code: 'monitor.rule.edit', labelKey: 'permission.monitor.rule.edit', parentCode: 'monitor.rule' },
+  { code: 'monitor.rule.delete', labelKey: 'permission.monitor.rule.delete', parentCode: 'monitor.rule' },
+  { code: 'monitor.rule.toggle', labelKey: 'permission.monitor.rule.toggle', parentCode: 'monitor.rule' },
+  { code: 'monitor.rule.import', labelKey: 'permission.monitor.rule.import', parentCode: 'monitor.rule' },
+  { code: 'monitor.rule.export', labelKey: 'permission.monitor.rule.export', parentCode: 'monitor.rule' },
+  { code: 'monitor.rule.group', labelKey: 'permission.monitor.rule.group', parentCode: 'monitor.rule' },
+  { code: 'monitor.rule.scope', labelKey: 'permission.monitor.rule.scope', parentCode: 'monitor.rule' },
+  { code: 'monitor.rule.simulate', labelKey: 'permission.monitor.rule.simulate', parentCode: 'monitor.rule' },
+  { code: 'monitor.mute.create', labelKey: 'permission.monitor.mute.create', parentCode: 'monitor.mute' },
+  { code: 'monitor.mute.edit', labelKey: 'permission.monitor.mute.edit', parentCode: 'monitor.mute' },
+  { code: 'monitor.mute.delete', labelKey: 'permission.monitor.mute.delete', parentCode: 'monitor.mute' },
+  { code: 'monitor.mute.inhibit_create', labelKey: 'permission.monitor.mute.inhibit_create', parentCode: 'monitor.mute' },
+  { code: 'monitor.mute.inhibit_edit', labelKey: 'permission.monitor.mute.inhibit_edit', parentCode: 'monitor.mute' },
+  { code: 'monitor.mute.inhibit_delete', labelKey: 'permission.monitor.mute.inhibit_delete', parentCode: 'monitor.mute' },
+  { code: 'monitor.subscription.create', labelKey: 'permission.monitor.subscription.create', parentCode: 'monitor.subscription' },
+  { code: 'monitor.subscription.edit', labelKey: 'permission.monitor.subscription.edit', parentCode: 'monitor.subscription' },
+  { code: 'monitor.subscription.delete', labelKey: 'permission.monitor.subscription.delete', parentCode: 'monitor.subscription' },
+  { code: 'monitor.escalation.create', labelKey: 'permission.monitor.escalation.create', parentCode: 'monitor.escalation' },
+  { code: 'monitor.escalation.edit', labelKey: 'permission.monitor.escalation.edit', parentCode: 'monitor.escalation' },
+  { code: 'monitor.escalation.delete', labelKey: 'permission.monitor.escalation.delete', parentCode: 'monitor.escalation' },
+  { code: 'monitor.record.create', labelKey: 'permission.monitor.record.create', parentCode: 'monitor.record' },
+  { code: 'monitor.record.edit', labelKey: 'permission.monitor.record.edit', parentCode: 'monitor.record' },
+  { code: 'monitor.record.delete', labelKey: 'permission.monitor.record.delete', parentCode: 'monitor.record' },
+  { code: 'monitor.datasource.create', labelKey: 'permission.monitor.datasource.create', parentCode: 'monitor.datasource' },
+  { code: 'monitor.datasource.edit', labelKey: 'permission.monitor.datasource.edit', parentCode: 'monitor.datasource' },
+  { code: 'monitor.datasource.delete', labelKey: 'permission.monitor.datasource.delete', parentCode: 'monitor.datasource' },
+  { code: 'monitor.datasource.test', labelKey: 'permission.monitor.datasource.test', parentCode: 'monitor.datasource' },
+  { code: 'job.template.create', labelKey: 'permission.job.template.create', parentCode: 'job.template' },
+  { code: 'job.template.edit', labelKey: 'permission.job.template.edit', parentCode: 'job.template' },
+  { code: 'job.template.delete', labelKey: 'permission.job.template.delete', parentCode: 'job.template' },
+  { code: 'job.template.run', labelKey: 'permission.job.template.run', parentCode: 'job.template' },
+  { code: 'job.execution.cancel', labelKey: 'permission.job.execution.cancel', parentCode: 'job.execution' },
+  { code: 'job.project.create', labelKey: 'permission.job.project.create', parentCode: 'job.project' },
+  { code: 'job.project.edit', labelKey: 'permission.job.project.edit', parentCode: 'job.project' },
+  { code: 'job.project.delete', labelKey: 'permission.job.project.delete', parentCode: 'job.project' },
+  { code: 'job.credential.create', labelKey: 'permission.job.credential.create', parentCode: 'job.credential' },
+  { code: 'job.credential.edit', labelKey: 'permission.job.credential.edit', parentCode: 'job.credential' },
+  { code: 'job.credential.delete', labelKey: 'permission.job.credential.delete', parentCode: 'job.credential' },
+  { code: 'job.runner.create', labelKey: 'permission.job.runner.create', parentCode: 'job.runner' },
+  { code: 'job.runner.edit', labelKey: 'permission.job.runner.edit', parentCode: 'job.runner' },
+  { code: 'job.runner.delete', labelKey: 'permission.job.runner.delete', parentCode: 'job.runner' },
+  { code: 'job.runner.token', labelKey: 'permission.job.runner.token', parentCode: 'job.runner' },
+  { code: 'job.adhoc.run', labelKey: 'permission.job.adhoc.run', parentCode: 'job.adhoc' },
+  { code: 'job.script.create', labelKey: 'permission.job.script.create', parentCode: 'job.script' },
+  { code: 'job.script.edit', labelKey: 'permission.job.script.edit', parentCode: 'job.script' },
+  { code: 'job.script.delete', labelKey: 'permission.job.script.delete', parentCode: 'job.script' },
+  { code: 'job.schedule.create', labelKey: 'permission.job.schedule.create', parentCode: 'job.schedule' },
+  { code: 'job.schedule.edit', labelKey: 'permission.job.schedule.edit', parentCode: 'job.schedule' },
+  { code: 'job.schedule.delete', labelKey: 'permission.job.schedule.delete', parentCode: 'job.schedule' },
+  { code: 'job.trigger.create', labelKey: 'permission.job.trigger.create', parentCode: 'job.trigger' },
+  { code: 'job.trigger.edit', labelKey: 'permission.job.trigger.edit', parentCode: 'job.trigger' },
+  { code: 'job.trigger.delete', labelKey: 'permission.job.trigger.delete', parentCode: 'job.trigger' },
+  { code: 'job.trigger.token', labelKey: 'permission.job.trigger.token', parentCode: 'job.trigger' },
+  { code: 'job.policy.rule', labelKey: 'permission.job.policy.rule', parentCode: 'job.policy' },
+  { code: 'job.policy.edit', labelKey: 'permission.job.policy.edit', parentCode: 'job.policy' },
+  { code: 'k8s.cluster.create', labelKey: 'permission.k8s.cluster.create', parentCode: 'k8s.cluster' },
+  { code: 'k8s.cluster.edit', labelKey: 'permission.k8s.cluster.edit', parentCode: 'k8s.cluster' },
+  { code: 'k8s.cluster.delete', labelKey: 'permission.k8s.cluster.delete', parentCode: 'k8s.cluster' },
+  { code: 'k8s.cluster.agent', labelKey: 'permission.k8s.cluster.agent', parentCode: 'k8s.cluster' },
+  { code: 'k8s.cluster.node_schedule', labelKey: 'permission.k8s.cluster.node_schedule', parentCode: 'k8s.cluster' },
+  { code: 'k8s.cluster.node_drain', labelKey: 'permission.k8s.cluster.node_drain', parentCode: 'k8s.cluster' },
+  { code: 'k8s.cluster.node_edit', labelKey: 'permission.k8s.cluster.node_edit', parentCode: 'k8s.cluster' },
+  { code: 'k8s.cluster.namespace_create', labelKey: 'permission.k8s.cluster.namespace_create', parentCode: 'k8s.cluster' },
+  { code: 'k8s.cluster.namespace_edit', labelKey: 'permission.k8s.cluster.namespace_edit', parentCode: 'k8s.cluster' },
+  { code: 'k8s.cluster.namespace_delete', labelKey: 'permission.k8s.cluster.namespace_delete', parentCode: 'k8s.cluster' },
+  { code: 'k8s.workload.create', labelKey: 'permission.k8s.workload.create', parentCode: 'k8s.workload' },
+  { code: 'k8s.workload.edit', labelKey: 'permission.k8s.workload.edit', parentCode: 'k8s.workload' },
+  { code: 'k8s.workload.delete', labelKey: 'permission.k8s.workload.delete', parentCode: 'k8s.workload' },
+  { code: 'k8s.workload.scale', labelKey: 'permission.k8s.workload.scale', parentCode: 'k8s.workload' },
+  { code: 'k8s.workload.restart', labelKey: 'permission.k8s.workload.restart', parentCode: 'k8s.workload' },
+  { code: 'k8s.workload.rollback', labelKey: 'permission.k8s.workload.rollback', parentCode: 'k8s.workload' },
+  { code: 'k8s.workload.log', labelKey: 'permission.k8s.workload.log', parentCode: 'k8s.workload' },
+  { code: 'k8s.workload.exec', labelKey: 'permission.k8s.workload.exec', parentCode: 'k8s.workload' },
+  { code: 'k8s.workload.debug', labelKey: 'permission.k8s.workload.debug', parentCode: 'k8s.workload' },
+  { code: 'k8s.workload.file', labelKey: 'permission.k8s.workload.file', parentCode: 'k8s.workload' },
+  { code: 'k8s.change.cancel', labelKey: 'permission.k8s.change.cancel', parentCode: 'k8s.change' },
+  { code: 'k8s.change.bypass', labelKey: 'permission.k8s.change.bypass', parentCode: 'k8s.change' },
+  { code: 'k8s.audit.replay', labelKey: 'permission.k8s.audit.replay', parentCode: 'k8s.audit' },
+  { code: 'k8s.inspection.run', labelKey: 'permission.k8s.inspection.run', parentCode: 'k8s.inspection' },
+  { code: 'k8s.kubeconfig.issue', labelKey: 'permission.k8s.kubeconfig.issue', parentCode: 'k8s.kubeconfig' },
+  { code: 'k8s.config.create', labelKey: 'permission.k8s.config.create', parentCode: 'k8s.config' },
+  { code: 'k8s.config.edit', labelKey: 'permission.k8s.config.edit', parentCode: 'k8s.config' },
+  { code: 'k8s.config.delete', labelKey: 'permission.k8s.config.delete', parentCode: 'k8s.config' },
+  { code: 'k8s.config.secret_reveal', labelKey: 'permission.k8s.config.secret_reveal', parentCode: 'k8s.config' },
+  { code: 'k8s.resource.create', labelKey: 'permission.k8s.resource.create', parentCode: 'k8s.resource' },
+  { code: 'k8s.resource.edit', labelKey: 'permission.k8s.resource.edit', parentCode: 'k8s.resource' },
+  { code: 'k8s.resource.delete', labelKey: 'permission.k8s.resource.delete', parentCode: 'k8s.resource' },
+  { code: 'k8s.app.repo', labelKey: 'permission.k8s.app.repo', parentCode: 'k8s.app' },
+  { code: 'k8s.app.install', labelKey: 'permission.k8s.app.install', parentCode: 'k8s.app' },
+  { code: 'k8s.app.upgrade', labelKey: 'permission.k8s.app.upgrade', parentCode: 'k8s.app' },
+  { code: 'k8s.app.uninstall', labelKey: 'permission.k8s.app.uninstall', parentCode: 'k8s.app' },
 ];
 
 /** 全量合法权限码集合（菜单码 + 元素码，保存授权时过滤勾选值） */

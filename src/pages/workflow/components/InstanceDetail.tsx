@@ -44,6 +44,7 @@ import {
   walkNodes,
 } from '@/components/FlowDesigner';
 import { UserSelect } from '@/components/UserSelect';
+import { fetchWorkflowUsers } from '@/components/UserSelect/sources';
 import { usePermissions } from '@/services/system/permissions';
 import {
   addSignTask,
@@ -67,10 +68,10 @@ import type {
   WorkflowHistory,
   WorkflowTaskAssignee,
 } from '@/services/workflow/typings';
+import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
 import { useEnumText, useFormRules, useSubmitter, useT } from '@/utils/i18n';
 import {
   ASSIGNEE_STATUS_META,
-  fetchWorkflowUsers,
   HISTORY_ACTION_COLOR,
   INSTANCE_STATUS_META,
 } from './meta';
@@ -79,24 +80,9 @@ const COMMENT_MAX = 1000;
 const REASSIGN_MAX = 20;
 /** 一次加签的人数上限（与后端校验一致） */
 const ADD_SIGN_MAX = 10;
-const TIME_FORMAT = 'YYYY-MM-DD HH:mm:ss';
+const TIME_FORMAT = DATE_TIME_SECONDS_FORMAT;
 
 const useStyles = createStyles(({ token, css }) => ({
-  section: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin: 20px 0 12px;
-    color: ${token.colorText};
-    font-weight: 600;
-    &::before {
-      width: 3px;
-      height: 14px;
-      background: ${token.colorPrimary};
-      border-radius: 2px;
-      content: '';
-    }
-  `,
   /** 整页容器：给底部固定的操作栏让出位置 */
   page: css`
     margin-bottom: 64px;
@@ -169,14 +155,6 @@ export interface InstanceBusiness {
    */
   main?: React.ReactNode;
 }
-
-/** 分节标题（其他详情页与表单抽屉复用，保持同一样式） */
-export const SectionTitle: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const { styles } = useStyles();
-  return <div className={styles.section}>{children}</div>;
-};
 
 /** 需要填写说明的动作 */
 type ActionKind =

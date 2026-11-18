@@ -13,6 +13,7 @@ import {
   theme,
 } from 'antd';
 import React, { useEffect, useMemo, useState } from 'react';
+import { K8sRoleScope } from '@/pages/k8s/components/RoleScope';
 import type { MenuPermissionCode } from '@/services/system/permissions';
 import {
   ELEMENT_PERMISSION_CODES,
@@ -477,6 +478,12 @@ const RolePermission: React.FC = () => {
           />
         </>
       ),
+    },
+    {
+      // 容器平台数据范围：与菜单 / 接口授权相互独立，单独保存
+      key: 'k8sScope',
+      label: t('pages.k8s.roleScope.tab'),
+      children: <K8sRoleScope roleId={roleId} readOnly={readOnly} />,
     },
   ];
 

@@ -292,12 +292,18 @@ const AssistantHeader: React.FC<{
  * 智能助手整页与全局弹窗共用；自身 flex 填满父级容器，父级需为定高 flex 列。
  * 助手以当前登录用户身份经后端工具调用操作系统；写操作先在此确认。
  */
-const ChatPanel: React.FC = () => {
+const ChatPanel: React.FC<{
+  /** 外部交来的问题：填进输入框（不自动发送）；seq 变化即重新填入 */
+  draft?: { text: string; seq: number };
+}> = ({ draft }) => {
   const { styles } = useStyles();
   const t = useT();
   const { modal } = App.useApp();
   const [inputValue, setInputValue] = useState('');
   const chat = useAssistantChat();
+  useEffect(() => {
+    if (draft) setInputValue(draft.text);
+  }, [draft]);
   const { initialState } = useModel('@@initialState');
   const roleConfig = useMemo(
     () => buildRoleConfig(initialState?.currentUser?.avatar),

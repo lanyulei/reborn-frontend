@@ -24,6 +24,7 @@ import {
 import { App, AutoComplete, Col, Form, Input, Modal, Typography } from 'antd';
 import type React from 'react';
 import { useState } from 'react';
+import { FULL, HALF } from '@/constants/layout';
 import { type Translate, useFormRules, useOptions, useT } from '@/utils/i18n';
 import {
   DEFAULT_TYPES,
@@ -37,9 +38,6 @@ import {
   PLACEHOLDER_TYPES,
   TEXTUAL_TYPES,
 } from './fieldTypes';
-
-const HALF = { span: 12 };
-const FULL = { span: 24 };
 
 export interface FieldFormItemsProps {
   /** 开放的字段类型（类型下拉的顺序）；须为稳定引用 */

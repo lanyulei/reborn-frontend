@@ -15,6 +15,8 @@ export default {
     '/api/': {
       target: 'http://127.0.0.1:8010',
       changeOrigin: true,
+      // 容器平台的 Web 终端走 WebSocket（/api/v1/k8s/exec）
+      ws: true,
     },
   },
   /**

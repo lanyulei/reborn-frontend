@@ -15,7 +15,6 @@ import {
 } from '@/services/cmdb/scope';
 import { usePermissions } from '@/services/system/permissions';
 import { useSubmitter, useT } from '@/utils/i18n';
-import { useCmdbStyles } from '../components/styles';
 
 /** 与 proto 一致：每项 1–32 字符，≤100 项 */
 const ENV_MAX_LEN = 32;
@@ -23,7 +22,6 @@ const ENV_MAX_ITEMS = 100;
 
 export const ScopesTab: React.FC = () => {
   const t = useT();
-  const { styles } = useCmdbStyles();
   const { message } = App.useApp();
   const has = usePermissions();
   const submitter = useSubmitter();
@@ -83,23 +81,20 @@ export const ScopesTab: React.FC = () => {
         title={t('pages.cmdb.scope.notice')}
         style={{ marginBottom: 16 }}
       />
-      {/* 仅补表格最外层边框（单元格无线） */}
-      <div className={styles.tableWrap}>
-        <ProTable<RoleScope>
-          cardBordered
-          rowKey="roleId"
-          actionRef={actionRef}
-          search={false}
-          options={false}
-          pagination={false}
-          columns={columns}
-          scroll={{ x: 'max-content' }}
-          request={async () => {
-            const result = await listRoleScopes();
-            return { data: result.items, success: true };
-          }}
-        />
-      </div>
+      <ProTable<RoleScope>
+        cardBordered
+        rowKey="roleId"
+        actionRef={actionRef}
+        search={false}
+        options={false}
+        pagination={false}
+        columns={columns}
+        scroll={{ x: 'max-content' }}
+        request={async () => {
+          const result = await listRoleScopes();
+          return { data: result.items, success: true };
+        }}
+      />
       {editRow && (
         <ModalForm<{ modelCodes: string[]; envs: string[] }>
           key={`scope-${editRow.roleId}`}

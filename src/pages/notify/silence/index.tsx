@@ -17,6 +17,7 @@ import {
   NOTIFY_EVENT_PATTERN_REGEX,
   NOTIFY_SEVERITY_META,
 } from '@/constants';
+import { HALF } from '@/constants/layout';
 import { useBizScope } from '@/services/notify/hooks';
 import type { SilenceSpecPayload } from '@/services/notify/silence';
 import {
@@ -45,7 +46,6 @@ import {
 const SEVERITY_ORDER = [1, 2, 3, 4] as const;
 
 /** 两列栅格：半行 */
-const HALF = { span: 12 };
 
 /** 静默表单值（时间窗开关在提交时折叠为可选 time_window；biz 仅创建） */
 interface SilenceFormValues {

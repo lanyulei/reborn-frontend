@@ -6,9 +6,9 @@ import { ModalForm, ProFormTextArea } from '@ant-design/pro-components';
 import { App, Form, Typography } from 'antd';
 import type React from 'react';
 import { UserSelect } from '@/components/UserSelect';
+import { fetchWorkflowUsers } from '@/components/UserSelect/sources';
 import { handoverTasks } from '@/services/workflow/runtime';
 import { useFormRules, useT } from '@/utils/i18n';
-import { fetchWorkflowUsers } from '../components/meta';
 
 const REASON_MAX = 1000;
 /** 循环上限：防止异常情况下无休止地请求（100 批 = 1 万个实例） */

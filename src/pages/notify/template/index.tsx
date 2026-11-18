@@ -11,6 +11,7 @@ import { App, Tag } from 'antd';
 import React, { useRef, useState } from 'react';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
 import { ENABLED_META, NOTIFY_TEMPLATE_CHANNEL_META } from '@/constants';
+import { FULL, HALF } from '@/constants/layout';
 import { useBizScope } from '@/services/notify/hooks';
 import {
   createTemplate,
@@ -52,8 +53,6 @@ const FORMAT_OPTIONS = Object.entries(FORMAT_LABELS).map(([value, label]) => ({
 }));
 
 /** 两列栅格：半行 / 整行 */
-const HALF = { span: 12 };
-const FULL = { span: 24 };
 
 /** 模板表单值（扁平结构，与更新接口的可选字段一一对应；biz 仅创建） */
 interface TemplateFormValues {

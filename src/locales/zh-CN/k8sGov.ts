@@ -1,0 +1,145 @@
+/** 容器平台 · 治理（限时 kubeconfig、巡检、终端录制回放、调试容器、文件传输、告警规则模板） */
+export default {
+  'menu.k8s.inspection': '巡检',
+  'menu.k8s.kubeconfig': '访问凭证',
+  'permission.k8s.workload.debug': '调试容器',
+  'permission.k8s.workload.file': '文件传输',
+  'permission.k8s.audit.replay': '回放终端录制',
+  'permission.k8s.inspection.run': '立即巡检',
+  'permission.k8s.kubeconfig.issue': '签发 kubeconfig',
+  'pages.k8s.action.debug': '调试容器',
+  'pages.k8s.action.debug.title': '在 {name} 中启动调试容器？',
+  'pages.k8s.action.debug.content':
+    '将在该 Pod 中添加一个临时容器并进入它，用于排查没有 shell 的容器。临时容器无法单独删除，会保留到 Pod 重建。',
+  'pages.k8s.action.file': '文件传输',
+  'pages.k8s.exec.debug': '调试',
+  'pages.k8s.file.title': '文件传输 · {pod}',
+  'pages.k8s.file.hint':
+    '容器内需有 tar；单次上限 100 MB，传输记入审计（不记内容）。',
+  'pages.k8s.file.download': '下载',
+  'pages.k8s.file.download.path': '容器内的文件或目录',
+  'pages.k8s.file.download.help': '填写绝对路径；目录会打包为 tar 下载',
+  'pages.k8s.file.downloaded': '已下载（{size}）',
+  'pages.k8s.file.upload': '上传',
+  'pages.k8s.file.upload.dir': '上传到目录',
+  'pages.k8s.file.upload.choose': '选择文件',
+  'pages.k8s.file.uploaded': '已上传到 {path}',
+  'pages.k8s.file.path.invalid':
+    '请输入规范的绝对路径（不含 . 、.. 与重复的斜杠）',
+  'pages.k8s.file.tooLarge': '文件超过 100 MB 的传输上限',
+  'pages.k8s.error.fileTooLarge': '文件超过传输大小上限',
+  'pages.k8s.error.approvalRequired': '该集群的变更需审批',
+  'pages.k8s.error.kubeTokenLimit':
+    '未失效的 kubeconfig 数量已达上限，请先吊销不再使用的',
+  'pages.k8s.error.inspectionBusy': '该集群已有待执行或执行中的巡检',
+  'pages.k8s.record.replay': '回放',
+  'pages.k8s.record.title': '终端回放 · {pod}（{user}）',
+  'pages.k8s.record.hint':
+    '只录制终端输出，不录制键盘输入；空闲间隔已压缩，本次回放已记入审计。',
+  'pages.k8s.record.truncated':
+    '输出超过录制上限，回放不完整；只录制输出，不录制键盘输入。',
+  'pages.k8s.record.failed': '无法读取录制内容',
+  'pages.k8s.audit.action.debug': '调试容器',
+  'pages.k8s.audit.action.file_upload': '上传文件',
+  'pages.k8s.audit.action.file_download': '下载文件',
+  'pages.k8s.audit.action.exec_replay': '回放终端录制',
+  'pages.k8s.audit.action.kubeconfig_issue': '签发 kubeconfig',
+  'pages.k8s.audit.action.kubeconfig_revoke': '吊销 kubeconfig',
+  'pages.k8s.audit.action.inspect': '手动巡检',
+  'pages.k8s.kubeconfig.issue': '签发 kubeconfig',
+  'pages.k8s.kubeconfig.hint':
+    '权限与你的平台权限一致；到期、吊销或账号停用后立即失效，写操作记入审计。',
+  'pages.k8s.kubeconfig.ttl': '有效期',
+  'pages.k8s.kubeconfig.ttl.hours': '{n} 小时',
+  'pages.k8s.kubeconfig.ttl.days': '{n} 天',
+  'pages.k8s.kubeconfig.note': '用途备注',
+  'pages.k8s.kubeconfig.once':
+    '内容只显示这一次，请立即保存。有效期至 {time}。',
+  'pages.k8s.kubeconfig.usage':
+    '用法：kubectl --kubeconfig <文件> get pods；不支持 port-forward / proxy，需审批的集群不可变更。',
+  'pages.k8s.kubeconfig.saved': '我已保存',
+  'pages.k8s.kubeconfig.copied': '已复制',
+  'pages.k8s.kubeconfig.copyFailed': '复制失败，请手动选择复制',
+  'pages.k8s.kubeconfig.download': '下载',
+  'pages.k8s.kubeconfig.status': '状态',
+  'pages.k8s.kubeconfig.active': '有效',
+  'pages.k8s.kubeconfig.revoked': '已吊销',
+  'pages.k8s.kubeconfig.expired': '已过期',
+  'pages.k8s.kubeconfig.createTime': '签发时间',
+  'pages.k8s.kubeconfig.expireTime': '过期时间',
+  'pages.k8s.kubeconfig.lastUsed': '最近使用',
+  'pages.k8s.kubeconfig.neverUsed': '从未使用',
+  'pages.k8s.kubeconfig.revoke': '吊销',
+  'pages.k8s.kubeconfig.revoke.title': '吊销这份 kubeconfig？',
+  'pages.k8s.kubeconfig.revoke.content':
+    '吊销后立即失效，正在使用它的 kubectl 会被拒绝，且无法恢复。',
+  'pages.k8s.kubeconfig.revoke.done': '已吊销',
+  'pages.k8s.kubeconfig.activeOnly': '只看有效的',
+  'pages.k8s.kubeconfig.all': '全部用户',
+  'pages.k8s.inspection.run': '立即巡检',
+  'pages.k8s.inspection.run.title': '立即巡检集群 {name}？',
+  'pages.k8s.inspection.run.content':
+    '巡检会分页读取集群的节点、工作负载、Pod 与 TLS 证书，大集群需要几分钟。',
+  'pages.k8s.inspection.run.started': '巡检已开始',
+  'pages.k8s.inspection.running': '巡检进行中',
+  'pages.k8s.inspection.pending': '这次巡检尚未完成，完成后自动显示结果。',
+  'pages.k8s.inspection.failed': '巡检失败',
+  'pages.k8s.inspection.none': '暂无巡检记录',
+  'pages.k8s.inspection.empty':
+    '暂无巡检记录；系统每天自动巡检一次，也可立即巡检。',
+  'pages.k8s.inspection.trigger.1': '定时',
+  'pages.k8s.inspection.trigger.2': '手动',
+  'pages.k8s.inspection.status.1': '待执行',
+  'pages.k8s.inspection.status.2': '执行中',
+  'pages.k8s.inspection.status.3': '完成',
+  'pages.k8s.inspection.status.4': '失败',
+  'pages.k8s.inspection.score': '得分',
+  'pages.k8s.inspection.score.n': '{n} 分',
+  'pages.k8s.inspection.severity.critical': '严重',
+  'pages.k8s.inspection.severity.warning': '警告',
+  'pages.k8s.inspection.severity.info': '提示',
+  'pages.k8s.inspection.objects': '检查范围',
+  'pages.k8s.inspection.objects.detail':
+    '{nodes} 个节点 · {workloads} 个工作负载 · {pods} 个 Pod · {certs} 张证书',
+  'pages.k8s.inspection.partial':
+    '集群对象数超过了巡检的遍历上限，结果不完整。',
+  'pages.k8s.inspection.scoped':
+    '上方的统计是整个集群的口径；下方只列出你有权限的命名空间与集群级的发现项。',
+  'pages.k8s.inspection.findings': '发现项',
+  'pages.k8s.inspection.clean': '没有发现问题',
+  'pages.k8s.inspection.message': '说明',
+  'pages.k8s.inspection.more':
+    '显示 {shown} 条，共 {total} 条（每个检查项至多保留 500 条，或其余不在你的数据范围内）',
+  'pages.k8s.inspection.check.no_requests': '未设置资源请求',
+  'pages.k8s.inspection.check.no_requests.desc':
+    '容器没有设置 CPU 或内存请求：调度器无法为它预留资源，节点资源紧张时最先被驱逐。',
+  'pages.k8s.inspection.check.no_limits': '未设置内存限制',
+  'pages.k8s.inspection.check.no_limits.desc':
+    '容器没有内存限制：内存泄漏时会挤占同节点上的其他工作负载。',
+  'pages.k8s.inspection.check.image_latest': '镜像使用 latest 或未指定标签',
+  'pages.k8s.inspection.check.image_latest.desc':
+    '镜像标签不固定：重建 Pod 时可能拉到不同的版本，也无法准确回滚。',
+  'pages.k8s.inspection.check.single_replica': '只有一个副本',
+  'pages.k8s.inspection.check.single_replica.desc':
+    'Deployment / StatefulSet 只有一个副本：节点故障或滚动发布时服务会中断。',
+  'pages.k8s.inspection.check.no_probe': '缺少探针',
+  'pages.k8s.inspection.check.no_probe.desc':
+    '容器既没有就绪探针也没有存活探针：未准备好就会接到流量，卡死后也不会被重启。',
+  'pages.k8s.inspection.check.cert_expiring': 'TLS 证书即将到期或已过期',
+  'pages.k8s.inspection.check.cert_expiring.desc':
+    '类型为 kubernetes.io/tls 的 Secret 中的证书已过期，或将在 30 天内到期。',
+  'pages.k8s.inspection.check.pod_restarts': 'Pod 频繁重启',
+  'pages.k8s.inspection.check.pod_restarts.desc': '容器累计重启 10 次及以上。',
+  'pages.k8s.inspection.check.pvc_pending': 'PVC 长时间 Pending',
+  'pages.k8s.inspection.check.pvc_pending.desc':
+    'PVC 处于 Pending 超过 1 小时：通常是没有匹配的存储类或容量不足。',
+  'pages.k8s.inspection.check.node_unhealthy': '节点不健康',
+  'pages.k8s.inspection.check.node_unhealthy.desc':
+    '节点 NotReady，或存在内存 / 磁盘 / PID 压力。',
+  'pages.k8s.inspection.check.version_skew': '节点版本偏差',
+  'pages.k8s.inspection.check.version_skew.desc':
+    '节点的 kubelet 版本比控制面落后 2 个及以上次版本，或比控制面更新。',
+  'pages.k8s.ruleTemplate.use': '使用 K8s 告警规则模板',
+  'pages.k8s.ruleTemplate.loaded': '已填入 {n} 条 K8s 告警规则，可在预览里取舍',
+  'pages.k8s.alertLink': '在容器平台查看对应资源',
+};

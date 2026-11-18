@@ -26,6 +26,7 @@ import {
 import dayjs, { type Dayjs } from 'dayjs';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ShiftAlertCounts } from '@/pages/monitor/components/ShiftAlertCounts';
 import { listGroups } from '@/services/oncall/group';
 import {
   getCurrentDuty,
@@ -562,6 +563,12 @@ const OncallCalendar: React.FC = () => {
         />
       )}
 
+      {/* 当班期间告警数：由监控告警域提供，没有告警事件菜单的用户不显示、不请求 */}
+      <ShiftAlertCounts
+        scheduleId={scheduleId}
+        startTime={range.startTime}
+        endTime={range.endTime}
+      />
       {view === 'month' ? (
         <MonthCalendar<OncallShift>
           month={month}

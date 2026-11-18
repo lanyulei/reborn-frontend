@@ -13,6 +13,7 @@ import {
 import { listEvents } from '@/services/notify/event';
 import { useBizScope } from '@/services/notify/hooks';
 import type { NotifyEvent, NotifyEventStatus } from '@/services/notify/typings';
+import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
 import { useEnumText, useT, useValueEnum } from '@/utils/i18n';
 import { timeRangeColumn, toTableResult } from '@/utils/table';
 import { useBizIdColumn } from '../components/bizScope';
@@ -157,7 +158,9 @@ const EventList: React.FC = () => {
                 key: 'nextPublishTime',
                 label: t('pages.notify.event.detail.nextPublishTime'),
                 children: record.nextPublishTime
-                  ? dayjs(record.nextPublishTime).format('YYYY-MM-DD HH:mm:ss')
+                  ? dayjs(record.nextPublishTime).format(
+                      DATE_TIME_SECONDS_FORMAT,
+                    )
                   : t('common.empty'),
               },
               {

@@ -37,8 +37,9 @@ import type {
   TicketDetail as TicketDetailData,
   TicketFormField,
 } from '@/services/ticket/typings';
+import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
 import { useT } from '@/utils/i18n';
-import { AttachmentList } from './Attachments';
+import { AttachmentList, useUploadingFields } from './Attachments';
 import {
   fileIdsOf,
   formColSpan,
@@ -64,7 +65,7 @@ const sameValue = (field: TicketFormField, a: unknown, b: unknown) => {
   }
   return JSON.stringify(a) === JSON.stringify(b);
 };
-const TIME_FORMAT = 'YYYY-MM-DD HH:mm:ss';
+const TIME_FORMAT = DATE_TIME_SECONDS_FORMAT;
 
 export const TicketDetail: React.FC<{
   ticketId: string;
@@ -83,9 +84,12 @@ export const TicketDetail: React.FC<{
   /** 是否正在修改表单（当前处理人） */
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  /** 修改表单时是否有附件字段仍在上传；uploadingFields 记着是哪些字段 */
-  const [uploading, setUploading] = useState(false);
-  const uploadingFields = useRef(new Set<string>());
+  /** 修改表单时是否有附件字段仍在上传 */
+  const {
+    uploading,
+    onChange: onUploadingChange,
+    reset: resetUploading,
+  } = useUploadingFields();
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [ratingBusy, setRatingBusy] = useState(false);
@@ -150,8 +154,7 @@ export const TicketDetail: React.FC<{
   const visible = fields.filter((f) => !hidden.has(f.code));
 
   const startEditing = (on: boolean) => {
-    uploadingFields.current.clear();
-    setUploading(false);
+    resetUploading();
     setEditing(on);
   };
 
@@ -363,11 +366,7 @@ export const TicketDetail: React.FC<{
                 namePath={DATA_PATH}
                 renderers={ticketFieldRenderers(ticket.data, detail.labels, {
                   files: detail.files,
-                  onUploadingChange: (code, busy) => {
-                    if (busy) uploadingFields.current.add(code);
-                    else uploadingFields.current.delete(code);
-                    setUploading(uploadingFields.current.size > 0);
-                  },
+                  onUploadingChange,
                 })}
                 customColSpan={colSpan}
                 // 显示条件的控制字段不一定在可编辑的字段里：用工单现有的取值判断

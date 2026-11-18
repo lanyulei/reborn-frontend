@@ -18,6 +18,7 @@ import {
   NOTIFY_EVENT_PATTERN_REGEX,
   NOTIFY_SEVERITY_META,
 } from '@/constants';
+import { FULL, HALF } from '@/constants/layout';
 import {
   DEFAULT_BIZ_ID,
   useBizScope,
@@ -50,8 +51,6 @@ import {
 const SEVERITY_ORDER = [1, 2, 3, 4] as const;
 
 /** 两列栅格：半行 / 整行 */
-const HALF = { span: 12 };
-const FULL = { span: 24 };
 
 /** 路由表单值（扁平结构；提交时组装为 spec 整组替换语义；biz 仅创建） */
 interface RouteFormValues {

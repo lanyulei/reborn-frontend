@@ -3,7 +3,13 @@ import common from './en-US/common';
 import component from './en-US/component';
 import enumMessages from './en-US/enum';
 import globalHeader from './en-US/globalHeader';
+import job from './en-US/job';
+import k8s from './en-US/k8s';
+import k8sApps from './en-US/k8sApps';
+import k8sChange from './en-US/k8sChange';
+import k8sGov from './en-US/k8sGov';
 import menu from './en-US/menu';
+import monitor from './en-US/monitor';
 import network from './en-US/network';
 import notify from './en-US/notify';
 import oncall from './en-US/oncall';
@@ -33,6 +39,12 @@ export default {
   ...notify,
   ...cmdb,
   ...oncall,
+  ...monitor,
+  ...job,
+  ...k8s,
+  ...k8sApps,
+  ...k8sChange,
+  ...k8sGov,
   ...ticket,
   ...workflow,
 };

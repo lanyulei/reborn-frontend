@@ -2,10 +2,11 @@ import { RobotOutlined } from '@ant-design/icons';
 import { useAccess } from '@umijs/max';
 import { Button, Modal, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ChatPanel from '@/components/ChatPanel';
 import { useT } from '@/utils/i18n';
 import useHeaderActionStyles from '../RightContent/style';
+import { onAskAssistant } from './ask';
 
 const useStyles = createStyles(() => ({
   // 仅弹窗内：会话列表左侧贴边、右侧 16px（整页另有 16px 等距覆盖，互不影响）
@@ -27,6 +28,16 @@ const GlobalChat: React.FC = () => {
   const { styles } = useStyles();
   const { styles: headerStyles } = useHeaderActionStyles();
   const access = useAccess();
+  // 其他页面交来的问题（askAssistant）：打开弹窗并填进输入框；seq 让同一问题可以重复交来
+  const [draft, setDraft] = useState<{ text: string; seq: number }>();
+  useEffect(
+    () =>
+      onAskAssistant((text) => {
+        setDraft((prev) => ({ text, seq: (prev?.seq ?? 0) + 1 }));
+        setOpen(true);
+      }),
+    [],
+  );
 
   // 入口按菜单权限码 assistant 控制（超管直通）；接口侧另有授权中间件兜底。
   if (!access.canAssistant) return null;
@@ -75,7 +86,7 @@ const GlobalChat: React.FC = () => {
           },
         }}
       >
-        <ChatPanel />
+        <ChatPanel draft={draft} />
       </Modal>
     </>
   );

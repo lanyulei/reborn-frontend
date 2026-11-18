@@ -15,9 +15,10 @@ import { App, Col, Form } from 'antd';
 import type React from 'react';
 import { useState } from 'react';
 import { IconPicker } from '@/components/IconPicker';
+import { SectionTitle } from '@/components/SectionTitle';
 import { type UserOption, UserSelect } from '@/components/UserSelect';
-import { SectionTitle } from '@/pages/workflow/components/InstanceDetail';
-import { fetchWorkflowUsers } from '@/pages/workflow/components/meta';
+import { fetchWorkflowUsers } from '@/components/UserSelect/sources';
+import { HALF } from '@/constants/layout';
 import { createTemplate, getTemplate, updateTemplate } from '@/services/ticket';
 import type {
   CiLink,
@@ -46,7 +47,6 @@ const COPY_SUFFIX_RESERVE = 8;
 const SORT_MAX = 9999;
 /** 编号前缀格式（与后端 proto 校验一致） */
 const PREFIX_PATTERN = /^[A-Z]{2,8}$/;
-const HALF = { span: 12 };
 /** 升级通知对象人数上限（与后端 proto 校验一致） */
 const ESCALATE_MAX = 10;
 const CI_LINKS: readonly CiLink[] = [0, 1, 2];

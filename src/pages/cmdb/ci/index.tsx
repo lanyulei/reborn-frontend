@@ -70,6 +70,7 @@ import type {
   CmdbRelationType,
 } from '@/services/cmdb/typings';
 import { usePermissions } from '@/services/system/permissions';
+import { saveBlob } from '@/utils/download';
 import { useEnumText, useT, useValueEnum } from '@/utils/i18n';
 import { toTableResult } from '@/utils/table';
 import { CIForm } from '../components/CIForm';
@@ -227,12 +228,7 @@ const CIListPage: React.FC = () => {
         format,
         withRelations: withRelations || undefined,
       });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `cmdb-${activeModel.code}.${format}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      saveBlob(blob, `cmdb-${activeModel.code}.${format}`);
     } finally {
       setExporting(false);
     }

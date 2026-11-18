@@ -1,0 +1,117 @@
+export default {
+  'pages.monitor.rule.template.action': '從範本建立',
+  'pages.monitor.rule.template.title': '從內建範本建立規則',
+  'pages.monitor.rule.template.import': '匯入',
+  'pages.monitor.rule.template.listFailed': '範本包清單載入失敗',
+  'pages.monitor.rule.template.detailFailed':
+    '範本包內容載入失敗，請換一個範本包或稍後重試',
+  'pages.monitor.rule.template.empty': '暫無內建範本',
+  'pages.monitor.rule.template.noRules': '此範本包沒有規則',
+  'pages.monitor.rule.template.ruleCount': '{count} 條',
+  'pages.monitor.rule.template.column.for': '持續時間',
+  'pages.monitor.rule.template.source': '範本包：{name}（{count} 條規則）',
+  'pages.monitor.rule.template.category.host': '主機',
+  'pages.monitor.rule.template.category.middleware': '中介軟體',
+  'pages.monitor.rule.template.category.database': '資料庫',
+  'pages.monitor.rule.template.category.platform': '本平台自我監控',
+  'pages.monitor.rule.template.category.other': '其他',
+  'pages.monitor.rule.simulate.title': '模擬觸發',
+  'pages.monitor.rule.simulate.close': '關閉',
+  'pages.monitor.rule.simulate.run': '開始模擬',
+  'pages.monitor.rule.simulate.runAndSend': '開始模擬並傳送測試通知',
+  'pages.monitor.rule.simulate.failed': '模擬失敗',
+  'pages.monitor.rule.simulate.noDatasource':
+    '規則的資料來源範圍內沒有可用的資料來源，無法模擬',
+  'pages.monitor.rule.simulate.datasource.hint.all':
+    '規則適用於全部資料來源：任選一個已啟用的資料來源執行查詢',
+  'pages.monitor.rule.simulate.datasource.hint.listed':
+    '只能選規則指定的資料來源',
+  'pages.monitor.rule.simulate.sampleLabels': '範例標籤',
+  'pages.monitor.rule.simulate.sampleLabels.rule':
+    '標籤名須以字母或底線開頭、只含字母數字底線且不重複（至多 128 字元），取值至多 256 字元',
+  'pages.monitor.rule.simulate.sampleValue': '範例取值',
+  'pages.monitor.rule.simulate.sample.hint':
+    '查詢沒有結果時用它合成一個事件；規則的附加標籤會自動合併',
+  'pages.monitor.rule.simulate.dryRun': '試跑',
+  'pages.monitor.rule.simulate.dryRun.on': '只回傳各階段的結果，不傳送任何通知',
+  'pages.monitor.rule.simulate.dryRun.off':
+    '本次模擬會真實傳送一則帶 [TEST] 標記的通知；傳送後自動恢復為試跑',
+  'pages.monitor.rule.simulate.send.confirm.title':
+    '關閉試跑並真實傳送測試通知？',
+  'pages.monitor.rule.simulate.send.confirm.content':
+    '模擬時會向解析出的通知對象真實傳送一則標題帶 [TEST] 的通知，對方會實際收到。訂閱者不會收到，也不會觸發升級與事件動作。',
+  'pages.monitor.rule.simulate.send.confirm.ok': '真實傳送',
+  'pages.monitor.rule.simulate.noRoute':
+    '通知管理裡沒有路由能匹配這條規則的告警事件',
+  'pages.monitor.rule.simulate.noRoute.description':
+    '即使規則觸發，通知也不會被投遞。請到「通知管理 → 路由」為監控告警事件設定路由。',
+  'pages.monitor.rule.simulate.notInEffect':
+    '此刻不在規則的生效時間內：評估引擎現在不會評估這條規則，以下各階段仍照常模擬',
+  'pages.monitor.rule.simulate.synthetic':
+    '查詢沒有回傳結果，以下事件是用範例標籤與範例取值合成的',
+  'pages.monitor.rule.simulate.sent': '測試通知已寫入通知管道',
+  'pages.monitor.rule.simulate.notSent':
+    '沒有傳送測試通知，原因見「傳送測試通知」階段的說明',
+  'pages.monitor.rule.simulate.stages': '處理階段',
+  'pages.monitor.rule.simulate.stage.query': '查詢',
+  'pages.monitor.rule.simulate.stage.effective': '生效時間',
+  'pages.monitor.rule.simulate.stage.relabel': '標籤改寫',
+  'pages.monitor.rule.simulate.stage.ci': '關聯資源與富化',
+  'pages.monitor.rule.simulate.stage.drop': '條件丟棄',
+  'pages.monitor.rule.simulate.stage.scope': '資源範圍',
+  'pages.monitor.rule.simulate.stage.level_inhibit': '級別抑制',
+  'pages.monitor.rule.simulate.stage.inhibit': '規則間抑制與拓撲抑制',
+  'pages.monitor.rule.simulate.stage.mute': '屏蔽',
+  'pages.monitor.rule.simulate.stage.notify': '通知對象與訂閱',
+  'pages.monitor.rule.simulate.stage.send': '傳送測試通知',
+  'pages.monitor.rule.simulate.status.pass': '通過',
+  'pages.monitor.rule.simulate.status.warn': '注意',
+  'pages.monitor.rule.simulate.status.block': '攔截',
+  'pages.monitor.rule.simulate.status.error': '出錯',
+  'pages.monitor.rule.simulate.status.skip': '跳過',
+  'pages.monitor.rule.simulate.queries': '查詢結果',
+  'pages.monitor.rule.simulate.query.index': '查詢',
+  'pages.monitor.rule.simulate.query.series': '序列數',
+  'pages.monitor.rule.simulate.query.truncated': '已截斷',
+  'pages.monitor.rule.simulate.query.duration': '耗時',
+  'pages.monitor.rule.simulate.query.error': '錯誤',
+  'pages.monitor.rule.simulate.events':
+    '事件（顯示 {shown} 個，共 {total} 個）',
+  'pages.monitor.rule.simulate.event.outcome': '去向',
+  'pages.monitor.rule.simulate.event.ci': '關聯資源',
+  'pages.monitor.rule.simulate.event.fingerprint': '指紋',
+  'pages.monitor.rule.simulate.event.labels': '最終標籤',
+  'pages.monitor.rule.simulate.event.sourceLabels':
+    '改寫前的標籤（序列標籤 + 規則附加標籤）',
+  'pages.monitor.rule.simulate.event.legend':
+    '綠色 = 改寫 / 富化新增，橘色 = 取值被改寫，刪除線 = 被移除',
+  'pages.monitor.rule.simulate.event.added': '改寫 / 富化新增',
+  'pages.monitor.rule.simulate.event.changed': '取值被改寫，原值：{from}',
+  'pages.monitor.rule.simulate.event.removed': '被改寫移除',
+  'pages.monitor.rule.simulate.outcome.notify': '會通知',
+  'pages.monitor.rule.simulate.outcome.dropped': '被條件丟棄',
+  'pages.monitor.rule.simulate.outcome.out_of_scope': '不在資源範圍內',
+  'pages.monitor.rule.simulate.outcome.level_inhibited': '被更高級別抑制',
+  'pages.monitor.rule.simulate.outcome.inhibited': '被抑制',
+  'pages.monitor.rule.simulate.outcome.muted_event': '被屏蔽（不產生事件）',
+  'pages.monitor.rule.simulate.outcome.muted_notify': '被屏蔽（只屏蔽通知）',
+  'pages.monitor.rule.simulate.outcome.maintenance': '資源維護中（只屏蔽通知）',
+  'pages.monitor.rule.simulate.ciStatus.matched': '已關聯',
+  'pages.monitor.rule.simulate.ciStatus.disabled': '規則關閉了關聯',
+  'pages.monitor.rule.simulate.ciStatus.no_label': '沒有用於關聯的標籤',
+  'pages.monitor.rule.simulate.ciStatus.not_found': '沒有對應的資源',
+  'pages.monitor.rule.simulate.ciStatus.ambiguous': '對應到多個資源',
+  'pages.monitor.rule.simulate.ciStatus.unavailable': '資源索引尚未就緒',
+  'pages.monitor.rule.simulate.recipients': '通知對象',
+  'pages.monitor.rule.simulate.recipients.empty':
+    '事件不帶收件人，交由通知管理的路由與訂閱決定',
+  'pages.monitor.rule.simulate.subscriptions': '命中的訂閱',
+  'pages.monitor.rule.simulate.subscriptions.empty': '沒有命中的訂閱',
+  'pages.monitor.rule.simulate.subscriptions.noRecipients': '沒有額外的接收方',
+  'pages.monitor.rule.simulate.escalation': '升級策略各級',
+  'pages.monitor.rule.simulate.escalation.empty': '規則沒有引用升級策略',
+  'pages.monitor.rule.simulate.escalation.level':
+    '第 {level} 級 · 持續 {minutes} 分鐘後',
+  'pages.monitor.rule.simulate.escalation.noRecipients':
+    '此刻沒有解析出通知對象',
+};

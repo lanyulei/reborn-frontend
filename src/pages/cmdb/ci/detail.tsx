@@ -43,6 +43,8 @@ import {
   useState,
 } from 'react';
 import { IconBadge } from '@/components/IconPicker';
+import { HostLocationSection } from '@/pages/k8s/components/HostLocation';
+import { useCiAlertsTab } from '@/pages/monitor/components/CiAlertsTab';
 import {
   getCI,
   getCIAt,
@@ -431,7 +433,6 @@ const HistoryPanel: React.FC<{
   fields: CmdbField[];
 }> = ({ ciId, version, fields }) => {
   const t = useT();
-  const { styles } = useCmdbStyles();
   const actionEnum = useValueEnum(CMDB_ACTION_META);
   const userNames = useUserNames();
   const sourceText = useSourceText();
@@ -503,8 +504,7 @@ const HistoryPanel: React.FC<{
     },
   ];
   return (
-    // 仅补表格最外层边框（单元格无线）
-    <div className={styles.tableWrap}>
+    <>
       {/* 与用户管理页的表格保持一致：默认密度 + 工具栏（刷新 / 密度 / 列设置）；
           历史列无可筛选项，不渲染查询表单 */}
       <ProTable<CmdbHistory>
@@ -592,7 +592,7 @@ const HistoryPanel: React.FC<{
           </>
         )}
       </Drawer>
-    </div>
+    </>
   );
 };
 
@@ -618,6 +618,8 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
   // 最近一次 load 的序号：只采纳最新一次的结果
   const loadSeq = useRef(0);
   const [editOpen, setEditOpen] = useState(false);
+  // 「告警」页签由监控告警域提供：没有告警事件菜单的用户为空数组（不显示、不请求）
+  const alertTabs = useCiAlertsTab(ci);
 
   const load = useCallback(async () => {
     const seq = ++loadSeq.current;
@@ -994,6 +996,7 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
                     )}
                   </Fragment>
                 ))}
+                <HostLocationSection attrs={ci.attrs} />
               </Card>
             ),
           },
@@ -1055,6 +1058,7 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
               <HistoryPanel ciId={ci.id} version={ci.version} fields={fields} />
             ),
           },
+          ...alertTabs,
         ]}
       />
       <CIForm
