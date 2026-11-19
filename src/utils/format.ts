@@ -1,3 +1,5 @@
+import dayjs from 'dayjs';
+
 const numberFormatter = new Intl.NumberFormat('en-US');
 
 /**
@@ -26,3 +28,7 @@ export const formatBytes = (size?: string | number): string => {
 
 /** 精确到秒的日期时间展示格式（dayjs） */
 export const DATE_TIME_SECONDS_FORMAT = 'YYYY-MM-DD HH:mm:ss';
+
+/** RFC3339 → 本地「年-月-日 时:分:秒」；空值返回空串 */
+export const formatTime = (value?: string): string =>
+  value ? dayjs(value).format(DATE_TIME_SECONDS_FORMAT) : '';

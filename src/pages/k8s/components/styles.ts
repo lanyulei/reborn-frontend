@@ -1,4 +1,4 @@
-/** 容器平台页面共享样式：等宽文本、代码块、作用域栏、日志与终端面板。 */
+/** 容器平台页面共享样式：等宽文本、代码块、日志与终端面板、左右分栏侧栏。 */
 import { createStyles } from 'antd-style';
 
 /** 日志 / 终端固定深色底（终端输出在深色底上最易读），不取主题 token */
@@ -12,6 +12,72 @@ export const TERMINAL = {
 } as const;
 
 export const useK8sStyles = createStyles(({ token, css }) => ({
+  /** 左右分栏（资源浏览器）：左侧吸顶卡片 + 右侧自适应，同 CMDB 实例页 / 告警规则页 */
+  split: css`
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  `,
+  splitSide: css`
+    position: sticky;
+    top: 72px;
+    flex: none;
+    width: 260px;
+    max-height: calc(100vh - 96px);
+    overflow: auto;
+    background: ${token.colorBgContainer};
+    border: 1px solid color-mix(in srgb, ${token.colorBorder} 25%, ${token.colorBorderSecondary});
+    border-radius: ${token.borderRadiusLG}px;
+  `,
+  splitSideTitle: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 4px;
+    color: ${token.colorText};
+    font-weight: 600;
+  `,
+  /** 标题旁的类型数量 */
+  sideCount: css`
+    margin-inline-start: 8px;
+    color: ${token.colorTextTertiary};
+    font-size: ${token.fontSizeSM}px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  `,
+  splitMain: css`
+    flex: 1;
+    min-width: 0;
+  `,
+  /** 侧栏菜单（inline）：贴住卡片左右各 16px */
+  sideMenu: css`
+    .ant-menu-item {
+      width: calc(100% - 32px);
+      margin-inline: 16px;
+    }
+  `,
+  /** 侧栏菜单项：名称 +（搜索时的组 / 资源名提示）+ CRD 标记 */
+  menuItem: css`
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+  `,
+  menuItemName: css`
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  `,
+  menuItemMeta: css`
+    flex: none;
+    overflow: hidden;
+    color: ${token.colorTextTertiary};
+    font-size: ${token.fontSizeSM}px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  `,
   code: css`
     font-family: ${token.fontFamilyCode};
     font-size: ${token.fontSizeSM}px;
@@ -33,21 +99,6 @@ export const useK8sStyles = createStyles(({ token, css }) => ({
   secondary: css`
     color: ${token.colorTextSecondary};
     font-size: ${token.fontSizeSM}px;
-  `,
-  scopeBar: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px 24px;
-    align-items: center;
-    margin-bottom: 16px;
-    padding: 16px 24px;
-    background: ${token.colorBgContainer};
-    border: 1px solid ${token.colorBorderSecondary};
-    border-radius: ${token.borderRadiusLG}px;
-  `,
-  scopeLabel: css`
-    margin-inline-end: 8px;
-    color: ${token.colorTextSecondary};
   `,
   editor: css`
     overflow: hidden;

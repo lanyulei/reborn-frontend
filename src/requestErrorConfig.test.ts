@@ -1,9 +1,9 @@
-import { message } from 'antd';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { errorConfig } from './requestErrorConfig';
 import { clearTokens, setTokens } from './utils/auth';
+import { message } from './utils/feedback';
 
-vi.mock('antd', () => ({
+vi.mock('./utils/feedback', () => ({
   message: {
     error: vi.fn(),
   },

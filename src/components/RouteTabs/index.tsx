@@ -1,7 +1,8 @@
 /**
  * 路由页签：把一个菜单分组下的几个平级页面在页头用 Tab 串起来。各页面的路由与 URL 不变
  * （hideInMenu + parentKeys 指回分组入口），页面用 RouteTabsPage 作外壳（自带 PageContainer 的
- * 外壳用 useRouteTabs）；分组入口路由用 RouteTabsLanding 落到第一个有权限的页签。
+ * 外壳用 useRouteTabs）；分组入口路由用 RouteGroupLanding 落到第一个有权限的页签；
+ * 模块入口路由（/job、/k8s 等）用 AccessLanding 落到第一个有权限的子页。
  * 按 useAccess 过滤无权限的页签；只剩一个可见页签时不显示页签栏。
  */
 import { PageContainer } from '@ant-design/pro-components';
@@ -88,5 +89,29 @@ export const RouteTabsLanding: React.FC<{ tabs: RouteTab[] }> = ({ tabs }) => {
   useEffect(() => {
     history.replace(visible.length ? tabUrl(visible[0]) : '/');
   }, [visible]);
+  return null;
+};
+
+/** 分组入口路由的页面：一个模块的几个分组入口共用一个路由组件，按当前路径取对应的页签组 */
+export const RouteGroupLanding: React.FC<{
+  /** 分组入口路径 → 页签 */
+  groups: Record<string, RouteTab[]>;
+}> = ({ groups }) => {
+  const { pathname } = useLocation();
+  return <RouteTabsLanding tabs={groups[pathname.replace(/\/$/, '')] ?? []} />;
+};
+
+/** 模块入口的落地项：有这个权限就落到这个路径 */
+export type Landing = [accessKey: AccessKey, path: string];
+
+/** 模块入口：按权限跳到第一个可访问的子页；一个都没有时回首页 */
+export const AccessLanding: React.FC<{ landings: Landing[] }> = ({
+  landings,
+}) => {
+  const access = useAccess();
+  useEffect(() => {
+    const target = landings.find(([key]) => access[key]);
+    history.replace(target ? target[1] : '/');
+  }, [access, landings]);
   return null;
 };

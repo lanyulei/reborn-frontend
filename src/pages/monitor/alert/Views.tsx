@@ -24,7 +24,6 @@ import type {
 } from '@/services/monitor/typings';
 import { usePermissions } from '@/services/system/permissions';
 import { useFormRules, useT } from '@/utils/i18n';
-import { useMonitorStyles } from '../components/styles';
 import { ALERT_LIMITS } from './meta';
 
 /** 当前的聚合方式与筛选条件；by 为空 = 没有选聚合方式（不能保存） */
@@ -55,7 +54,6 @@ export const AlertViewBar: React.FC<{
   const has = usePermissions();
   const rules = useFormRules();
   const { message, modal } = App.useApp();
-  const { styles } = useMonitorStyles();
   const [views, setViews] = useState<MonitorAlertView[]>([]);
   // create = 另存为新视图；update = 用当前条件覆盖正在套用的视图
   const [saving, setSaving] = useState<'create' | 'update'>();
@@ -128,7 +126,6 @@ export const AlertViewBar: React.FC<{
 
   return (
     <>
-      <span className={styles.hint}>{t('pages.monitor.alert.view.title')}</span>
       <Select<string>
         style={{ width: 200 }}
         allowClear

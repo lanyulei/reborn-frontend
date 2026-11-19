@@ -1,5 +1,5 @@
 import type React from 'react';
-import { TabContainer, type TabItem } from '../components/TabContainer';
+import { TabContainer, type TabItem } from '@/components/TabContainer';
 
 /** 投递追踪：排障链路 事件 → 发送任务 → 投递明细 → 死信队列 四页聚合，页间按 ID 下钻 */
 const TRACE_TABS: TabItem[] = [

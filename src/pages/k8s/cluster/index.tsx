@@ -1,13 +1,16 @@
 /**
- * 集群管理：集群（接入 / 连通性 / Agent）│ 节点 │ 命名空间。
- * 集群页签面向集群管理员，不受作用域栏约束；节点与命名空间在当前集群内操作。
+ * 集群列表：集群的接入 / 连通性 / Agent，面向集群管理员，不受作用域栏约束。
+ * 同文件里还有命名空间页的内容（NamespaceList），由 /k8s/namespaces 使用。
  */
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
+import { history, useSearchParams } from '@umijs/max';
 import {
   Alert,
   App,
   Badge,
+  Button,
+  Drawer,
   Flex,
   Form,
   Input,
@@ -508,21 +511,33 @@ const NamespaceCreate: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   return (
     <>
       <CreateButton onClick={() => setOpen(true)}>
-        {t('pages.k8s.namespace.create')}
+        {t('common.action.create')}
       </CreateButton>
-      <Modal
+      <Drawer
         open={open}
-        width={720}
         title={t('pages.k8s.namespace.create')}
         destroyOnHidden
         mask={{ closable: false }}
-        okText={t('pages.k8s.change.preview')}
-        onCancel={() => setOpen(false)}
-        onOk={async () => {
-          const values = await form.validateFields();
-          setManifest(namespaceManifest(values));
-          setOpen(false);
-        }}
+        keyboard={false}
+        size="max(800px, 50vw)"
+        onClose={() => setOpen(false)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setOpen(false)}>
+              {t('common.action.cancel')}
+            </Button>
+            <Button
+              type="primary"
+              onClick={async () => {
+                const values = await form.validateFields();
+                setManifest(namespaceManifest(values));
+                setOpen(false);
+              }}
+            >
+              {t('pages.k8s.change.preview')}
+            </Button>
+          </div>
+        }
       >
         <Form form={form} layout="vertical" preserve={false}>
           <Form.Item
@@ -563,7 +578,7 @@ const NamespaceCreate: React.FC<{ onDone: () => void }> = ({ onDone }) => {
             {field('defaultMemoryLimit', '512Mi')}
           </div>
         </Form>
-      </Modal>
+      </Drawer>
       {manifest && (
         <ManifestModal
           clusterId={scope.clusterId}
@@ -676,33 +691,35 @@ const Namespaces: React.FC = () => {
   );
 };
 
+/** 命名空间页（/k8s/namespaces）的内容：通用资源视图 + 配额用量列 + 创建 / 申请 */
+export const NamespaceList = Namespaces;
+
+/** 集群列表（/k8s/cluster）：接入 / 连通性 / Agent，面向集群管理员，不受作用域约束 */
 const ClusterPage: React.FC = () => {
-  const t = useT();
+  const [params] = useSearchParams();
+  // 旧链接 /k8s/cluster?tab=node|namespace：节点与命名空间已是独立菜单页
+  const legacy = params.get('tab');
+  useEffect(() => {
+    if (legacy !== 'node' && legacy !== 'namespace') return;
+    const next = new URLSearchParams(params);
+    next.delete('tab');
+    const query = next.toString();
+    history.replace(
+      `${legacy === 'node' ? '/k8s/node' : '/k8s/namespaces'}${query ? `?${query}` : ''}`,
+    );
+  }, [legacy, params]);
   const tabs = useMemo(
     () => [
       {
         key: 'cluster',
-        label: t('pages.k8s.cluster.tab.cluster'),
+        label: '',
         scope: 'none' as const,
         render: () => <ClusterList />,
       },
-      {
-        key: 'node',
-        label: t('pages.k8s.cluster.tab.node'),
-        scope: 'cluster' as const,
-        render: () => (
-          <ResourceView gvr={GVRS.node} namespaced={false} creatable={false} />
-        ),
-      },
-      {
-        key: 'namespace',
-        label: t('pages.k8s.cluster.tab.namespace'),
-        scope: 'cluster' as const,
-        render: () => <Namespaces />,
-      },
     ],
-    [t],
+    [],
   );
+  if (legacy === 'node' || legacy === 'namespace') return null;
   return <K8sPage tabs={tabs} />;
 };
 

@@ -1,13 +1,11 @@
 /**
- * 监控告警域请求包装：在 authRequest 之上补两件事——
+ * 监控告警域请求包装（公共内核见 @/services/system/domainRequest）：
  * 1. 查询串里的数组按「重复键」序列化（statuses=1&statuses=2），与后端 repeated 查询参数的绑定方式一致；
  * 2. 错误提示按后端的 MONITOR_* reason 映射成当前语言的文案（后端 message 是英文）；
  *    不认识的 reason 回退到后端 message。
  */
-import type { RequestOptions } from '@@/plugin-request/request';
-import { message } from 'antd';
-import { authRequest, getErrorMessage } from '@/services/system/request';
-import { getAccessToken } from '@/utils/auth';
+import { createDomainRequest } from '@/services/system/domainRequest';
+import { getErrorMessage } from '@/services/system/request';
 import { t } from '@/utils/i18n';
 
 /**
@@ -105,10 +103,7 @@ export const monitorReasonText = (
     : text;
 };
 
-/** 取后端 Kratos Status 的 reason（网络错误等无响应体时为 undefined） */
-export const getErrorReason = (error: unknown): string | undefined =>
-  (error as { response?: { data?: { reason?: string } } } | undefined)?.response
-    ?.data?.reason;
+export { getErrorReason } from '@/services/system/domainRequest';
 
 /** 请求失败的提示文案：MONITOR_* reason 取对应文案，其余沿用后端 message */
 export const getMonitorErrorMessage = (
@@ -132,47 +127,11 @@ export const getMonitorErrorMessage = (
   );
 };
 
-/** 查询参数 → 查询串：数组展开为重复键，undefined / null / 空串跳过 */
-const serializeParams = (params: Record<string, unknown>): string => {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params ?? {})) {
-    for (const item of Array.isArray(value) ? value : [value]) {
-      if (item !== undefined && item !== null && item !== '') {
-        search.append(key, String(item));
-      }
-    }
-  }
-  return search.toString();
-};
-
-interface MonitorRequestOptions extends RequestOptions {
-  /** 静默：失败不弹提示，由调用方自行展示 */
-  silent?: boolean;
-}
-
-export async function monitorRequest<T>(
-  url: string,
-  options: MonitorRequestOptions = {},
-): Promise<T> {
-  const { silent, ...rest } = options;
-  try {
-    return await authRequest<T>(url, {
-      ...rest,
-      paramsSerializer: serializeParams,
-      silent: true,
-    });
-  } catch (error) {
-    const status = (error as { response?: { status?: number } })?.response
-      ?.status;
-    if (silent) throw error;
-    if (status !== 401) {
-      message.error(getMonitorErrorMessage(error));
-    } else if (getAccessToken() !== null) {
-      // 401 走到这里有两种情况：authRequest 已清空令牌并跳转登录（不再提示）；或刷新令牌遇到
-      // 暂时性故障、令牌仍保留——共享请求层此时提示「请求失败，请重试」，这里因恒以 silent 调用
-      // authRequest 而要自己补上同一句
-      message.error(t('app.request.retry'));
-    }
-    throw error;
-  }
-}
+/**
+ * 401 且令牌仍保留（刷新令牌遇到暂时性故障）时补一句「请求失败，请重试」：共享请求层此时会提示，
+ * 这里因恒以 silent 调用 authRequest 而要自己补上（retryHintOn401）。
+ */
+export const monitorRequest = createDomainRequest({
+  errorMessage: getMonitorErrorMessage,
+  retryHintOn401: true,
+});

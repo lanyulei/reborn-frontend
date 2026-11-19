@@ -15,6 +15,13 @@ import {
 import { Alert, App, Button, Col, Form } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
+import {
+  isKept,
+  type KeyValue,
+  KeyValueEditor,
+  recordToKv,
+  validateKeyValues,
+} from '@/components/KeyValueEditor';
 import { FULL, HALF } from '@/constants/layout';
 import {
   createDatasource,
@@ -37,13 +44,6 @@ import type {
 } from '@/services/monitor/typings';
 import { usePermissions } from '@/services/system/permissions';
 import { useFormRules, useOptions, useSubmitter, useT } from '@/utils/i18n';
-import {
-  isKept,
-  type KeyValue,
-  KeyValueEditor,
-  recordToKv,
-  validateKeyValues,
-} from '../components/KeyValueEditor';
 import {
   AUTH_TYPE_META,
   AUTH_TYPE_ORDER,

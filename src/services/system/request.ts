@@ -5,7 +5,7 @@
  */
 import type { RequestOptions } from '@@/plugin-request/request';
 import { request } from '@umijs/max';
-import { message } from 'antd';
+import { message } from '@/utils/feedback';
 import {
   clearTokens,
   getAccessToken,

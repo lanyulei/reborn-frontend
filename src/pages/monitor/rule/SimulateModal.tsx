@@ -21,6 +21,12 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import {
+  type KeyValue,
+  KeyValueEditor,
+  kvToRecord,
+  validateKeyValues,
+} from '@/components/KeyValueEditor';
 import { SectionTitle } from '@/components/SectionTitle';
 import { getMonitorErrorMessage } from '@/services/monitor/request';
 import { simulateRule } from '@/services/monitor/rule';
@@ -34,12 +40,6 @@ import type {
 import { useFormRules, useT } from '@/utils/i18n';
 import { formatValue, labelEntries } from '../components/format';
 import type { DatasourceOptionsState } from '../components/hooks';
-import {
-  type KeyValue,
-  KeyValueEditor,
-  kvToRecord,
-  validateKeyValues,
-} from '../components/KeyValueEditor';
 import {
   ESCALATION_TRIGGER_META,
   LABEL_NAME_REGEX,

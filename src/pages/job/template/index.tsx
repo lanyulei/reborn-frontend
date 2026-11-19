@@ -290,10 +290,7 @@ const TemplateList: React.FC = () => {
         }
         if (access.canJobExecution) {
           actions.push(
-            <Link
-              key="executions"
-              to={`/job/execution?templateId=${record.id}`}
-            >
+            <Link key="executions" to={`/job/history?templateId=${record.id}`}>
               {t('pages.job.template.executions')}
             </Link>,
           );

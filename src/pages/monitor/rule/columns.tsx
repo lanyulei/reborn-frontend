@@ -106,9 +106,9 @@ export const useRuleColumns = ({
       valueType: 'select',
       valueEnum: severityEnum,
       width: 120,
-      // 多档阈值：全部级别都显示
+      // 多档阈值：全部级别都显示（单行排开，不竖着叠）
       render: (_, record) => (
-        <Space size={4} wrap>
+        <Space size={4}>
           {[...(record.spec.queries ?? [])]
             .sort((a, b) => b.severity - a.severity)
             .map((query) => (
@@ -131,7 +131,8 @@ export const useRuleColumns = ({
       },
       render: (_, record) => {
         const count = record.firingCount ?? 0;
-        if (count === 0) return 0;
+        // 0 不吸注意力：置灰弱化；有活跃告警才用链接强调
+        if (count === 0) return <span className={styles.hint}>0</span>;
         return access.canMonitorAlert ? (
           <a
             onClick={() =>

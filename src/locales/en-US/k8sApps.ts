@@ -156,6 +156,43 @@ export default {
   'pages.k8s.form.volume.raw': 'Other type',
   'pages.k8s.form.volume.rawHint':
     'Volume type not supported by the form; kept as is (edit in YAML)',
+  'pages.k8s.form.unset': 'Unset',
+  'pages.k8s.form.section.advanced':
+    'Advanced: lifecycle hooks and security context',
+  'pages.k8s.form.section.initContainers': 'Init containers',
+  'pages.k8s.form.section.claims': 'Volume claim templates',
+  'pages.k8s.form.section.pod': 'Pod settings',
+  'pages.k8s.form.startup': 'Startup probe',
+  'pages.k8s.form.probe.timeout': 'Timeout (s)',
+  'pages.k8s.form.probe.success': 'Success threshold',
+  'pages.k8s.form.probe.failure': 'Failure threshold',
+  'pages.k8s.form.postStart': 'postStart hook',
+  'pages.k8s.form.preStop': 'preStop hook',
+  'pages.k8s.form.hook.none': 'None',
+  'pages.k8s.form.security.privileged': 'Privileged',
+  'pages.k8s.form.security.allowPrivilegeEscalation':
+    'Allow privilege escalation',
+  'pages.k8s.form.security.readOnlyRootFilesystem': 'Read-only root filesystem',
+  'pages.k8s.form.security.runAsNonRoot': 'Run as non-root',
+  'pages.k8s.form.security.runAsUser': 'Run as user ID',
+  'pages.k8s.form.security.runAsGroup': 'Run as group ID',
+  'pages.k8s.form.security.fsGroup': 'fsGroup',
+  'pages.k8s.form.security.capAdd': 'Added capabilities',
+  'pages.k8s.form.security.capDrop': 'Dropped capabilities',
+  'pages.k8s.form.hostPath': 'Path on the node',
+  'pages.k8s.form.hostPath.rule': 'Must be an absolute path',
+  'pages.k8s.form.claims.hint':
+    'Each replica gets its own PVC from the template; it cannot be changed here after creation. Reference it by name in the container mounts.',
+  'pages.k8s.form.claims.storageClass':
+    'Storage class (empty = cluster default)',
+  'pages.k8s.form.gracePeriod': 'Termination grace period (s)',
+  'pages.k8s.form.nodeSelector':
+    'Node selector (schedule only onto nodes with these labels)',
+  'pages.k8s.form.affinity': 'Replica scheduling',
+  'pages.k8s.form.affinity.none': 'None',
+  'pages.k8s.form.affinity.spread': 'Prefer spreading across nodes',
+  'pages.k8s.form.affinity.pack': 'Prefer packing onto one node',
+  'pages.k8s.form.affinity.raw': 'Custom affinity present (edit in YAML)',
   'pages.k8s.nodeMeta.title': 'Labels and taints of node {name}',
   'pages.k8s.nodeMeta.taints': 'Taints',
   'pages.k8s.nodeMeta.taints.hint':

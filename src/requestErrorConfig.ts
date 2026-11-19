@@ -1,8 +1,8 @@
 ﻿import type { RequestOptions } from '@@/plugin-request/request';
 import type { RequestConfig } from '@umijs/max';
 import { getIntl } from '@umijs/max';
-import { message } from 'antd';
 import { getAccessToken } from './utils/auth';
+import { message } from './utils/feedback';
 
 /** 后端错误体：Kratos Status{code, message, details} */
 interface BackendStatus {

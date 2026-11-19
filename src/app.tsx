@@ -31,6 +31,7 @@ import type {
   SystemUser,
 } from '@/services/system/typings';
 import { clearTokens } from '@/utils/auth';
+import { MessageHolder } from '@/utils/feedback';
 import { t } from '@/utils/i18n';
 import defaultSettings from '../config/defaultSettings';
 import Exception403 from './pages/exception/403';
@@ -286,6 +287,16 @@ export const antd: RuntimeAntdConfig = (memo) => {
   });
   return memo;
 };
+
+/** 在 antd 插件的 <App> 之内（本文件的运行时先于插件套用，故在其内层）：挂上请求层用的提示实例 */
+export function innerProvider(container: React.ReactNode) {
+  return (
+    <>
+      <MessageHolder />
+      {container}
+    </>
+  );
+}
 
 export function rootContainer(container: React.ReactNode) {
   return (

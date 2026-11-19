@@ -3,9 +3,14 @@
  * 1. 常见错误码提示本地化文案，其余沿用后端 message（集群返回的原文）；
  * 2. 「缓存建立中」（K8S_CACHE_SYNCING）按退避自动重试，调用方无感。
  */
-import type { RequestOptions } from '@@/plugin-request/request';
-import { message } from 'antd';
+import {
+  type DomainRequestOptions,
+  getErrorMetadata,
+  getErrorReason,
+  getErrorStatus,
+} from '@/services/system/domainRequest';
 import { authRequest, getErrorMessage } from '@/services/system/request';
+import { message } from '@/utils/feedback';
 import { t } from '@/utils/i18n';
 import {
   announceSubmitted,
@@ -39,39 +44,15 @@ const REASON_PREFIX_ID: Record<string, string> = {
   K8S_CLUSTER_UNREACHABLE: 'pages.k8s.error.unreachable',
 };
 
-interface ErrorLike {
-  reason?: string;
-  status?: number;
-  metadata?: Record<string, string>;
-  response?: {
-    status?: number;
-    data?: { reason?: string; metadata?: Record<string, string> };
-  };
-}
-
-/** 取后端 Kratos Status 的 metadata */
-export const getErrorMetadata = (
-  error: unknown,
-): Record<string, string> | undefined => {
-  const err = error as ErrorLike | undefined;
-  return err?.response?.data?.metadata ?? err?.metadata;
-};
-
-/** 取后端 Kratos Status 的 reason（流式请求的错误对象直接带 reason） */
-export const getErrorReason = (error: unknown): string | undefined => {
-  const err = error as ErrorLike | undefined;
-  return err?.response?.data?.reason ?? err?.reason;
-};
+export {
+  getErrorMetadata,
+  getErrorReason,
+  getErrorStatus,
+} from '@/services/system/domainRequest';
 
 /** 写操作已转为变更单（HTTP 428）：不是失败，调用方应收起弹窗而不是展示错误 */
 export const isChangeSubmitted = (error: unknown): boolean =>
   getErrorReason(error) === CHANGE_SUBMITTED;
-
-/** 取 HTTP 状态码 */
-export const getErrorStatus = (error: unknown): number | undefined => {
-  const err = error as ErrorLike | undefined;
-  return err?.response?.status ?? err?.status;
-};
 
 /** 错误 → 展示文案 */
 export const getK8sErrorMessage = (error: unknown): string => {
@@ -99,10 +80,7 @@ const serializeParams = (params: Record<string, unknown>): string => {
   return search.toString();
 };
 
-export interface K8sRequestOptions extends RequestOptions {
-  /** 静默：失败不弹提示，由调用方自行展示 */
-  silent?: boolean;
-}
+export type K8sRequestOptions = DomainRequestOptions;
 
 /** 缓存建立中的重试间隔（毫秒）；用尽后把错误交给调用方 */
 const SYNC_RETRY_MS = [1000, 2000, 3000, 5000, 5000, 8000];

@@ -3,12 +3,12 @@ import { Badge, Tag, Tooltip, Typography } from 'antd';
 import dayjs from 'dayjs';
 import type React from 'react';
 import type { ListColumn, RowState, StateCell } from '@/services/k8s/typings';
-import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
+import { formatTime } from '@/utils/format';
 import { useT } from '@/utils/i18n';
 import { STATE_META } from './meta';
+import { statusLabel, statusOrigin } from './statusText';
 
-export const formatTime = (value?: string): string =>
-  value ? dayjs(value).format(DATE_TIME_SECONDS_FORMAT) : '';
+export { formatTime };
 
 /** 时长的紧凑写法（同 kubectl 的 AGE）：3d2h / 5h12m / 12m / 30s */
 export const formatAge = (from: string | undefined, now = Date.now()) => {
@@ -47,13 +47,17 @@ export const StateBadge: React.FC<{
   reason?: string;
 }> = ({ state, text, reason }) => {
   const t = useT();
-  if (!isRowState(state)) return <>{text || t('common.empty')}</>;
+  if (!isRowState(state)) return <>{statusLabel(text) || t('common.empty')}</>;
   const meta = STATE_META[state];
-  const badge = <Badge status={meta.badge} text={text || t(meta.textId)} />;
-  return reason ? <Tooltip title={reason}>{badge}</Tooltip> : badge;
+  const badge = (
+    <Badge status={meta.badge} text={statusLabel(text) || t(meta.textId)} />
+  );
+  // 悬停：翻译前的原文 + 具体原因
+  const tip = [statusOrigin(text), reason].filter(Boolean).join('：');
+  return tip ? <Tooltip title={tip}>{badge}</Tooltip> : badge;
 };
 
-/** 键值标签组；超过 max 个折叠为 +N（悬停显示全部） */
+/** 键值标签组；超过 max 个折叠为 +N（悬停显示全部）。键与值同色，标签横纵间距 6px */
 export const LabelTags: React.FC<{
   value?: Record<string, string> | null;
   max?: number;
@@ -65,7 +69,7 @@ export const LabelTags: React.FC<{
   const shown = max > 0 ? entries.slice(0, max) : entries;
   const rest = entries.slice(shown.length);
   return (
-    <span>
+    <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
       {shown.map((entry) => (
         <Tag key={entry[0]} style={{ maxWidth: 280 }}>
           <Typography.Text

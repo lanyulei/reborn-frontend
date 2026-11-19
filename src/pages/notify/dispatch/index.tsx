@@ -7,6 +7,7 @@ import { ProTable } from '@ant-design/pro-components';
 import { Link, useAccess, useSearchParams } from '@umijs/max';
 import { Descriptions, Tag, Typography } from 'antd';
 import React, { useRef } from 'react';
+import { JsonView } from '@/components/JsonView';
 import { NOTIFY_DISPATCH_STATUS_META } from '@/constants';
 import { listDispatches } from '@/services/notify/dispatch';
 import type {
@@ -16,7 +17,6 @@ import type {
 import { useT, useValueEnum } from '@/utils/i18n';
 import { timeRangeColumn, toTableResult } from '@/utils/table';
 import { useChannelFilter } from '../components/bizScope';
-import { JsonView } from '../components/JsonView';
 
 /**
  * 通知发送任务：路由命中后生成的发送任务（事件 × 渠道 × 收件人），

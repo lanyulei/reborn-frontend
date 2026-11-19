@@ -31,9 +31,9 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
+import { JsonView } from '@/components/JsonView';
 import { CreateButton } from '@/components/TableActions';
 import { HALF } from '@/constants/layout';
-import { JsonView } from '@/pages/notify/components/JsonView';
 import {
   type CmdbProvider,
   type CmdbRunStatus,

@@ -18,14 +18,13 @@ import {
   Button,
   Drawer,
   Dropdown,
-  Empty,
   Input,
   type MenuProps,
-  Segmented,
   Select,
   Space,
   Spin,
   Tag,
+  theme,
 } from 'antd';
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -36,6 +35,7 @@ import {
   type ListAlertsParams,
   listAlerts,
 } from '@/services/monitor/alert';
+import { getMonitorErrorMessage } from '@/services/monitor/request';
 import type {
   AlertAggregate,
   MonitorAlert,
@@ -104,6 +104,7 @@ interface CardFilter {
 const AlertList: React.FC = () => {
   const t = useT();
   const { styles, cx } = useMonitorStyles();
+  const { token } = theme.useToken();
   const { message } = App.useApp();
   const actionRef = useRef<ActionType>(null);
   const formRef = useRef<ProFormInstance | undefined>(undefined);
@@ -152,12 +153,18 @@ const AlertList: React.FC = () => {
   const [aggItems, setAggItems] = useState<AlertAggregate[]>([]);
   const [aggTotal, setAggTotal] = useState(0);
   const [aggLoading, setAggLoading] = useState(false);
+  /** 展示中的聚合结果对应的 aggKey；与当前 aggKey 不一致（刚切换 / 刚回到页签）时按加载中处理 */
+  const [aggLoadedKey, setAggLoadedKey] = useState<string>();
+  /** 聚合请求失败的提示；失败不能装作「没有活跃告警」 */
+  const [aggError, setAggError] = useState<string>();
   const [cardFilter, setCardFilter] = useState<CardFilter>();
   // 表格最近一次请求用的公共筛选（聚合沿用同一组条件）；tick 变化即重取聚合
   const lastFilter = useRef<AlertFilterParams>({});
   const [tick, setTick] = useState(0);
   // 表格最近一次请求里是否带了聚合接口不支持的条件（关键字 / 我负责的 / 处理状态 / 指定规则 / 指定资源）
   const [aggPartial, setAggPartial] = useState(false);
+  // 表格最近一次请求里是否带了聚合也会套用的筛选（分组 / 数据源 / 级别 / 标签 / 屏蔽 / 认领 / 抑制）
+  const [aggFiltered, setAggFiltered] = useState(false);
   // 表格最近一次请求里表单的标签筛选项数（卡片的标签筛选要占其中一个名额）
   const formLabelCount = useRef(0);
 
@@ -180,25 +187,34 @@ const AlertList: React.FC = () => {
           ? `label:${aggLabel}`
           : undefined
         : aggBy;
+  // 新聚合方式的结果还没回来：不显示空态，避免闪「当前没有活跃告警」
+  const aggStale = aggLoadedKey !== aggKey;
 
   useEffect(() => {
     if (tab !== 'active' || !aggKey) {
       setAggItems([]);
+      setAggLoadedKey(undefined);
       return;
     }
     let cancelled = false;
     setAggLoading(true);
+    setAggError(undefined);
     aggregateAlerts({ ...lastFilter.current, by: aggKey })
       .then((result) => {
         if (cancelled) return;
         setAggItems(result.items ?? []);
         setAggTotal(result.total ?? 0);
       })
-      .catch(() => {
-        if (!cancelled) setAggItems([]);
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setAggItems([]);
+        setAggError(getMonitorErrorMessage(error));
       })
       .finally(() => {
-        if (!cancelled) setAggLoading(false);
+        if (!cancelled) {
+          setAggLoading(false);
+          setAggLoadedKey(aggKey);
+        }
       });
     return () => {
       cancelled = true;
@@ -593,13 +609,25 @@ const AlertList: React.FC = () => {
         />
       )}
       {tab === 'active' && aggKey && (
-        <Spin spinning={aggLoading}>
+        <Spin spinning={aggLoading || aggStale}>
           {aggItems.length === 0 ? (
-            !aggLoading && (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description={t('pages.monitor.alert.agg.empty')}
+            aggError ? (
+              <Alert
+                type="error"
+                showIcon
+                title={t('pages.monitor.alert.agg.error')}
+                description={aggError}
               />
+            ) : (
+              // 没有可聚合的告警：没有筛选时不占位（下方表格自有空态）；有筛选时用一行字说明
+              // 是筛选条件下没有，而不是系统里没有活跃告警
+              !aggLoading &&
+              !aggStale &&
+              aggFiltered && (
+                <div className={styles.hint} style={{ marginBottom: 8 }}>
+                  {t('pages.monitor.alert.agg.emptyFiltered')}
+                </div>
+              )
             )
           ) : (
             <>
@@ -773,12 +801,13 @@ const AlertList: React.FC = () => {
                 gap: 8,
                 alignItems: 'center',
                 flexWrap: 'wrap',
+                /* 工具栏标题容器自带 500 字重 / 16px：恢复默认字体，控件不加粗不加黑 */
+                fontSize: token.fontSize,
+                fontWeight: 400,
               }}
             >
-              <span className={styles.hint}>
-                {t('pages.monitor.alert.agg.title')}
-              </span>
-              <Segmented<AggBy>
+              <Select<AggBy>
+                style={{ width: 110 }}
                 value={aggBy}
                 options={AGG_OPTIONS.map((by) => ({
                   value: by,
@@ -810,33 +839,37 @@ const AlertList: React.FC = () => {
                 getCurrent={() => ({ by: aggKey, filters: lastFilter.current })}
                 onOpenChange={setViewDialog}
               />
+              {/* 标签展示（紧凑 / 完整）也是筛选类操作：与聚合一起放在左侧。
+                  Select 的选项值不支持 boolean，用字符串映射回 compact 状态 */}
+              <Select<string>
+                style={{ width: 100 }}
+                value={compact ? 'compact' : 'full'}
+                options={[
+                  {
+                    value: 'compact',
+                    label: t('pages.monitor.alert.labels.compact'),
+                  },
+                  {
+                    value: 'full',
+                    label: t('pages.monitor.alert.labels.full'),
+                  },
+                ]}
+                onChange={(value) => setCompact(value === 'compact')}
+              />
+              {/* 刷新配置同样放在左侧（历史页签不显示：headerTitle 本就只在活跃页签渲染） */}
+              <Select<number>
+                style={{ width: 150 }}
+                value={refreshS}
+                prefix={<SyncOutlined spin={refreshS > 0} />}
+                options={REFRESH_OPTIONS.map((seconds) => ({
+                  value: seconds,
+                  label: t(`pages.monitor.alert.refresh.${seconds}`),
+                }))}
+                onChange={setRefreshS}
+              />
             </span>
           )
         }
-        toolBarRender={() => [
-          <Segmented<boolean>
-            key="compact"
-            value={compact}
-            options={[
-              { value: true, label: t('pages.monitor.alert.labels.compact') },
-              { value: false, label: t('pages.monitor.alert.labels.full') },
-            ]}
-            onChange={setCompact}
-          />,
-          tab === 'active' && (
-            <Select<number>
-              key="refresh"
-              style={{ width: 150 }}
-              value={refreshS}
-              prefix={<SyncOutlined spin={refreshS > 0} />}
-              options={REFRESH_OPTIONS.map((seconds) => ({
-                value: seconds,
-                label: t(`pages.monitor.alert.refresh.${seconds}`),
-              }))}
-              onChange={setRefreshS}
-            />
-          ),
-        ]}
         request={async (params) => {
           const severities = ((params.severities as string[]) ?? []).map(
             (value) => Number(value) as MonitorSeverity,
@@ -853,6 +886,7 @@ const AlertList: React.FC = () => {
             labels: labels.length ? [...labels] : undefined,
           };
           lastFilter.current = common;
+          setAggFiltered(Object.values(common).some((v) => v !== undefined));
           setTick((n) => n + 1);
 
           const mine = parseBoolParam(params.mine);

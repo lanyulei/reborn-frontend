@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import type React from 'react';
 import { useMemo, useState } from 'react';
 // useSize 目前定义在 CMDB 的图表文件里（工单统计也从那里引用）：挪到公共位置要改 CMDB 的文件，暂保持现状
-import { useSize } from '@/pages/cmdb/components/charts';
+import { useSize } from '@/components/Charts';
 import type { QuerySeries } from '@/services/monitor/typings';
 import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
 import { useT } from '@/utils/i18n';

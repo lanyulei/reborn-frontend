@@ -3,17 +3,17 @@
  * 都是「表单 → 改对象 → 预检（dry-run）→ 对比 → 提交」，与 YAML 编辑走同一条变更路径；
  * 表单没建模的字段原样保留（workloadForm.ts 的 applyNodeMeta / applyQuota）。
  */
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined } from '@ant-design/icons';
 import {
   Alert,
   App,
   Button,
   Col,
   Collapse,
+  Drawer,
   Flex,
   Form,
   Input,
-  Modal,
   Row,
   Select,
   Spin,
@@ -42,9 +42,9 @@ import {
 } from '@/services/k8s/resource';
 import type { GVR, ManifestItem, PreviewResult } from '@/services/k8s/typings';
 import { useT } from '@/utils/i18n';
+import { useKeyValueEditorStyles } from '../forms/shared/KeyValueEditor';
 import { ApprovalNotice } from './approval';
 import { GVRS } from './meta';
-import { KVList } from './WorkloadFormModal';
 import {
   applyNodeMeta,
   applyQuota,
@@ -58,11 +58,104 @@ import {
   type TaintForm,
   taintError,
   toYaml,
+  validLabelKey,
+  validLabelValue,
 } from './workloadForm';
 import { YamlDiff } from './YamlEditor';
 
+type T = ReturnType<typeof useT>;
+
+/** 键值对列表（标签 / 注解）：外观与创建向导里的标签 / 注解编辑一致，逐行校验 */
+const KVList: React.FC<{
+  name: string | (string | number)[];
+  t: T;
+  /** 值按标签值校验（注解不校验） */
+  labelValue?: boolean;
+}> = ({ name, t, labelValue }) => {
+  const { styles } = useKeyValueEditorStyles({ footerJustify: 'flex-end' });
+  return (
+    <Form.List name={name}>
+      {(fields, { add, remove }) => (
+        <>
+          <div className={styles.editor}>
+            {fields.map((field) => (
+              <div
+                key={field.key}
+                className={styles.row}
+                // 校验提示出现时各列顶对齐
+                style={{ alignItems: 'start' }}
+              >
+                <Form.Item
+                  name={[field.name, 'key']}
+                  style={{ marginBottom: 0 }}
+                  rules={[
+                    {
+                      validator: (_, v) =>
+                        validLabelKey(v ?? '')
+                          ? Promise.resolve()
+                          : Promise.reject(
+                              new Error(t('pages.k8s.form.key.rule')),
+                            ),
+                    },
+                  ]}
+                >
+                  <Input
+                    className={styles.input}
+                    placeholder={t('pages.k8s.form.key')}
+                    maxLength={317}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name={[field.name, 'value']}
+                  style={{ marginBottom: 0 }}
+                  rules={
+                    labelValue
+                      ? [
+                          {
+                            validator: (_, v) =>
+                              validLabelValue(v ?? '')
+                                ? Promise.resolve()
+                                : Promise.reject(
+                                    new Error(
+                                      t('pages.k8s.form.labelValue.rule'),
+                                    ),
+                                  ),
+                          },
+                        ]
+                      : undefined
+                  }
+                >
+                  <Input
+                    className={styles.input}
+                    placeholder={t('pages.k8s.form.value')}
+                  />
+                </Form.Item>
+                <Button
+                  aria-label={t('common.action.delete')}
+                  className={styles.deleteButton}
+                  icon={<DeleteOutlined />}
+                  type="text"
+                  onClick={() => remove(field.name)}
+                />
+              </div>
+            ))}
+          </div>
+          <div className={styles.footer}>
+            <Button onClick={() => add({ key: '', value: '' })}>
+              {t('pages.k8s.form.add')}
+            </Button>
+          </div>
+        </>
+      )}
+    </Form.List>
+  );
+};
+
 const QUOTA: GVR = { group: '', version: 'v1', resource: 'resourcequotas' };
 const LIMIT_RANGE: GVR = { group: '', version: 'v1', resource: 'limitranges' };
+
+/** 编辑抽屉的宽度：视口的一半，至少 800px（与 YAML 编辑抽屉一致） */
+const EDIT_DRAWER_SIZE = 'max(800px, 50vw)';
 
 /** 节点：标签与污点 */
 export const NodeMetaModal: React.FC<{
@@ -74,6 +167,9 @@ export const NodeMetaModal: React.FC<{
   const t = useT();
   const { message } = App.useApp();
   const [form] = Form.useForm<{ labels: KV[]; taints: TaintForm[] }>();
+  const { styles: kvStyles } = useKeyValueEditorStyles({
+    footerJustify: 'flex-end',
+  });
   const obj = useRef<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -187,13 +283,14 @@ export const NodeMetaModal: React.FC<{
   };
 
   return (
-    <Modal
+    <Drawer
       open
-      width={960}
+      size={EDIT_DRAWER_SIZE}
+      keyboard={false}
       title={t('pages.k8s.nodeMeta.title', { name: node })}
       destroyOnHidden
       mask={{ closable: false }}
-      onCancel={onClose}
+      onClose={onClose}
       footer={
         <Flex justify="end" gap={8}>
           <Button onClick={onClose}>{t('common.action.cancel')}</Button>
@@ -254,13 +351,8 @@ export const NodeMetaModal: React.FC<{
               title={t('pages.k8s.change.noChange')}
             />
           ))}
-        <div
-          style={{
-            display: preview ? 'none' : undefined,
-            maxHeight: '64vh',
-            overflow: 'auto',
-          }}
-        >
+        {/* 抽屉正文自带滚动：不再限制表单高度 */}
+        <div style={{ display: preview ? 'none' : undefined }}>
           <Form form={form} layout="vertical" disabled={busy}>
             <Form.Item label={t('pages.k8s.detail.labels')}>
               <KVList name="labels" t={t} labelValue />
@@ -272,74 +364,95 @@ export const NodeMetaModal: React.FC<{
               <Form.List name="taints">
                 {(fields, { add, remove }) => (
                   <>
-                    {fields.map((field) => (
-                      <Flex key={field.key} gap={8} align="baseline">
-                        <Form.Item
-                          name={[field.name, 'key']}
-                          style={{ flex: 1, marginBottom: 8 }}
-                          rules={[
-                            {
-                              validator: (_, v) =>
-                                taintError({
-                                  key: v ?? '',
-                                  effect: 'NoSchedule',
-                                }) === 'key'
-                                  ? Promise.reject(
-                                      new Error(t('pages.k8s.form.key.rule')),
-                                    )
-                                  : Promise.resolve(),
-                            },
-                          ]}
+                    <div className={kvStyles.editor}>
+                      {fields.map((field) => (
+                        <div
+                          key={field.key}
+                          className={kvStyles.row}
+                          // 比键值行多一列「效果」；校验提示出现时各列顶对齐
+                          style={{
+                            gridTemplateColumns:
+                              'minmax(0, 1fr) minmax(0, 1fr) 190px 40px',
+                            alignItems: 'start',
+                          }}
                         >
-                          <Input placeholder={t('pages.k8s.form.key')} />
-                        </Form.Item>
-                        <Form.Item
-                          name={[field.name, 'value']}
-                          style={{ flex: 1, marginBottom: 8 }}
-                          rules={[
-                            {
-                              validator: (_, v) =>
-                                taintError({
-                                  key: 'k',
-                                  value: v ?? '',
-                                  effect: 'NoSchedule',
-                                }) === 'value'
-                                  ? Promise.reject(
-                                      new Error(
-                                        t('pages.k8s.form.labelValue.rule'),
-                                      ),
-                                    )
-                                  : Promise.resolve(),
-                            },
-                          ]}
-                        >
-                          <Input placeholder={t('pages.k8s.form.value')} />
-                        </Form.Item>
-                        <Form.Item
-                          name={[field.name, 'effect']}
-                          style={{ marginBottom: 8 }}
-                          rules={[{ required: true, message: '' }]}
-                        >
-                          <Select
-                            style={{ width: 190 }}
-                            options={TAINT_EFFECTS.map((value) => ({ value }))}
+                          <Form.Item
+                            name={[field.name, 'key']}
+                            style={{ marginBottom: 0 }}
+                            rules={[
+                              {
+                                validator: (_, v) =>
+                                  taintError({
+                                    key: v ?? '',
+                                    effect: 'NoSchedule',
+                                  }) === 'key'
+                                    ? Promise.reject(
+                                        new Error(t('pages.k8s.form.key.rule')),
+                                      )
+                                    : Promise.resolve(),
+                              },
+                            ]}
+                          >
+                            <Input
+                              className={kvStyles.input}
+                              placeholder={t('pages.k8s.form.key')}
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name={[field.name, 'value']}
+                            style={{ marginBottom: 0 }}
+                            rules={[
+                              {
+                                validator: (_, v) =>
+                                  taintError({
+                                    key: 'k',
+                                    value: v ?? '',
+                                    effect: 'NoSchedule',
+                                  }) === 'value'
+                                    ? Promise.reject(
+                                        new Error(
+                                          t('pages.k8s.form.labelValue.rule'),
+                                        ),
+                                      )
+                                    : Promise.resolve(),
+                              },
+                            ]}
+                          >
+                            <Input
+                              className={kvStyles.input}
+                              placeholder={t('pages.k8s.form.value')}
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name={[field.name, 'effect']}
+                            style={{ marginBottom: 0 }}
+                            rules={[{ required: true, message: '' }]}
+                          >
+                            <Select
+                              options={TAINT_EFFECTS.map((value) => ({
+                                value,
+                              }))}
+                            />
+                          </Form.Item>
+                          <Button
+                            aria-label={t('common.action.delete')}
+                            className={kvStyles.deleteButton}
+                            icon={<DeleteOutlined />}
+                            type="text"
+                            onClick={() => remove(field.name)}
                           />
-                        </Form.Item>
-                        <MinusCircleOutlined
-                          onClick={() => remove(field.name)}
-                        />
-                      </Flex>
-                    ))}
-                    <Button
-                      type="dashed"
-                      size="small"
-                      icon={<PlusOutlined />}
-                      onClick={() =>
-                        add({ key: '', value: '', effect: 'NoSchedule' })
-                      }
-                    >
-                      {t('pages.k8s.form.add')}
-                    </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className={kvStyles.footer}>
+                      <Button
+                        onClick={() =>
+                          add({ key: '', value: '', effect: 'NoSchedule' })
+                        }
+                      >
+                        {t('pages.k8s.form.add')}
+                      </Button>
+                    </div>
                   </>
                 )}
               </Form.List>
@@ -347,7 +460,7 @@ export const NodeMetaModal: React.FC<{
           </Form>
         </div>
       </Spin>
-    </Modal>
+    </Drawer>
   );
 };
 
@@ -566,13 +679,14 @@ export const NamespaceQuotaModal: React.FC<{
     plan.items.every((item) => item.beforeYaml === item.afterYaml);
 
   return (
-    <Modal
+    <Drawer
       open
-      width={960}
+      size={EDIT_DRAWER_SIZE}
+      keyboard={false}
       title={t('pages.k8s.quota.title', { name: namespace })}
       destroyOnHidden
       mask={{ closable: false }}
-      onCancel={onClose}
+      onClose={onClose}
       footer={
         <Flex justify="end" gap={8}>
           <Button onClick={onClose}>{t('common.action.cancel')}</Button>
@@ -679,6 +793,6 @@ export const NamespaceQuotaModal: React.FC<{
           </Form>
         </div>
       </Spin>
-    </Modal>
+    </Drawer>
   );
 };

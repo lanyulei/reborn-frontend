@@ -14,16 +14,16 @@ import {
 import { Alert, App, Checkbox, Col, Form } from 'antd';
 import type React from 'react';
 import { useMemo, useRef } from 'react';
-import { SectionTitle } from '@/components/SectionTitle';
-import { NOTIFY_SEVERITY_META } from '@/constants';
-import { FULL, HALF } from '@/constants/layout';
 import {
   type KeyValue,
   KeyValueEditor,
   kvToRecord,
   recordToKv,
   validateKeyValues,
-} from '@/pages/monitor/components/KeyValueEditor';
+} from '@/components/KeyValueEditor';
+import { SectionTitle } from '@/components/SectionTitle';
+import { NOTIFY_SEVERITY_META } from '@/constants';
+import { FULL, HALF } from '@/constants/layout';
 import { RuleSelect } from '@/pages/monitor/components/RuleSelect';
 import { createJobTrigger, updateJobTrigger } from '@/services/job/trigger';
 import type {

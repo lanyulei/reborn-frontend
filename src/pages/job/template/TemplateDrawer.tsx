@@ -265,7 +265,9 @@ export const TemplateDrawer: React.FC<{
     >
       {/* ---------- 基本信息 ---------- */}
       <Col span={24}>
-        <SectionTitle>{t('pages.job.template.section.basic')}</SectionTitle>
+        <SectionTitle style={{ margin: '0 0 12px' }}>
+          {t('pages.job.template.section.basic')}
+        </SectionTitle>
       </Col>
       <ProFormText
         name="name"
@@ -301,7 +303,9 @@ export const TemplateDrawer: React.FC<{
 
       {/* ---------- 执行内容 ---------- */}
       <Col span={24}>
-        <SectionTitle>{t('pages.job.template.section.content')}</SectionTitle>
+        <SectionTitle style={{ margin: '0 0 12px' }}>
+          {t('pages.job.template.section.content')}
+        </SectionTitle>
       </Col>
       <ProFormSelect
         name="projectId"
@@ -348,10 +352,14 @@ export const TemplateDrawer: React.FC<{
 
       {/* ---------- 目标主机 ---------- */}
       <Col span={24}>
-        <SectionTitle>{t('pages.job.template.section.target')}</SectionTitle>
+        <SectionTitle style={{ margin: '0 0 12px' }}>
+          {t('pages.job.template.section.target')}
+        </SectionTitle>
       </Col>
       <TargetFields />
-      <Col span={24}>
+      {/* 预览按钮不以 Form.Item 结尾（无 24px 底距）：补齐行距，下方「执行参数」分节标题才有
+          与其他分节一致的间距（grid 的 gutter 只是水平间距，垂直空隙全靠元素外边距叠加） */}
+      <Col span={24} style={{ marginBottom: 24 }}>
         <Button loading={previewing} onClick={() => void runPreview()}>
           {t('pages.job.template.preview')}
         </Button>
@@ -390,7 +398,9 @@ export const TemplateDrawer: React.FC<{
 
       {/* ---------- 执行参数 ---------- */}
       <Col span={24}>
-        <SectionTitle>{t('pages.job.template.section.params')}</SectionTitle>
+        <SectionTitle style={{ margin: '0 0 12px' }}>
+          {t('pages.job.template.section.params')}
+        </SectionTitle>
         <div className={styles.hint} style={{ marginBottom: 12 }}>
           {t('pages.job.template.form.params.hint')}
         </div>
@@ -413,7 +423,9 @@ export const TemplateDrawer: React.FC<{
 
       {/* ---------- 执行选项 ---------- */}
       <Col span={24}>
-        <SectionTitle>{t('pages.job.template.section.options')}</SectionTitle>
+        <SectionTitle style={{ margin: '0 0 12px' }}>
+          {t('pages.job.template.section.options')}
+        </SectionTitle>
       </Col>
       <ProFormDigit
         name="forks"

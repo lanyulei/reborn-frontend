@@ -16,7 +16,6 @@ import {
   Alert,
   App,
   AutoComplete,
-  Button,
   Col,
   Flex,
   Form,
@@ -24,6 +23,8 @@ import {
   Modal,
   Select,
   Tag,
+  Typography,
+  theme,
 } from 'antd';
 import type React from 'react';
 import { useState } from 'react';
@@ -175,6 +176,7 @@ export const TestResult: React.FC<{ result: TestClusterResult }> = ({
   result,
 }) => {
   const t = useT();
+  const { token } = theme.useToken();
   return (
     <Alert
       type={result.ok ? 'success' : 'error'}
@@ -190,10 +192,25 @@ export const TestResult: React.FC<{ result: TestClusterResult }> = ({
       }
       description={
         (result.error || (result.checks?.length ?? 0) > 0) && (
-          <div>
-            {result.error && <div>{result.error}</div>}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: token.marginXS,
+            }}
+          >
+            {result.error && (
+              <div style={{ wordBreak: 'break-word' }}>{result.error}</div>
+            )}
             {(result.checks ?? []).map((check) => (
-              <div key={check.name}>
+              <div
+                key={check.name}
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: token.marginXS,
+                }}
+              >
                 <Tag color={check.ok ? 'success' : 'error'}>
                   {t(
                     check.ok
@@ -201,8 +218,14 @@ export const TestResult: React.FC<{ result: TestClusterResult }> = ({
                       : 'pages.k8s.cluster.test.fail',
                   )}
                 </Tag>
-                {check.name}
-                {check.message ? `：${check.message}` : ''}
+                <span style={{ minWidth: 0, wordBreak: 'break-word' }}>
+                  {check.name}
+                  {check.message && (
+                    <span style={{ color: token.colorTextSecondary }}>
+                      ：{check.message}
+                    </span>
+                  )}
+                </span>
               </div>
             ))}
           </div>
@@ -325,6 +348,11 @@ export const ClusterDrawer: React.FC<{
         return true;
       }}
     >
+      <Col span={24}>
+        <SectionTitle style={{ marginTop: 0 }}>
+          {t('pages.k8s.cluster.section.basic')}
+        </SectionTitle>
+      </Col>
       <ProFormText
         name="name"
         label={t('pages.k8s.cluster.name')}
@@ -342,7 +370,7 @@ export const ClusterDrawer: React.FC<{
         colProps={HALF}
         rules={[rules.max(64)]}
       />
-      <Col span={12}>
+      <Col span={24}>
         <Form.Item
           name="env"
           label={t('pages.k8s.cluster.env')}
@@ -354,17 +382,30 @@ export const ClusterDrawer: React.FC<{
           {/* 可从已有环境里选，也可直接输入新的 */}
           <AutoComplete
             allowClear
+            placeholder={t('pages.k8s.cluster.env.placeholder')}
             options={[
               ...new Set(['prod', 'staging', 'test', 'dev', ...envOptions]),
             ].map((value) => ({ value }))}
           />
         </Form.Item>
       </Col>
+      <ProFormTextArea
+        name="description"
+        label={t('pages.k8s.cluster.description')}
+        colProps={FULL}
+        fieldProps={{ rows: 2, maxLength: 255, showCount: true }}
+      />
+      <Col span={24}>
+        <SectionTitle style={{ marginTop: 0 }}>
+          {t('pages.k8s.cluster.section.connection')}
+        </SectionTitle>
+      </Col>
       <ProFormRadio.Group
         name="accessMode"
         label={t('pages.k8s.cluster.accessMode')}
-        colProps={HALF}
+        colProps={FULL}
         disabled={!!row}
+        extra={t('pages.k8s.cluster.accessMode.extra')}
         options={[
           { value: 1, label: t('pages.k8s.cluster.accessMode.1') },
           { value: 2, label: t('pages.k8s.cluster.accessMode.2') },
@@ -396,23 +437,16 @@ export const ClusterDrawer: React.FC<{
             <>
               <Col span={24}>
                 <Flex justify="space-between" align="center">
-                  <SectionTitle>{t('pages.k8s.cluster.direct')}</SectionTitle>
-                  <Flex gap={8}>
-                    <Button
-                      size="small"
-                      type="link"
-                      onClick={() => setPasting(true)}
-                    >
+                  <SectionTitle style={{ marginTop: 0 }}>
+                    {t('pages.k8s.cluster.direct')}
+                  </SectionTitle>
+                  <Flex gap={12} align="center">
+                    <Typography.Link onClick={() => setPasting(true)}>
                       {t('pages.k8s.cluster.kubeconfig.paste')}
-                    </Button>
-                    <Button
-                      size="small"
-                      type="link"
-                      loading={testing}
-                      onClick={test}
-                    >
+                    </Typography.Link>
+                    <Typography.Link disabled={testing} onClick={test}>
                       {t('pages.k8s.cluster.test')}
-                    </Button>
+                    </Typography.Link>
                   </Flex>
                 </Flex>
                 {testResult && <TestResult result={testResult} />}
@@ -507,13 +541,17 @@ export const ClusterDrawer: React.FC<{
           )
         }
       </ProFormDependency>
-      <ProFormTextArea
-        name="description"
-        label={t('pages.k8s.cluster.description')}
-        colProps={FULL}
-        fieldProps={{ rows: 2, maxLength: 255, showCount: true }}
-      />
+      <Col span={24}>
+        <SectionTitle style={{ marginTop: 0 }}>
+          {t('pages.k8s.cluster.section.insight')}
+        </SectionTitle>
+      </Col>
       <ClusterInsightFields />
+      <Col span={24}>
+        <SectionTitle style={{ marginTop: 0 }}>
+          {t('pages.k8s.cluster.section.advanced')}
+        </SectionTitle>
+      </Col>
       <ApprovalTemplateField />
       <ProFormSwitch
         name="execDisabled"

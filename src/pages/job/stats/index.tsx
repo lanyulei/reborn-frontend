@@ -11,13 +11,13 @@ import {
   FieldTimeOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
+import { PageContainer } from '@ant-design/pro-components';
 import { Card, Col, Empty, Row, Segmented, Spin, Table } from 'antd';
 import { createStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { RouteTabsPage } from '@/components/RouteTabs';
-import { BarList, StatCard } from '@/pages/cmdb/components/charts';
+import { BarList, StatCard } from '@/components/Charts';
 import { getJobStats } from '@/services/job/execution';
 import type {
   JobExecutionStatus,
@@ -29,7 +29,6 @@ import type {
 } from '@/services/job/typings';
 import { useT } from '@/utils/i18n';
 import { formatDuration } from '../components/format';
-import { HISTORY_TABS } from '../components/groups';
 import {
   EXECUTION_STATUS_META,
   KIND_META,
@@ -153,7 +152,7 @@ const JobStatsPage: React.FC = () => {
   const finished = num(data?.finished);
 
   return (
-    <RouteTabsPage tabs={HISTORY_TABS}>
+    <PageContainer title={false}>
       <div className={styles.toolbar}>
         <span>{t('pages.job.stats.days')}</span>
         <Segmented
@@ -291,7 +290,7 @@ const JobStatsPage: React.FC = () => {
           </Row>
         </>
       )}
-    </RouteTabsPage>
+    </PageContainer>
   );
 };
 

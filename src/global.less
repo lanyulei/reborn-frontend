@@ -65,6 +65,16 @@ body,
   display: none;
 }
 
+// 侧边菜单选中项：把默认的极浅底色加深一点——取「主色浅底」与「主色浅底悬停档」的
+// 中间色（跟随主题）；antd 运行时样式在后加载，须 !important
+.ant-pro-sider .ant-menu .ant-menu-item.ant-menu-item-selected {
+  background-color: color-mix(
+    in srgb,
+    var(--ant-color-primary-bg) 50%,
+    var(--ant-color-primary-bg-hover)
+  ) !important;
+}
+
 canvas {
   display: block;
 }
@@ -154,4 +164,10 @@ body .ant-pro-card.ant-pro-card-border {
 
 .ant-pro-page-container > div.ant-page-header.ant-pro-page-container-warp-page-header.ant-page-header-has-breadcrumb.ant-page-header-has-footer.ant-page-header-ghost > div > div > div.ant-tabs-nav {
   margin-bottom: 0;
+}
+
+// 查询筛选表单（ProTable 搜索栏 QueryFilter）的内边距统一为 16px 24px；
+// 类名重复一次以提升优先级，覆盖组件默认样式
+.ant-pro-query-filter.ant-pro-query-filter {
+  padding: 16px 24px;
 }

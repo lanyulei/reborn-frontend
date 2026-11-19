@@ -4,11 +4,10 @@
  * 数据源是全局资源：仍被规则指定使用时不可删除（范围为「全局」的规则不算引用）。
  */
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { ProTable } from '@ant-design/pro-components';
+import { PageContainer, ProTable } from '@ant-design/pro-components';
 import { App, Badge, Tag, Tooltip } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
-import { RouteTabsPage } from '@/components/RouteTabs';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
 import { ENABLED_META } from '@/constants';
 import {
@@ -28,7 +27,6 @@ import type {
 import { usePermissions } from '@/services/system/permissions';
 import { useEnumText, useT, useValueEnum } from '@/utils/i18n';
 import { parseBoolParam, toTableResult } from '@/utils/table';
-import { METRIC_TABS } from '../components/groups';
 import {
   AUTH_TYPE_META,
   HEALTH_STATUS_META,
@@ -253,7 +251,7 @@ const DatasourceList: React.FC = () => {
   ];
 
   return (
-    <RouteTabsPage tabs={METRIC_TABS}>
+    <PageContainer title={false}>
       <ProTable<MonitorDatasource>
         cardBordered
         headerTitle={
@@ -291,7 +289,7 @@ const DatasourceList: React.FC = () => {
           onSaved={reload}
         />
       )}
-    </RouteTabsPage>
+    </PageContainer>
   );
 };
 

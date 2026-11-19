@@ -32,7 +32,8 @@ import { usePermissions } from '@/services/system/permissions';
 import { useT } from '@/utils/i18n';
 import { formatTime } from '../components/cells';
 import { OPS_TABS } from '../components/groups';
-import { K8sPage, useK8sScope } from '../components/scope';
+import { kindPath, useKindName } from '../components/meta';
+import { K8sPage, ScopeSelects, useK8sScope } from '../components/scope';
 import { useK8sStyles } from '../components/styles';
 
 /** 检查项文案；前端不认识的检查项（后端新增）退回显示其代码 */
@@ -82,17 +83,17 @@ const useStyles = createStyles(({ token, css }) => ({
   `,
 }));
 
-/** 发现项对象 → 资源页（带集群与命名空间）；其余类型只展示文字 */
-const KIND_PAGE: Record<string, string> = {
-  Pod: '/k8s/workload?tab=pod',
-  Deployment: '/k8s/workload?tab=deployment',
-  StatefulSet: '/k8s/workload?tab=statefulset',
-  DaemonSet: '/k8s/workload?tab=daemonset',
-  Job: '/k8s/workload?tab=job',
-  Node: '/k8s/cluster?tab=node',
-  Secret: '/k8s/config?tab=secret',
-  PersistentVolumeClaim: '/k8s/config?tab=storage',
-};
+/** 发现项对象可跳转到资源列表页的类型；其余只展示文字 */
+const LINK_KINDS = new Set([
+  'Pod',
+  'Deployment',
+  'StatefulSet',
+  'DaemonSet',
+  'Job',
+  'Node',
+  'Secret',
+  'PersistentVolumeClaim',
+]);
 
 const SEVERITY_COLOR: Record<number, string> = {
   3: 'error',
@@ -137,6 +138,7 @@ const ScoreTrend: React.FC<{ runs: InspectionRun[]; color: string }> = ({
 
 const Inspection: React.FC = () => {
   const t = useT();
+  const kindName = useKindName();
   const { message, modal } = App.useApp();
   const has = usePermissions();
   const { styles, theme } = useStyles();
@@ -263,9 +265,8 @@ const Inspection: React.FC = () => {
   }, [detail]);
 
   const link = (f: InspectionFinding): string | undefined => {
-    const base = KIND_PAGE[f.kind ?? ''];
-    if (!base) return undefined;
-    return `${base}&cluster=${encodeURIComponent(clusterId)}${f.namespace ? `&ns=${encodeURIComponent(f.namespace)}` : ''}`;
+    if (!LINK_KINDS.has(f.kind ?? '')) return undefined;
+    return kindPath(f.kind, clusterId, f.namespace);
   };
 
   if (loading)
@@ -273,6 +274,8 @@ const Inspection: React.FC = () => {
 
   const toolbar = (
     <Space style={{ marginBottom: 16 }} wrap>
+      {/* 巡检按集群筛选：集群筛选框放最左，与资源列表页一致 */}
+      <ScopeSelects showNamespace={false} />
       <Select
         style={{ minWidth: 320 }}
         value={current?.id}
@@ -467,6 +470,7 @@ const Inspection: React.FC = () => {
                               title: t('pages.k8s.event.kind'),
                               dataIndex: 'kind',
                               width: 170,
+                              render: (v: string) => kindName(v),
                             },
                             {
                               title: t('pages.k8s.event.object'),

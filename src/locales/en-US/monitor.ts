@@ -16,7 +16,7 @@ export default {
   'menu.monitor.rule': 'Alert Rules',
   'menu.monitor.mute': 'Noise Reduction',
   'menu.monitor.subscription': 'Subscriptions',
-  'menu.monitor.datasource': 'Datasources',
+  'menu.monitor.datasource': 'Datasource Management',
   'menu.monitor.explore': 'Explore',
   'permission.monitor.rule.create': 'Create alert rule',
   'permission.monitor.rule.edit': 'Edit / clone / move / roll back alert rules',
@@ -340,7 +340,9 @@ export default {
   'pages.monitor.alert.agg.by.label': 'Label',
   'pages.monitor.alert.agg.summary':
     '{total} active alerts in {count} buckets (click a card to filter)',
-  'pages.monitor.alert.agg.empty': 'No active alerts',
+  'pages.monitor.alert.agg.emptyFiltered':
+    'No active alerts match the current filters',
+  'pages.monitor.alert.agg.error': 'Failed to load aggregation',
   'pages.monitor.alert.agg.noLabel': '(no {label} label)',
   'pages.monitor.alert.agg.filtered': 'Filtered by "{name}"',
   'pages.monitor.alert.agg.partial':
@@ -378,6 +380,7 @@ export default {
 
   // 告警规则：分组与授权
   'pages.monitor.group.title': 'Rule groups',
+  'pages.monitor.group.contextTip': 'Right-click a group to manage it',
   'pages.monitor.group.all': 'All rules',
   'pages.monitor.group.empty':
     'No accessible rule groups. Ask an administrator for access.',
@@ -386,7 +389,6 @@ export default {
   'pages.monitor.group.createChild.title': 'New group under "{name}"',
   'pages.monitor.group.edit.title': 'Edit group - {name}',
   'pages.monitor.group.scope': 'Role access',
-  'pages.monitor.group.actions': 'Actions for group "{name}"',
   'pages.monitor.group.delete.title': 'Delete group "{name}"?',
   'pages.monitor.group.delete.description':
     'A group that still has subgroups or rules cannot be deleted. Role access granted on this group is removed with it.',

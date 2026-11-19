@@ -5,7 +5,7 @@
  */
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, App, Segmented, Space, Tag, Tooltip } from 'antd';
+import { Alert, App, Select, Space, Tag, Tooltip, theme } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
 import { RouteTabsPage } from '@/components/RouteTabs';
@@ -42,6 +42,7 @@ const SubscriptionList: React.FC = () => {
   const has = usePermissions();
   const t = useT();
   const { styles } = useMonitorStyles();
+  const { token } = theme.useToken();
   const { groups } = useRuleGroups();
   const datasources = useDatasourceOptions();
   const enabledEnum = useValueEnum(ENABLED_META);
@@ -303,13 +304,19 @@ const SubscriptionList: React.FC = () => {
         // 换范围即重建：筛选与分页不串
         key={scope}
         headerTitle={
-          <Space size={12}>
+          /* 工具栏标题容器自带 500 字重 / 16px：恢复默认字体，控件不加粗不加黑 */
+          <Space
+            size={12}
+            style={{ fontSize: token.fontSize, fontWeight: 400 }}
+          >
             {has('monitor.subscription.create') && (
               <CreateButton onClick={() => setFormRow(null)}>
                 {t('pages.monitor.subscription.create.title')}
               </CreateButton>
             )}
-            <Segmented<Scope>
+            {/* 范围切换：我的订阅 / 全部订阅 */}
+            <Select<Scope>
+              style={{ width: 110 }}
               value={scope}
               onChange={setScope}
               options={[

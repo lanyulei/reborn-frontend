@@ -14,33 +14,34 @@ import { useT } from '@/utils/i18n';
 import { timeRangeColumn, toTableResult } from '@/utils/table';
 import { formatTime } from '../components/cells';
 import { OPS_TABS } from '../components/groups';
+import { kindPath, useKindName } from '../components/meta';
 import { K8sPage } from '../components/scope';
 import { useK8sStyles } from '../components/styles';
 
-/** 事件关联对象 → 可跳转的页面与页签；其余类型只展示文字 */
-const KIND_PAGE: Record<string, string> = {
-  Pod: '/k8s/workload?tab=pod',
-  Deployment: '/k8s/workload?tab=deployment',
-  StatefulSet: '/k8s/workload?tab=statefulset',
-  DaemonSet: '/k8s/workload?tab=daemonset',
-  Job: '/k8s/workload?tab=job',
-  CronJob: '/k8s/workload?tab=job',
-  Node: '/k8s/cluster?tab=node',
-};
+/** 事件关联对象可跳转到资源列表页的类型；其余只展示文字 */
+const LINK_KINDS = new Set([
+  'Pod',
+  'Deployment',
+  'StatefulSet',
+  'DaemonSet',
+  'Job',
+  'CronJob',
+  'Node',
+]);
 
 /** 事件对象所在页面的链接（带上集群与命名空间） */
 export const eventLink = (e: {
   clusterId: string;
   namespace?: string;
   kind?: string;
-}): string | undefined => {
-  const base = KIND_PAGE[e.kind ?? ''];
-  if (!base) return undefined;
-  return `${base}&cluster=${encodeURIComponent(e.clusterId)}${e.namespace ? `&ns=${encodeURIComponent(e.namespace)}` : ''}`;
-};
+}): string | undefined =>
+  LINK_KINDS.has(e.kind ?? '')
+    ? kindPath(e.kind, e.clusterId, e.namespace)
+    : undefined;
 
 const Events: React.FC = () => {
   const t = useT();
+  const kindName = useKindName();
   const { styles } = useK8sStyles();
   const [clusters, setClusters] = useState<Record<string, { text: string }>>(
     {},
@@ -92,6 +93,7 @@ const Events: React.FC = () => {
         title: t('pages.k8s.event.kind'),
         dataIndex: 'kind',
         width: 120,
+        render: (_, r) => kindName(r.kind),
       },
       {
         title: t('pages.k8s.event.object'),

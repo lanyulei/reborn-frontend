@@ -1,11 +1,7 @@
 /** 监控告警域的展示格式化：时间、持续时长、指标值、标签过滤串。 */
-import dayjs from 'dayjs';
-import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
 import type { Translate } from '@/utils/i18n';
 
-/** RFC3339 → 本地「年-月-日 时:分:秒」；空值返回空串 */
-export const formatTime = (value?: string): string =>
-  value ? dayjs(value).format(DATE_TIME_SECONDS_FORMAT) : '';
+export { formatTime } from '@/utils/format';
 
 /** 秒数 → 最多两段的可读时长（3 天 4 小时 / 5 分钟 20 秒）；后端 int64 以字符串给出 */
 export const formatDuration = (

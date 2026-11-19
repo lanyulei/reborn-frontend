@@ -74,6 +74,8 @@ export const YamlEditor: React.FC<{
         extensions: [
           basicSetup,
           yaml(),
+          // 长行自动换行（不出现横向滚动条）
+          EditorView.lineWrapping,
           editorTheme,
           EditorView.theme({
             '&': { height: cssHeight },
@@ -125,6 +127,7 @@ export const YamlDiff: React.FC<{
     const extensions = [
       basicSetup,
       yaml(),
+      EditorView.lineWrapping,
       editorTheme,
       EditorState.readOnly.of(true),
       EditorView.editable.of(false),

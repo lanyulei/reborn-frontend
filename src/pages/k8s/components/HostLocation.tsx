@@ -10,6 +10,7 @@ import SectionTitle from '@/components/SectionTitle';
 import { type HostLocation, locateHost } from '@/services/k8s/insight';
 import { useT } from '@/utils/i18n';
 import { StateBadge } from './cells';
+import { kindPath } from './meta';
 
 const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+:[0-9a-fA-F:]*$/;
 
@@ -22,14 +23,6 @@ const ipsOf = (attrs?: Record<string, unknown>): string[] => {
     }
   }
   return [...out].slice(0, 4);
-};
-
-const KIND_TAB: Record<string, string> = {
-  Deployment: 'deployment',
-  StatefulSet: 'statefulset',
-  DaemonSet: 'daemonset',
-  Job: 'job',
-  Pod: 'pod',
 };
 
 export const HostLocationSection: React.FC<{
@@ -77,7 +70,7 @@ export const HostLocationSection: React.FC<{
           style={{ marginBottom: 16 }}
         >
           <div style={{ marginBottom: 8 }}>
-            <Link to={`/k8s/cluster?tab=node&cluster=${item.clusterId}`}>
+            <Link to={kindPath('Node', item.clusterId)}>
               {item.displayName || item.clusterName} / {item.node}
             </Link>
             <span style={{ marginInline: 12 }}>
@@ -104,9 +97,7 @@ export const HostLocationSection: React.FC<{
               {
                 title: t('pages.k8s.column.name'),
                 render: (_, w) => (
-                  <Link
-                    to={`/k8s/workload?tab=${KIND_TAB[w.kind] ?? 'pod'}&cluster=${encodeURIComponent(item.clusterId)}&ns=${encodeURIComponent(w.namespace)}`}
-                  >
+                  <Link to={kindPath(w.kind, item.clusterId, w.namespace)}>
                     {w.name}
                   </Link>
                 ),

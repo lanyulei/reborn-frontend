@@ -1,5 +1,5 @@
 import type React from 'react';
-import { TabContainer, type TabItem } from '../components/TabContainer';
+import { TabContainer, type TabItem } from '@/components/TabContainer';
 
 /** 通知规则：事件如何被处理——路由（分发）/ 静默（抑制）/ 模板（渲染）三页聚合 */
 const RULE_TABS: TabItem[] = [

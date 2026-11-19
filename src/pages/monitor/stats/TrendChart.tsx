@@ -6,7 +6,7 @@
 import { Empty } from 'antd';
 import type React from 'react';
 import { useState } from 'react';
-import { useSize } from '@/pages/cmdb/components/charts';
+import { useSize } from '@/components/Charts';
 import { useT } from '@/utils/i18n';
 import { valueAxis } from '../components/chartAxis';
 import { useMonitorStyles } from '../components/styles';

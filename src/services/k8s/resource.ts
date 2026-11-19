@@ -175,6 +175,23 @@ export const suspendCronJob = (
 export const evictPod = (clusterId: string, ref: ResourceRef) =>
   post<void>(clusterId, '/pod:evict', { ref });
 
+export interface PodResizeContainer {
+  name: string;
+  /** 缺省的资源 = 不改动；不能传空串 */
+  requests?: { cpu?: string; memory?: string };
+  limits?: { cpu?: string; memory?: string };
+}
+
+/**
+ * 原地调整运行中 Pod 的容器资源（集群的 resize 子资源，需要 Kubernetes 1.33+）。
+ * 成功只表示集群已接受，由节点异步生效；需审批的集群上转为变更单。
+ */
+export const resizePod = (
+  clusterId: string,
+  ref: ResourceRef,
+  containers: PodResizeContainer[],
+) => post<void>(clusterId, '/pod:resize', { ref, containers }, { silent: true });
+
 export const cordonNode = (
   clusterId: string,
   name: string,

@@ -92,10 +92,7 @@ export default function access(
     canMonitorEngine: has('monitor.engine'),
     // 菜单分组入口：分组内任一页面可见即可进入（页签再按各页权限过滤）
     canMonitorNotice: has('monitor.subscription') || has('monitor.escalation'),
-    canMonitorMetric:
-      has('monitor.explore') ||
-      has('monitor.record') ||
-      has('monitor.datasource'),
+    canMonitorMetric: has('monitor.explore') || has('monitor.record'),
     canMonitorInsight: has('monitor.stats') || has('monitor.engine'),
     canMonitor:
       has('monitor.alert') ||
@@ -120,7 +117,6 @@ export default function access(
     canJobPolicy: has('job.policy'),
     canJobStats: has('job.stats'),
     canJobLibrary: has('job.template') || has('job.script'),
-    canJobHistory: has('job.execution') || has('job.stats'),
     canJobAutomation: has('job.schedule') || has('job.trigger'),
     canJobResource:
       has('job.project') || has('job.credential') || has('job.runner'),
@@ -147,6 +143,10 @@ export default function access(
     canK8sEvent: has('k8s.event'),
     canK8sInspection: has('k8s.inspection'),
     canK8sKubeconfig: has('k8s.kubeconfig'),
+    // 菜单分组的可见性：组内任一页面可见即显示
+    canK8sWorkloads:
+      has('k8s.workload') || has('k8s.config') || has('k8s.resource'),
+    canK8sConfigGroup: has('k8s.config') || has('k8s.resource'),
     canK8sOps: has('k8s.event') || has('k8s.inspection'),
     canK8sSecurity:
       has('k8s.change') || has('k8s.kubeconfig') || has('k8s.audit'),

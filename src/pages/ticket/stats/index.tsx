@@ -17,7 +17,7 @@ import { createStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { BarList, StatCard } from '@/pages/cmdb/components/charts';
+import { BarList, StatCard } from '@/components/Charts';
 import { getTicketStats } from '@/services/ticket';
 import type {
   TicketPriority,

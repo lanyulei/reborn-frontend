@@ -14,9 +14,18 @@ import { useT } from '@/utils/i18n';
 /** ProTable headerTitle 位置的主操作按钮 */
 export const CreateButton: React.FC<{
   onClick: () => void;
+  /** 悬停 / 聚焦钩子：懒加载创建表单的场景用来预取代码 */
+  onMouseEnter?: React.MouseEventHandler<HTMLButtonElement>;
+  onFocus?: React.FocusEventHandler<HTMLButtonElement>;
   children: React.ReactNode;
-}> = ({ onClick, children }) => (
-  <Button type="primary" icon={<PlusOutlined />} onClick={onClick}>
+}> = ({ onClick, onMouseEnter, onFocus, children }) => (
+  <Button
+    type="primary"
+    icon={<PlusOutlined />}
+    onClick={onClick}
+    onMouseEnter={onMouseEnter}
+    onFocus={onFocus}
+  >
     {children}
   </Button>
 );

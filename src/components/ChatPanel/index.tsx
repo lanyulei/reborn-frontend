@@ -31,7 +31,7 @@ import {
   Typography,
 } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { JsonView } from '@/pages/notify/components/JsonView';
+import { JsonView } from '@/components/JsonView';
 import type { AssistantToolStatus } from '@/services/assistant/typings';
 import { type Translate, useT } from '@/utils/i18n';
 import type {

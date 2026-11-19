@@ -68,7 +68,7 @@ import {
   type DetailTarget,
   ResourceDetail,
 } from '../components/ResourceDetail';
-import { K8sPage, useK8sScope } from '../components/scope';
+import { K8sPage, ScopeSelects, useK8sScope } from '../components/scope';
 import { useK8sStyles } from '../components/styles';
 import { YamlDiff, YamlEditor } from '../components/YamlEditor';
 
@@ -868,33 +868,46 @@ const Releases: React.FC = () => {
       <ProTable<HelmRelease>
         cardBordered
         rowKey={(row) => `${row.namespace}/${row.name}`}
-        search={false}
-        options={false}
+        search={{ labelWidth: 'auto' }}
+        options={{ reload: () => void load(), density: true, setting: true }}
         loading={loading}
         dataSource={rows}
         scroll={{ x: 'max-content' }}
-        pagination={{ pageSize: 20, showSizeChanger: false }}
+        pagination={{
+          defaultPageSize: 20,
+          showSizeChanger: true,
+          pageSizeOptions: [20, 50, 100, 200],
+        }}
         headerTitle={
-          has('k8s.app.install') && (
-            <CreateButton onClick={() => setInstalling(true)}>
-              {t('pages.k8s.app.install')}
-            </CreateButton>
-          )
+          // 新建（安装）按钮在最左，其后是集群 / 命名空间筛选；list-toolbar-title
+          // 自身无间距，包一层统一 8px（与资源列表页 ResourceTable 的处理一致）
+          <span
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+          >
+            {has('k8s.app.install') && (
+              <CreateButton onClick={() => setInstalling(true)}>
+                {t('pages.k8s.app.install')}
+              </CreateButton>
+            )}
+            <ScopeSelects />
+          </span>
         }
-        toolBarRender={() => [
-          <Input.Search
-            key="keyword"
-            allowClear
-            style={{ width: 220 }}
-            placeholder={t('pages.k8s.table.keyword')}
-            maxLength={64}
-            onSearch={(value) => setKeyword(value.trim())}
-          />,
-          <Button key="reload" onClick={() => void load()}>
-            {t('pages.k8s.scope.reload')}
-          </Button>,
-        ]}
+        onSubmit={(values) => {
+          const v = values as { keyword?: string };
+          setKeyword(v.keyword?.trim() ?? '');
+        }}
+        onReset={() => setKeyword('')}
         columns={[
+          {
+            title: t('common.column.keyword'),
+            dataIndex: 'keyword',
+            hideInTable: true,
+            hideInSetting: true,
+            fieldProps: {
+              placeholder: t('pages.k8s.table.keyword'),
+              maxLength: 64,
+            },
+          },
           {
             title: t('pages.k8s.column.name'),
             dataIndex: 'name',
@@ -1444,10 +1457,13 @@ const Repos: React.FC = () => {
         actionRef={actionRef}
         rowKey="id"
         columns={columns}
-        options={false}
         search={{ labelWidth: 'auto' }}
         scroll={{ x: 'max-content' }}
-        pagination={{ defaultPageSize: 20 }}
+        pagination={{
+          defaultPageSize: 20,
+          showSizeChanger: true,
+          pageSizeOptions: [20, 50, 100, 200],
+        }}
         headerTitle={
           canManage && (
             <CreateButton onClick={() => setFormRow(null)}>

@@ -1,7 +1,7 @@
 /**
  * CmdbCIService 资源：列表 / 详情 / 创建 / 更新（乐观锁）/ 状态流转 / 删除 / 历史。
  */
-import { message } from 'antd';
+import { message } from '@/utils/feedback';
 import { authRequest, getErrorMessage } from '@/services/system/request';
 import type { PagedResult } from '@/services/system/typings';
 import type {

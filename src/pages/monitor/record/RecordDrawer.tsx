@@ -17,6 +17,13 @@ import { Link } from '@umijs/max';
 import { Alert, App, Button, Col, Form, Segmented } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
+import {
+  type KeyValue,
+  KeyValueEditor,
+  kvToRecord,
+  recordToKv,
+  validateKeyValues,
+} from '@/components/KeyValueEditor';
 import { SectionTitle } from '@/components/SectionTitle';
 import { FULL, HALF } from '@/constants/layout';
 import {
@@ -42,13 +49,6 @@ import {
   type DatasourceOptionsState,
   withRefOptions,
 } from '../components/hooks';
-import {
-  type KeyValue,
-  KeyValueEditor,
-  kvToRecord,
-  recordToKv,
-  validateKeyValues,
-} from '../components/KeyValueEditor';
 import { LABEL_NAME_REGEX } from '../components/meta';
 import { type QueryMode, QueryRunner } from '../components/QueryRunner';
 import { useMonitorStyles } from '../components/styles';

@@ -1,12 +1,24 @@
 /**
  * 容器平台的全局作用域：集群 + 命名空间。选择写进 URL（?cluster=<id>&ns=<name>，链接可分享），
- * 最近一次选择记在 localStorage 作为缺省值。K8sPage 是各菜单页的外壳：页签（?tab=）、作用域栏、
- * 集群不可达提示，并提供终端面板。
+ * 最近一次选择记在 localStorage 作为缺省值。K8sPage 是各菜单页的外壳：页签（?tab=）、集群不可达
+ * 提示，并提供终端面板。集群 / 命名空间筛选（ScopeSelects）放在各列表的工具栏里（表格上方）。
  */
 import { ReloadOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
 import { useSearchParams } from '@umijs/max';
-import { Alert, Badge, Button, Empty, Select, Spin, Tag, Tooltip } from 'antd';
+import {
+  Alert,
+  Badge,
+  Button,
+  ConfigProvider,
+  Empty,
+  Flex,
+  Select,
+  Spin,
+  type ThemeConfig,
+  Tooltip,
+  theme,
+} from 'antd';
 import type React from 'react';
 import {
   createContext,
@@ -25,19 +37,18 @@ import { useT } from '@/utils/i18n';
 import { PermissionRequestButton } from '../change/requests';
 import { ApprovalBar } from './approval';
 import { isProdEnv } from './meta';
-import { useK8sStyles } from './styles';
 
 const CLUSTER_KEY = 'k8s.scope.cluster';
 const nsKey = (clusterId: string) => `k8s.scope.ns.${clusterId}`;
 
-const readStored = (key: string): string | null => {
+export const readStored = (key: string): string | null => {
   try {
     return window.localStorage.getItem(key);
   } catch {
     return null;
   }
 };
-const writeStored = (key: string, value: string) => {
+export const writeStored = (key: string, value: string) => {
   try {
     window.localStorage.setItem(key, value);
   } catch {
@@ -216,10 +227,23 @@ const useScopeState = (): K8sScope => {
 
 const STATUS_BADGE = ['default', 'success', 'error'] as const;
 
-/** 作用域栏：集群切换器（按环境分组、可搜索）+ 命名空间切换器 */
-const ScopeBar: React.FC<{ showNamespace: boolean }> = ({ showNamespace }) => {
+// 下拉列表里当前选中的选项默认加粗（optionSelectedFontWeight = fontWeightStrong / 600），
+// 改回普通字重，与未选中选项一致（下拉渲染在 body 弹层里，不受下方行内重置影响，
+// 须经组件 token 调整；选中态仍有勾选图标与底色标识）。只作用于这两个筛选框。
+const SCOPE_SELECT_THEME: ThemeConfig = {
+  components: {
+    Select: { optionSelectedFontWeight: 400 },
+  },
+};
+
+/**
+ * 集群 / 命名空间筛选：放在列表工具栏（表格上方，新建按钮左侧）。不加标题，
+ * 集群在左（按环境分组、可搜索）、命名空间在右。
+ */
+export const ScopeSelects: React.FC<{ showNamespace?: boolean }> = ({
+  showNamespace = true,
+}) => {
   const t = useT();
-  const { styles } = useK8sStyles();
   const scope = useK8sScope();
 
   const clusterOptions = useMemo(() => {
@@ -261,14 +285,22 @@ const ScopeBar: React.FC<{ showNamespace: boolean }> = ({ showNamespace }) => {
     [scope.allowAll, scope.namespaces, scope.namespace, t],
   );
 
+  const { token } = theme.useToken();
+
   return (
-    <div className={styles.scopeBar}>
-      <span>
-        <span className={styles.scopeLabel}>
-          {t('pages.k8s.scope.cluster')}
-        </span>
+    <ConfigProvider theme={SCOPE_SELECT_THEME}>
+      {/* ProTable 把 headerTitle 渲染在 list-toolbar-title 里（fontWeight 500 + fontSizeLG），
+          选择框（含占位文案）会继承得比普通控件更粗更大：重置回常规字号字重 */}
+      <span
+        style={{
+          display: 'inline-flex',
+          gap: 8,
+          fontSize: token.fontSize,
+          fontWeight: 400,
+        }}
+      >
         <Select
-          style={{ width: 300 }}
+          style={{ width: 240 }}
           loading={scope.loading}
           value={scope.clusterId || undefined}
           placeholder={t('pages.k8s.scope.cluster.placeholder')}
@@ -281,14 +313,9 @@ const ScopeBar: React.FC<{ showNamespace: boolean }> = ({ showNamespace }) => {
           }}
           onChange={scope.setCluster}
         />
-      </span>
-      {showNamespace && (
-        <span>
-          <span className={styles.scopeLabel}>
-            {t('pages.k8s.scope.namespace')}
-          </span>
+        {showNamespace && (
           <Select
-            style={{ width: 240 }}
+            style={{ width: 200 }}
             loading={scope.nsLoading}
             disabled={!scope.clusterId}
             value={
@@ -298,17 +325,9 @@ const ScopeBar: React.FC<{ showNamespace: boolean }> = ({ showNamespace }) => {
             showSearch
             onChange={scope.setNamespace}
           />
-        </span>
-      )}
-      {scope.cluster?.k8sVersion && <Tag>{scope.cluster.k8sVersion}</Tag>}
-      {scope.cluster?.env && (
-        <Tag color={scope.isProd ? 'red' : undefined}>{scope.cluster.env}</Tag>
-      )}
-      <Tooltip title={t('pages.k8s.scope.reload')}>
-        <Button type="text" icon={<ReloadOutlined />} onClick={scope.reload} />
-      </Tooltip>
-      <PermissionRequestButton clusterId={scope.clusterId} />
-    </div>
+        )}
+      </span>
+    </ConfigProvider>
   );
 };
 
@@ -326,34 +345,39 @@ const TabBody: React.FC<{ tab: K8sTab }> = ({ tab }) => {
   const mode = tab.scope ?? 'namespace';
   if (mode === 'none') return <>{tab.render()}</>;
 
-  let body: React.ReactNode;
+  let empty: React.ReactNode;
   if (scope.loading && !scope.clusterId) {
-    body = <Spin style={{ display: 'block', margin: '48px auto' }} />;
+    empty = <Spin style={{ display: 'block', margin: '48px auto' }} />;
   } else if (!scope.clusterId) {
-    body = (
+    empty = (
       <Empty description={t('pages.k8s.scope.noCluster')}>
         <PermissionRequestButton type="primary" />
       </Empty>
     );
   } else if (mode === 'namespace' && !scope.nsReady) {
-    body = scope.nsLoading ? (
+    empty = scope.nsLoading ? (
       <Spin style={{ display: 'block', margin: '48px auto' }} />
     ) : scope.nsError ? null : (
       <Empty description={t('pages.k8s.scope.noNamespace')} />
     );
-  } else {
-    // 切换集群 / 命名空间即重建内容：列表状态、打开的抽屉不跨作用域残留
-    body = (
-      <div
-        key={`${scope.clusterId}/${mode === 'namespace' ? scope.namespace : ''}`}
-      >
-        {tab.render()}
-      </div>
-    );
   }
+
   return (
     <>
-      <ScopeBar showNamespace={mode === 'namespace'} />
+      {/* 集群 / 命名空间筛选在各列表的工具栏里；列表未渲染（空态）时在这里兜底，保证还能切换集群 */}
+      {empty !== undefined && scope.clusters.length > 0 && (
+        <Flex gap={8} wrap align="center" style={{ marginBottom: 16 }}>
+          <ScopeSelects showNamespace={mode === 'namespace'} />
+          <Tooltip title={t('pages.k8s.scope.reload')}>
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              onClick={scope.reload}
+            />
+          </Tooltip>
+          <PermissionRequestButton clusterId={scope.clusterId} />
+        </Flex>
+      )}
       <ApprovalBar cluster={scope.cluster} />
       {scope.cluster?.status === 2 && (
         <Alert
@@ -372,7 +396,16 @@ const TabBody: React.FC<{ tab: K8sTab }> = ({ tab }) => {
           title={scope.nsError}
         />
       )}
-      {body}
+      {empty !== undefined ? (
+        empty
+      ) : (
+        // 切换集群 / 命名空间即重建内容：列表状态、打开的抽屉不跨作用域残留
+        <div
+          key={`${scope.clusterId}/${mode === 'namespace' ? scope.namespace : ''}`}
+        >
+          {tab.render()}
+        </div>
+      )}
     </>
   );
 };
@@ -384,10 +417,12 @@ const GROUP_KEEP = ['cluster'];
  * 容器平台菜单页外壳。属于菜单分组的页面传 group：页头改为分组的路由页签（切换时保留所选集群），
  * 页内的 tabs 仍按 ?tab= 选中——分组里须为它们各列一个带 tab 的页签。
  */
-export const K8sPage: React.FC<{ tabs: K8sTab[]; group?: RouteTab[] }> = ({
-  tabs,
-  group,
-}) => {
+export const K8sPage: React.FC<{
+  tabs: K8sTab[];
+  group?: RouteTab[];
+  /** 覆盖自动生成的面包屑（如详情页给出「容器平台 / 列表页 / 资源详情」） */
+  breadcrumb?: React.ComponentProps<typeof PageContainer>['breadcrumb'];
+}> = ({ tabs, group, breadcrumb }) => {
   const scope = useScopeState();
   const [params, setParams] = useSearchParams();
   const active = tabs.find((tab) => tab.key === params.get('tab')) ?? tabs[0];
@@ -395,8 +430,11 @@ export const K8sPage: React.FC<{ tabs: K8sTab[]; group?: RouteTab[] }> = ({
 
   return (
     <ScopeContext.Provider value={scope}>
+      {/* breadcrumb 键一旦出现（哪怕值为 undefined）就会覆盖路由自动生成的面包屑：
+          只在真的传入时才带这个键 */}
       <PageContainer
         title={false}
+        {...(breadcrumb ? { breadcrumb } : {})}
         tabList={
           tabs.length > 1
             ? tabs.map((tab) => ({ key: tab.key, tab: tab.label }))

@@ -31,6 +31,7 @@ import { getK8sErrorMessage } from '@/services/k8s/request';
 import { useT } from '@/utils/i18n';
 import { AgeText } from '../components/cells';
 import { formatMetric, MetricsPanel } from '../components/MetricsPanel';
+import { kindPath, useKindName } from '../components/meta';
 import { K8sPage } from '../components/scope';
 import { eventLink } from '../event';
 
@@ -136,18 +137,8 @@ const STATUS: Record<
   2: { badge: 'error', id: 'pages.k8s.cluster.status.2' },
 };
 
-const KIND_TAB: Record<string, string> = {
-  Deployment: 'deployment',
-  StatefulSet: 'statefulset',
-  DaemonSet: 'daemonset',
-  Pod: 'pod',
-};
-
-const itemLink = (clusterId: string, item: SummaryItem): string => {
-  if (item.kind === 'Node') return `/k8s/cluster?tab=node&cluster=${clusterId}`;
-  const tab = KIND_TAB[item.kind ?? ''] ?? 'deployment';
-  return `/k8s/workload?tab=${tab}&cluster=${clusterId}&ns=${item.namespace ?? ''}`;
-};
+const itemLink = (clusterId: string, item: SummaryItem): string =>
+  kindPath(item.kind, clusterId, item.namespace);
 
 const Meter: React.FC<{
   label: string;
@@ -177,6 +168,7 @@ const Meter: React.FC<{
 
 const ClusterCard: React.FC<{ cluster: OverviewCluster }> = ({ cluster }) => {
   const t = useT();
+  const kindName = useKindName();
   const { styles } = useStyles();
   const s = cluster.summary;
   const status = STATUS[cluster.status] ?? STATUS[0];
@@ -188,10 +180,7 @@ const ClusterCard: React.FC<{ cluster: OverviewCluster }> = ({ cluster }) => {
   return (
     <div className={styles.card}>
       <Flex justify="space-between" align="center">
-        <Link
-          className={styles.name}
-          to={`/k8s/workload?cluster=${cluster.id}`}
-        >
+        <Link className={styles.name} to={kindPath('Deployment', cluster.id)}>
           {cluster.displayName || cluster.name}
         </Link>
         <Tooltip title={cluster.status === 2 ? cluster.lastError : undefined}>
@@ -213,7 +202,7 @@ const ClusterCard: React.FC<{ cluster: OverviewCluster }> = ({ cluster }) => {
       ) : (
         <>
           <div className={styles.stats}>
-            <Link to={`/k8s/cluster?tab=node&cluster=${cluster.id}`}>
+            <Link to={kindPath('Node', cluster.id)}>
               <span className={styles.statValue}>
                 {s.nodeReady} / {s.nodeTotal}
               </span>
@@ -221,7 +210,7 @@ const ClusterCard: React.FC<{ cluster: OverviewCluster }> = ({ cluster }) => {
                 {t('pages.k8s.overview.nodes')}
               </span>
             </Link>
-            <Link to={`/k8s/workload?cluster=${cluster.id}`}>
+            <Link to={kindPath('Deployment', cluster.id)}>
               <span className={styles.statValue}>
                 {s.workloadAbnormal} / {s.workloadTotal}
               </span>
@@ -229,7 +218,7 @@ const ClusterCard: React.FC<{ cluster: OverviewCluster }> = ({ cluster }) => {
                 {t('pages.k8s.overview.abnormalWorkloads')}
               </span>
             </Link>
-            <Link to={`/k8s/workload?tab=pod&cluster=${cluster.id}`}>
+            <Link to={kindPath('Pod', cluster.id)}>
               <span className={styles.statValue}>
                 {abnormalPods} / {s.podTotal}
               </span>
@@ -272,7 +261,7 @@ const ClusterCard: React.FC<{ cluster: OverviewCluster }> = ({ cluster }) => {
                     className={styles.ellipsis}
                     to={itemLink(cluster.id, item)}
                   >
-                    <Badge status="error" /> {item.kind}{' '}
+                    <Badge status="error" /> {kindName(item.kind)}{' '}
                     {item.namespace ? `${item.namespace}/` : ''}
                     {item.name}
                   </Link>
@@ -317,6 +306,7 @@ const ClusterCard: React.FC<{ cluster: OverviewCluster }> = ({ cluster }) => {
 
 const EventList: React.FC<{ events: ClusterEvent[] }> = ({ events }) => {
   const t = useT();
+  const kindName = useKindName();
   const { styles } = useStyles();
   if (events.length === 0) {
     return (
@@ -332,7 +322,9 @@ const EventList: React.FC<{ events: ClusterEvent[] }> = ({ events }) => {
     <div className={styles.card}>
       {events.map((e) => {
         const to = eventLink(e);
-        const object = `${e.kind}/${e.namespace ? `${e.namespace}/` : ''}${e.name}`;
+        const object = `${kindName(e.kind)}/${
+          e.namespace ? `${e.namespace}/` : ''
+        }${e.name}`;
         return (
           <div key={e.id} className={styles.eventRow}>
             <AgeText value={e.lastTime} />

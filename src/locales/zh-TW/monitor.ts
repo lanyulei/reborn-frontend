@@ -16,7 +16,7 @@ export default {
   'menu.monitor.rule': '告警規則',
   'menu.monitor.mute': '降噪規則',
   'menu.monitor.subscription': '告警訂閱',
-  'menu.monitor.datasource': '資料來源',
+  'menu.monitor.datasource': '資料來源管理',
   'menu.monitor.explore': '即時查詢',
   'permission.monitor.rule.create': '新增告警規則',
   'permission.monitor.rule.edit': '編輯 / 克隆 / 移動 / 回滾告警規則',
@@ -307,7 +307,8 @@ export default {
   'pages.monitor.alert.agg.by.label': '按標籤',
   'pages.monitor.alert.agg.summary':
     '共 {total} 條活躍告警，歸為 {count} 類（點擊卡片篩選）',
-  'pages.monitor.alert.agg.empty': '當前沒有活躍告警',
+  'pages.monitor.alert.agg.emptyFiltered': '沒有符合篩選條件的活躍告警',
+  'pages.monitor.alert.agg.error': '聚合視圖載入失敗',
   'pages.monitor.alert.agg.noLabel': '（無 {label} 標籤）',
   'pages.monitor.alert.agg.filtered': '已按「{name}」篩選',
   'pages.monitor.alert.agg.partial':
@@ -342,6 +343,7 @@ export default {
 
   // 告警规则：分组与授权
   'pages.monitor.group.title': '規則分組',
+  'pages.monitor.group.contextTip': '在分組上點擊右鍵，可以維護該分組',
   'pages.monitor.group.all': '全部規則',
   'pages.monitor.group.empty': '沒有可存取的規則分組，請聯繫管理員授權',
   'pages.monitor.group.createRoot': '新增頂級分組',
@@ -349,7 +351,6 @@ export default {
   'pages.monitor.group.createChild.title': '在「{name}」下新增分組',
   'pages.monitor.group.edit.title': '編輯分組 - {name}',
   'pages.monitor.group.scope': '分組授權',
-  'pages.monitor.group.actions': '分組「{name}」的操作',
   'pages.monitor.group.delete.title': '刪除分組「{name}」？',
   'pages.monitor.group.delete.description':
     '分組下仍有下級分組或規則時無法刪除。刪除後，授權在該分組上的角色範圍隨之失效。',

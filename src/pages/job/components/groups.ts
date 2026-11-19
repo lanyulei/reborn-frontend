@@ -19,22 +19,6 @@ export const LIBRARY_TABS: RouteTab[] = [
   },
 ];
 
-/** 执行记录：执行记录 / 执行统计 */
-export const HISTORY_TABS: RouteTab[] = [
-  {
-    key: 'execution',
-    path: '/job/execution',
-    labelKey: 'menu.job.execution',
-    accessKey: 'canJobExecution',
-  },
-  {
-    key: 'stats',
-    path: '/job/stats',
-    labelKey: 'menu.job.stats',
-    accessKey: 'canJobStats',
-  },
-];
-
 /** 定时触发：定时作业 / 触发器 */
 export const AUTOMATION_TABS: RouteTab[] = [
   {
@@ -73,10 +57,9 @@ export const RESOURCE_TABS: RouteTab[] = [
   },
 ];
 
-/** 分组入口路由 → 页签 */
+/** 分组入口路由 → 页签（执行记录 / 执行统计已拆为独立菜单页面，不再在此列） */
 export const GROUPS: Record<string, RouteTab[]> = {
   '/job/library': LIBRARY_TABS,
-  '/job/history': HISTORY_TABS,
   '/job/automation': AUTOMATION_TABS,
   '/job/resource': RESOURCE_TABS,
 };

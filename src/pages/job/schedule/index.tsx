@@ -613,10 +613,7 @@ const ScheduleList: React.FC = () => {
         }
         if (access.canJobExecution) {
           actions.push(
-            <Link
-              key="executions"
-              to={`/job/execution?triggerRef=${record.id}`}
-            >
+            <Link key="executions" to={`/job/history?triggerRef=${record.id}`}>
               {t('pages.job.template.executions')}
             </Link>,
           );

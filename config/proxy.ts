@@ -19,21 +19,4 @@ export default {
       ws: true,
     },
   },
-  /**
-   * @name 详细的代理配置
-   * @doc https://github.com/chimurai/http-proxy-middleware
-   */
-  test: {
-    // localhost:8010/api/** -> https://pro-api.ant-design-demo.workers.dev/api/**
-    '/api/': {
-      target: 'https://pro-api.ant-design-demo.workers.dev',
-      changeOrigin: true,
-    },
-  },
-  pre: {
-    '/api/': {
-      target: 'your pre url',
-      changeOrigin: true,
-    },
-  },
 };

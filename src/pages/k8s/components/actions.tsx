@@ -16,7 +16,15 @@ import {
   theme,
 } from 'antd';
 import type React from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { isChangeSubmitted } from '@/services/k8s/request';
 import {
   cordonNode,
   deleteObject,
@@ -29,12 +37,18 @@ import {
   suspendCronJob,
   triggerCronJob,
 } from '@/services/k8s/resource';
-import type { GVR, K8sObject, ResourceRef } from '@/services/k8s/typings';
+import type {
+  GVR,
+  K8sObject,
+  ListRow,
+  ResourceRef,
+} from '@/services/k8s/typings';
 import {
   type ElementPermissionCode,
   usePermissions,
 } from '@/services/system/permissions';
 import { useT } from '@/utils/i18n';
+import { type EditEntry, editEntriesOf } from '../forms/editRegistry';
 import { ApprovalNotice } from './approval';
 import { EditObjectModal } from './ChangePreview';
 import { useDangerConfirm } from './confirm';
@@ -42,8 +56,9 @@ import { DrainModal } from './DrainModal';
 import { PodFileModal } from './FileTransferModal';
 import { NamespaceQuotaModal, NodeMetaModal } from './MetaEditors';
 import { elementCode, GVRS, isNamespaced, sameGVR } from './meta';
+import { PodResizeModal } from './PodResizeModal';
+import { RollbackModal } from './RollbackModal';
 import { useTerminal } from './Terminal';
-import { formKindOf, WorkloadFormModal } from './WorkloadFormModal';
 
 export interface ActionTarget {
   namespace?: string;
@@ -56,15 +71,30 @@ export type DetailTab =
   | 'pods'
   | 'events'
   | 'logs'
+  | 'metrics'
   | 'yaml'
   | 'revisions';
+
+/** 操作的分组：菜单里按此顺序排列，组与组之间用分隔线隔开 */
+export type ActionGroup = 'view' | 'ops' | 'edit' | 'danger';
+const GROUP_ORDER: ActionGroup[] = ['view', 'ops', 'edit', 'danger'];
 
 interface Action {
   key: string;
   label: string;
+  group: ActionGroup;
   danger?: boolean;
   run: () => void;
 }
+
+/** 下拉菜单项：组与组之间插入分隔线 */
+const actionMenuItems = (actions: Action[]) =>
+  actions.flatMap((action, index) => [
+    ...(index > 0 && actions[index - 1].group !== action.group
+      ? [{ type: 'divider' as const, key: `divider:${action.key}` }]
+      : []),
+    { key: action.key, label: action.label, danger: action.danger },
+  ]);
 
 type ModalState =
   | {
@@ -73,16 +103,65 @@ type ModalState =
         | 'scale'
         | 'image'
         | 'drain'
-        | 'form'
         | 'nodeMeta'
         | 'quota'
-        | 'file';
+        | 'file'
+        | 'resize'
+        | 'rollback'
+        | 'settings';
       target: ActionTarget;
     }
+  // 登记表里的表单编辑项（详情内的编辑抽屉）
+  | { type: 'entry'; entry: EditEntry; target: ActionTarget }
   | undefined;
 
 const is = (gvr: GVR, ...list: GVR[]) =>
   list.some((item) => sameGVR(gvr, item));
+
+// 「编辑设置」抽屉按需加载
+const WorkloadSettingsEdit = lazy(() => import('../forms/edit/workload'));
+type WorkloadSettingsKind =
+  | 'Deployment'
+  | 'StatefulSet'
+  | 'DaemonSet'
+  | 'CronJob';
+
+/** 支持「编辑设置」的类型 */
+const settingsKindOf = (gvr: GVR): WorkloadSettingsKind | undefined =>
+  sameGVR(gvr, GVRS.deployment)
+    ? 'Deployment'
+    : sameGVR(gvr, GVRS.statefulSet)
+      ? 'StatefulSet'
+      : sameGVR(gvr, GVRS.daemonSet)
+        ? 'DaemonSet'
+        : sameGVR(gvr, GVRS.cronJob)
+          ? 'CronJob'
+          : undefined;
+
+/**
+ * 列表行没有对象原文：从行的状态推出「暂停 / 禁止调度」等开关的当前值，
+ * 这样行操作只给出适用的那一个（暂停 ↔ 恢复、停止调度 ↔ 恢复调度）。
+ */
+const objectHintOf = (
+  gvr: GVR,
+  target: ActionTarget,
+): K8sObject | undefined => {
+  const status = (target as Partial<ListRow>).cells?.status as
+    | { text?: string }
+    | undefined;
+  const text = status?.text;
+  if (text === undefined) return undefined;
+  if (sameGVR(gvr, GVRS.deployment)) {
+    return { spec: { paused: text === '已暂停' } };
+  }
+  if (sameGVR(gvr, GVRS.cronJob)) {
+    return { spec: { suspend: text === '已暂停' } };
+  }
+  if (sameGVR(gvr, GVRS.node)) {
+    return { spec: { unschedulable: text.includes('SchedulingDisabled') } };
+  }
+  return undefined;
+};
 
 /** 伸缩 / 更新镜像弹窗：打开时读取对象的当前值 */
 const QuickModal: React.FC<{
@@ -273,13 +352,19 @@ export const useResourceActions = ({
     const name = target.name;
     const list: Action[] = [];
     const add = (
+      group: ActionGroup,
       code: ElementPermissionCode,
       key: string,
       run: () => void,
-      danger?: boolean,
     ) => {
       if (has(code)) {
-        list.push({ key, label: t(`pages.k8s.action.${key}`), run, danger });
+        list.push({
+          key,
+          label: t(`pages.k8s.action.${key}`),
+          group,
+          danger: group === 'danger',
+          run,
+        });
       }
     };
     /** 直接执行并提示；失败已由请求层提示 */
@@ -302,16 +387,18 @@ export const useResourceActions = ({
 
     if (sameGVR(gvr, GVRS.pod)) {
       if (onOpenTab) {
-        add('k8s.workload.log', 'logs', () => onOpenTab(target, 'logs'));
+        add('view', 'k8s.workload.log', 'logs', () =>
+          onOpenTab(target, 'logs'),
+        );
       }
-      add('k8s.workload.exec', 'terminal', () =>
+      add('view', 'k8s.workload.exec', 'terminal', () =>
         terminal.open({
           clusterId,
           namespace: target.namespace ?? '',
           pod: name,
         }),
       );
-      add('k8s.workload.debug', 'debug', () =>
+      add('view', 'k8s.workload.debug', 'debug', () =>
         confirm({
           title: t('pages.k8s.action.debug.title', { name }),
           content: t('pages.k8s.action.debug.content'),
@@ -325,38 +412,46 @@ export const useResourceActions = ({
             }),
         }),
       );
-      add('k8s.workload.file', 'file', () =>
+      add('view', 'k8s.workload.file', 'file', () =>
         setModal({ type: 'file', target }),
       );
     }
     if (is(gvr, GVRS.deployment, GVRS.statefulSet, GVRS.replicaSet)) {
-      add('k8s.workload.scale', 'scale', () =>
+      add('ops', 'k8s.workload.scale', 'scale', () =>
         setModal({ type: 'scale', target }),
       );
     }
     if (is(gvr, GVRS.deployment, GVRS.statefulSet, GVRS.daemonSet)) {
-      add('k8s.workload.restart', 'restart', () =>
+      add('ops', 'k8s.workload.restart', 'restart', () =>
         ask('restart', () => restartWorkload(clusterId, ref)),
       );
-      add('k8s.workload.edit', 'image', () =>
+      add('ops', 'k8s.workload.edit', 'image', () =>
         setModal({ type: 'image', target }),
+      );
+      add('ops', 'k8s.workload.rollback', 'rollback', () =>
+        setModal({ type: 'rollback', target }),
+      );
+    }
+    if (settingsKindOf(gvr)) {
+      add('edit', 'k8s.workload.edit', 'settings', () =>
+        setModal({ type: 'settings', target }),
       );
     }
     if (sameGVR(gvr, GVRS.deployment)) {
       const paused = object?.spec?.paused;
       if (paused !== true) {
-        add('k8s.workload.edit', 'pause', () =>
+        add('ops', 'k8s.workload.edit', 'pause', () =>
           exec(() => pauseWorkload(clusterId, ref, true)),
         );
       }
       if (paused === true || !object) {
-        add('k8s.workload.edit', 'resume', () =>
+        add('ops', 'k8s.workload.edit', 'resume', () =>
           exec(() => pauseWorkload(clusterId, ref, false)),
         );
       }
     }
     if (sameGVR(gvr, GVRS.cronJob)) {
-      add('k8s.workload.create', 'trigger', () =>
+      add('ops', 'k8s.workload.create', 'trigger', () =>
         exec(
           () => triggerCronJob(clusterId, ref),
           'pages.k8s.action.trigger.done',
@@ -364,12 +459,12 @@ export const useResourceActions = ({
       );
       const suspended = object?.spec?.suspend;
       if (suspended !== true) {
-        add('k8s.workload.edit', 'suspend', () =>
+        add('ops', 'k8s.workload.edit', 'suspend', () =>
           exec(() => suspendCronJob(clusterId, ref, true)),
         );
       }
       if (suspended === true || !object) {
-        add('k8s.workload.edit', 'unsuspend', () =>
+        add('ops', 'k8s.workload.edit', 'unsuspend', () =>
           exec(() => suspendCronJob(clusterId, ref, false)),
         );
       }
@@ -377,71 +472,79 @@ export const useResourceActions = ({
     if (sameGVR(gvr, GVRS.node)) {
       const off = object?.spec?.unschedulable;
       if (off !== true) {
-        add('k8s.cluster.node_schedule', 'cordon', () =>
+        add('ops', 'k8s.cluster.node_schedule', 'cordon', () =>
           ask('cordon', () => cordonNode(clusterId, name, true)),
         );
       }
       if (off === true || !object) {
-        add('k8s.cluster.node_schedule', 'uncordon', () =>
+        add('ops', 'k8s.cluster.node_schedule', 'uncordon', () =>
           exec(() => cordonNode(clusterId, name, false)),
         );
       }
-      add(
-        'k8s.cluster.node_drain',
-        'drain',
-        () => setModal({ type: 'drain', target }),
-        true,
-      );
-    }
-    if (formKindOf(gvr)) {
-      add('k8s.workload.edit', 'editForm', () =>
-        setModal({ type: 'form', target }),
+      add('danger', 'k8s.cluster.node_drain', 'drain', () =>
+        setModal({ type: 'drain', target }),
       );
     }
     if (sameGVR(gvr, GVRS.node)) {
-      add('k8s.cluster.node_edit', 'nodeMeta', () =>
+      add('edit', 'k8s.cluster.node_edit', 'nodeMeta', () =>
         setModal({ type: 'nodeMeta', target }),
       );
     }
     if (sameGVR(gvr, GVRS.namespace)) {
-      add('k8s.cluster.namespace_edit', 'quota', () =>
+      add('edit', 'k8s.cluster.namespace_edit', 'quota', () =>
         setModal({ type: 'quota', target }),
       );
     }
-    add(elementCode(gvr, 'edit'), 'editYaml', () =>
+    // 表单编辑项（按资源类型登记）：与「编辑 YAML」同一元素权限
+    if (has(elementCode(gvr, 'edit'))) {
+      for (const entry of editEntriesOf(gvr)) {
+        list.push({
+          key: `entry:${entry.key}`,
+          label: entry.label,
+          group: 'edit',
+          run: () => setModal({ type: 'entry', entry, target }),
+        });
+      }
+    }
+    add('edit', elementCode(gvr, 'edit'), 'editYaml', () =>
       setModal({ type: 'edit', target }),
     );
     if (sameGVR(gvr, GVRS.pod)) {
-      add(
-        'k8s.workload.delete',
-        'evict',
-        () => ask('evict', () => evictPod(clusterId, ref)),
-        true,
+      // 原地调整资源：与伸缩同一元素权限
+      add('ops', 'k8s.workload.scale', 'resize', () =>
+        setModal({ type: 'resize', target }),
+      );
+      add('danger', 'k8s.workload.delete', 'evict', () =>
+        ask('evict', () => evictPod(clusterId, ref)),
       );
     }
     if (!sameGVR(gvr, GVRS.node)) {
-      add(
-        elementCode(gvr, 'delete'),
-        'delete',
-        () =>
-          confirm({
-            title: t('pages.k8s.action.delete.title', { name }),
-            content: t('pages.k8s.action.delete.content'),
-            name,
-            namespace: ref.namespace,
-            onOk: () =>
-              deleteObject(clusterId, { ref, uid: target.uid })
-                .then(() => {
-                  message.success(t('common.msg.deleted'));
-                  onChanged();
-                  onDeleted?.();
-                })
-                .catch(() => undefined),
-          }),
-        true,
+      add('danger', elementCode(gvr, 'delete'), 'delete', () =>
+        confirm({
+          title: t('pages.k8s.action.delete.title', { name }),
+          content: t('pages.k8s.action.delete.content'),
+          name,
+          namespace: ref.namespace,
+          onOk: () =>
+            deleteObject(clusterId, { ref, uid: target.uid })
+              .then(() => {
+                message.success(t('common.msg.deleted'));
+                onChanged();
+                onDeleted?.();
+              })
+              .catch(() => undefined),
+        }),
       );
     }
-    return list;
+    // 按分组排列（组内保持登记顺序）
+    return list
+      .map((action, index) => ({ action, index }))
+      .sort(
+        (x, y) =>
+          GROUP_ORDER.indexOf(x.action.group) -
+            GROUP_ORDER.indexOf(y.action.group) || x.index - y.index,
+      )
+      .map((item) => item.action);
   };
 
   /** 渲染为若干链接：前 inline 个直接展示，其余收进「更多」 */
@@ -449,7 +552,10 @@ export const useResourceActions = ({
     target: ActionTarget,
     options: { object?: K8sObject; inline?: number } = {},
   ): React.ReactNode[] => {
-    const actions = actionsOf(target, options.object);
+    const actions = actionsOf(
+      target,
+      options.object ?? objectHintOf(gvr, target),
+    );
     const inline = options.inline ?? 2;
     const head =
       actions.length > inline + 1 ? actions.slice(0, inline) : actions;
@@ -469,11 +575,7 @@ export const useResourceActions = ({
           key="more"
           trigger={['click']}
           menu={{
-            items: rest.map((action) => ({
-              key: action.key,
-              label: action.label,
-              danger: action.danger,
-            })),
+            items: actionMenuItems(rest),
             onClick: ({ key }) =>
               rest.find((action) => action.key === key)?.run(),
           }}
@@ -487,11 +589,129 @@ export const useResourceActions = ({
     return nodes;
   };
 
+  /** 批量操作（列表勾选后出现）：逐个执行，汇总成功 / 失败 / 转为变更单的数量 */
+  const batch = (
+    rows: ActionTarget[],
+    clear: () => void,
+  ): React.ReactNode[] => {
+    const run = (
+      key: 'restart' | 'delete',
+      call: (target: ActionTarget) => Promise<unknown>,
+    ) =>
+      confirm({
+        title: `${t(`pages.k8s.action.${key}`)} ${rows.length} 个对象？`,
+        content: (
+          <div style={{ maxHeight: 220, overflow: 'auto' }}>
+            {rows.map((row) => (
+              <div key={`${row.namespace}/${row.name}`}>
+                {row.namespace ? `${row.namespace}/` : ''}
+                {row.name}
+              </div>
+            ))}
+          </div>
+        ),
+        // 生产集群：输入数量确认
+        name: String(rows.length),
+        onOk: async () => {
+          let failed = 0;
+          let submitted = 0;
+          for (const row of rows) {
+            try {
+              await call(row);
+            } catch (err) {
+              // 需审批的集群：每个对象各生成一张变更单，不算失败
+              if (isChangeSubmitted(err)) submitted += 1;
+              else failed += 1;
+            }
+          }
+          const done = rows.length - failed - submitted;
+          if (failed > 0) {
+            message.warning(`成功 ${done} 个，失败 ${failed} 个`);
+          } else if (submitted > 0) {
+            message.info(`已提交 ${submitted} 张变更单`);
+          } else {
+            message.success(t('common.msg.updated'));
+          }
+          clear();
+          onChanged();
+        },
+      });
+    const nodes: React.ReactNode[] = [];
+    if (
+      is(gvr, GVRS.deployment, GVRS.statefulSet, GVRS.daemonSet) &&
+      has('k8s.workload.restart')
+    ) {
+      nodes.push(
+        <a
+          key="restart"
+          onClick={() =>
+            run('restart', (row) => restartWorkload(clusterId, refOf(row)))
+          }
+        >
+          批量{t('pages.k8s.action.restart')}
+        </a>,
+      );
+    }
+    if (!sameGVR(gvr, GVRS.node) && has(elementCode(gvr, 'delete'))) {
+      nodes.push(
+        <a
+          key="delete"
+          style={{ color: token.colorError }}
+          onClick={() =>
+            run('delete', (row) =>
+              deleteObject(clusterId, { ref: refOf(row), uid: row.uid }),
+            )
+          }
+        >
+          批量{t('pages.k8s.action.delete')}
+        </a>,
+      );
+    }
+    return nodes;
+  };
+
   const close = () => setModal(undefined);
   const holder = modal && (
     <>
+      {modal.type === 'entry' && (
+        <Suspense fallback={null}>
+          <modal.entry.component
+            clusterId={clusterId}
+            target={refOf(modal.target)}
+            onClose={close}
+            onDone={onChanged}
+          />
+        </Suspense>
+      )}
       {modal.type === 'edit' && (
         <EditObjectModal
+          clusterId={clusterId}
+          target={refOf(modal.target)}
+          onClose={close}
+          onDone={onChanged}
+        />
+      )}
+      {modal.type === 'rollback' && (
+        <RollbackModal
+          clusterId={clusterId}
+          target={refOf(modal.target)}
+          onClose={close}
+          onDone={onChanged}
+        />
+      )}
+      {modal.type === 'settings' && settingsKindOf(gvr) && (
+        <Suspense fallback={null}>
+          <WorkloadSettingsEdit
+            clusterId={clusterId}
+            kind={settingsKindOf(gvr) ?? 'Deployment'}
+            target={refOf(modal.target)}
+            onClose={close}
+            onDone={onChanged}
+          />
+        </Suspense>
+      )}
+      {modal.type === 'resize' && (
+        <PodResizeModal
           clusterId={clusterId}
           target={refOf(modal.target)}
           onClose={close}
@@ -502,15 +722,6 @@ export const useResourceActions = ({
         <QuickModal
           clusterId={clusterId}
           type={modal.type}
-          target={refOf(modal.target)}
-          onClose={close}
-          onDone={onChanged}
-        />
-      )}
-      {modal.type === 'form' && formKindOf(gvr) && (
-        <WorkloadFormModal
-          clusterId={clusterId}
-          kind={formKindOf(gvr) ?? 'Deployment'}
           target={refOf(modal.target)}
           onClose={close}
           onDone={onChanged}
@@ -553,6 +764,7 @@ export const useResourceActions = ({
 
   return {
     render,
+    batch,
     holder,
     hasAny: (target: ActionTarget) => actionsOf(target).length > 0,
   };

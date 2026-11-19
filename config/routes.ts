@@ -201,8 +201,8 @@ export default [
     ],
   },
   {
-    // 容器平台：总览 / 工作负载 / 网络与配置 / 应用 / 资源浏览器 / 集群管理 / 事件巡检 / 安全审计。
-    // 各页内以页签切换资源类型，集群与命名空间的选择写在 URL 查询参数里。
+    // 容器平台：总览 / 集群列表 / 节点 / 命名空间 / 工作负载 / 网络 / 配置 / 存储 / 访问控制 / CRD /
+    // 资源浏览器 / 应用 / 事件巡检 / 安全审计。每类资源一个菜单页，集群与命名空间的选择写在 URL 查询参数里。
     // 「事件巡检」「安全审计」是菜单分组：入口路由落到第一个有权限的页面，分组内的页面仍是平级路由
     // （URL 不变，hideInMenu + parentKeys 指回入口），页头用路由页签切换（见 src/components/RouteTabs）
     path: '/k8s',
@@ -226,16 +226,206 @@ export default [
         access: 'canK8sOverview',
       },
       {
-        path: '/k8s/workload',
-        name: 'workload',
-        component: './k8s/workload',
-        access: 'canK8sWorkload',
+        // 集群列表：接入 / 连通性 / Agent
+        path: '/k8s/cluster',
+        name: 'cluster',
+        component: './k8s/cluster',
+        access: 'canK8sCluster',
       },
       {
+        path: '/k8s/node',
+        name: 'node',
+        component: './k8s/node',
+        access: 'canK8sCluster',
+      },
+      {
+        path: '/k8s/namespaces',
+        name: 'namespaces',
+        component: './k8s/namespaces',
+        access: 'canK8sCluster',
+      },
+      {
+        // 工作负载：Deployment·StatefulSet·DaemonSet / Job / CronJob / Pod / Service / Ingress / HPA
+        path: '/k8s/workloads',
+        name: 'workloads',
+        access: 'canK8sWorkloads',
+        routes: [
+          {
+            path: '/k8s/workloads',
+            redirect: '/k8s/workloads/list',
+          },
+          {
+            path: '/k8s/workloads/list',
+            name: 'list',
+            component: './k8s/workloads/list',
+            access: 'canK8sWorkload',
+          },
+          {
+            path: '/k8s/workloads/jobs',
+            name: 'jobs',
+            component: './k8s/workloads/jobs',
+            access: 'canK8sWorkload',
+          },
+          {
+            path: '/k8s/workloads/cron-jobs',
+            name: 'cronJobs',
+            component: './k8s/workloads/cron-jobs',
+            access: 'canK8sWorkload',
+          },
+          {
+            path: '/k8s/workloads/pods',
+            name: 'pods',
+            component: './k8s/workloads/pods',
+            access: 'canK8sWorkload',
+          },
+          {
+            path: '/k8s/workloads/services',
+            name: 'services',
+            component: './k8s/workloads/services',
+            access: 'canK8sConfig',
+          },
+          {
+            path: '/k8s/workloads/ingresses',
+            name: 'ingresses',
+            component: './k8s/workloads/ingresses',
+            access: 'canK8sConfig',
+          },
+          {
+            path: '/k8s/workloads/horizontal-pod-autoscalers',
+            name: 'hpa',
+            component: './k8s/workloads/horizontal-pod-autoscalers',
+            access: 'canK8sResource',
+          },
+        ],
+      },
+      {
+        // 网络：NetworkPolicy / IngressClass / EndpointSlice（增删改归资源浏览器的元素权限）
+        path: '/k8s/network',
+        name: 'network',
+        access: 'canK8sResource',
+        routes: [
+          {
+            path: '/k8s/network',
+            redirect: '/k8s/network/network-policies',
+          },
+          {
+            path: '/k8s/network/network-policies',
+            name: 'networkPolicies',
+            component: './k8s/network/network-policies',
+            access: 'canK8sResource',
+          },
+          {
+            path: '/k8s/network/ingress-classes',
+            name: 'ingressClasses',
+            component: './k8s/network/ingress-classes',
+            access: 'canK8sResource',
+          },
+          {
+            path: '/k8s/network/endpoint-slices',
+            name: 'endpointSlices',
+            component: './k8s/network/endpoint-slices',
+            access: 'canK8sResource',
+          },
+        ],
+      },
+      {
+        // 配置：Secret / ConfigMap / ServiceAccount
         path: '/k8s/config',
         name: 'config',
-        component: './k8s/config',
+        access: 'canK8sConfigGroup',
+        routes: [
+          {
+            // 入口：落到保密字典；旧链接 /k8s/config?tab=… 按页签跳到对应的新页面
+            path: '/k8s/config',
+            hideInMenu: true,
+            component: './k8s/legacy',
+          },
+          {
+            path: '/k8s/config/secrets',
+            name: 'secrets',
+            component: './k8s/config/secrets',
+            access: 'canK8sConfig',
+          },
+          {
+            path: '/k8s/config/config-maps',
+            name: 'configMaps',
+            component: './k8s/config/config-maps',
+            access: 'canK8sConfig',
+          },
+          {
+            path: '/k8s/config/service-accounts',
+            name: 'serviceAccounts',
+            component: './k8s/config/service-accounts',
+            access: 'canK8sResource',
+          },
+        ],
+      },
+      {
+        // 存储：PVC / PV / StorageClass
+        path: '/k8s/storage',
+        name: 'storage',
         access: 'canK8sConfig',
+        routes: [
+          {
+            path: '/k8s/storage',
+            redirect: '/k8s/storage/persistent-volume-claims',
+          },
+          {
+            path: '/k8s/storage/persistent-volume-claims',
+            name: 'pvc',
+            component: './k8s/storage/persistent-volume-claims',
+            access: 'canK8sConfig',
+          },
+          {
+            path: '/k8s/storage/persistent-volumes',
+            name: 'pv',
+            component: './k8s/storage/persistent-volumes',
+            access: 'canK8sConfig',
+          },
+          {
+            path: '/k8s/storage/storage-classes',
+            name: 'storageClasses',
+            component: './k8s/storage/storage-classes',
+            access: 'canK8sConfig',
+          },
+        ],
+      },
+      {
+        // 访问控制：集群内的 Role / ClusterRole 与其绑定（平台自身的授权在「系统管理 / 角色」）
+        path: '/k8s/access-control',
+        name: 'accessControl',
+        access: 'canK8sResource',
+        routes: [
+          {
+            path: '/k8s/access-control',
+            redirect: '/k8s/access-control/roles',
+          },
+          {
+            path: '/k8s/access-control/roles',
+            name: 'roles',
+            component: './k8s/access-control/roles',
+            access: 'canK8sResource',
+          },
+          {
+            path: '/k8s/access-control/bindings',
+            name: 'bindings',
+            component: './k8s/access-control/bindings',
+            access: 'canK8sResource',
+          },
+        ],
+      },
+      {
+        path: '/k8s/custom-resource-definitions',
+        name: 'crd',
+        component: './k8s/custom-resource-definitions',
+        access: 'canK8sResource',
+      },
+      {
+        // 资源浏览器：集群的全部资源类型（含 CRD 的实例）
+        path: '/k8s/resource',
+        name: 'resource',
+        component: './k8s/resource',
+        access: 'canK8sResource',
       },
       {
         // 应用：Helm Release 与 Helm 仓库
@@ -245,16 +435,17 @@ export default [
         access: 'canK8sApp',
       },
       {
-        path: '/k8s/resource',
-        name: 'resource',
-        component: './k8s/resource',
-        access: 'canK8sResource',
+        // 资源详情（整页）：任意资源类型共用；能否看到具体对象由集群按数据范围判定
+        path: '/k8s/detail/:group/:version/:resource/:namespace/:name',
+        name: 'detail',
+        hideInMenu: true,
+        component: './k8s/detail',
       },
       {
-        path: '/k8s/cluster',
-        name: 'cluster',
-        component: './k8s/cluster',
-        access: 'canK8sCluster',
+        // 旧地址兼容：原「工作负载」「网络与配置」页签容器，按 ?tab= 跳到对应的新页面
+        path: '/k8s/workload',
+        hideInMenu: true,
+        component: './k8s/legacy',
       },
       {
         // 事件巡检：事件 / 巡检
@@ -328,7 +519,7 @@ export default [
   },
   {
     // 监控告警：告警事件 / 告警规则 / 降噪规则 / 通知策略 / 指标数据 / 运行分析（后三个是菜单分组，
-    // 做法同容器平台）
+    // 做法同容器平台）；数据源管理是独立页面，放在菜单最下面
     path: '/monitor',
     name: 'monitor',
     icon: 'alert',
@@ -399,7 +590,7 @@ export default [
         access: 'canMonitorEscalation',
       },
       {
-        // 指标数据：即时查询 / 记录规则 / 数据源
+        // 指标数据：即时查询 / 记录规则
         path: '/monitor/metric',
         name: 'metric',
         component: './monitor/group',
@@ -420,14 +611,6 @@ export default [
         parentKeys: ['/monitor/metric'],
         component: './monitor/record',
         access: 'canMonitorRecord',
-      },
-      {
-        path: '/monitor/datasource',
-        name: 'datasource',
-        hideInMenu: true,
-        parentKeys: ['/monitor/metric'],
-        component: './monitor/datasource',
-        access: 'canMonitorDatasource',
       },
       {
         // 运行分析：告警统计 / 引擎状态
@@ -452,11 +635,18 @@ export default [
         component: './monitor/engine',
         access: 'canMonitorEngine',
       },
+      {
+        // 数据源管理：从「指标数据」分组拆出来的独立页面，固定放监控菜单最下面
+        path: '/monitor/datasource',
+        name: 'datasource',
+        component: './monitor/datasource',
+        access: 'canMonitorDatasource',
+      },
     ],
   },
   {
-    // 作业中心：快速执行 / 作业管理 / 执行记录 / 定时触发 / 资源配置 / 安全策略（中间四个是菜单分组，
-    // 做法同容器平台）；执行详情隐藏于菜单
+    // 作业中心：快速执行 / 作业管理 / 定时触发 / 资源配置 / 安全策略 / 执行记录 / 执行统计
+    // （作业管理 / 定时触发 / 资源配置是菜单分组，做法同容器平台）；执行详情隐藏于菜单
     path: '/job',
     name: 'job',
     icon: 'code',
@@ -496,38 +686,6 @@ export default [
         parentKeys: ['/job/library'],
         component: './job/script',
         access: 'canJobScript',
-      },
-      {
-        // 执行记录：执行记录 / 执行统计
-        path: '/job/history',
-        name: 'history',
-        component: './job/group',
-        access: 'canJobHistory',
-      },
-      {
-        path: '/job/execution',
-        name: 'execution',
-        hideInMenu: true,
-        parentKeys: ['/job/history'],
-        component: './job/execution',
-        access: 'canJobExecution',
-      },
-      {
-        // 提交执行后跳到这里。不单设 access：有任一作业中心菜单即可打开（沿用上级的 canJob），
-        // 能看到什么由接口权限判定（「执行作业」按钮权限带有查看执行详情 / 主机 / 日志的接口）
-        path: '/job/execution/:id',
-        name: 'execution-detail',
-        hideInMenu: true,
-        parentKeys: ['/job/history'],
-        component: './job/execution/detail',
-      },
-      {
-        path: '/job/stats',
-        name: 'stats',
-        hideInMenu: true,
-        parentKeys: ['/job/history'],
-        component: './job/stats',
-        access: 'canJobStats',
       },
       {
         // 定时触发：定时作业 / 触发器
@@ -588,6 +746,36 @@ export default [
         name: 'policy',
         component: './job/policy',
         access: 'canJobPolicy',
+      },
+      {
+        // 执行记录：作业执行列表（原与执行统计同属「执行记录」分组的页签，现拆为独立页面）
+        path: '/job/history',
+        name: 'history',
+        component: './job/execution',
+        access: 'canJobExecution',
+      },
+      {
+        // 旧地址兼容：原「执行记录」页签的路径，跳到拆分后的页面
+        path: '/job/execution',
+        redirect: '/job/history',
+        // 旧链接带着筛选条件（?groupId= / ?triggerRef= / ?templateId=），跳转时原样带上
+        keepQuery: true,
+      },
+      {
+        // 提交执行后跳到这里。不单设 access：有任一作业中心菜单即可打开（沿用上级的 canJob），
+        // 能看到什么由接口权限判定（「执行作业」按钮权限带有查看执行详情 / 主机 / 日志的接口）
+        path: '/job/execution/:id',
+        name: 'execution-detail',
+        hideInMenu: true,
+        parentKeys: ['/job/history'],
+        component: './job/execution/detail',
+      },
+      {
+        // 执行统计：从「执行记录」分组拆出的独立页面
+        path: '/job/stats',
+        name: 'stats',
+        component: './job/stats',
+        access: 'canJobStats',
       },
     ],
   },

@@ -31,8 +31,8 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { JsonView } from '@/components/JsonView';
 import { ConfirmLink, DeleteConfirmLink } from '@/components/TableActions';
-import { JsonView } from '@/pages/notify/components/JsonView';
 import {
   addGroupMembers,
   deleteGroup,

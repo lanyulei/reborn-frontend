@@ -12,10 +12,10 @@ import { Empty, Input, Tooltip } from 'antd';
 import { createStyles, useTheme } from 'antd-style';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSize } from '@/components/Charts';
 import { IconGlyph } from '@/components/IconPicker';
 import type { CmdbCardinality } from '@/services/cmdb/typings';
 import { useT } from '@/utils/i18n';
-import { useSize } from './charts';
 import { UiIcon } from './icons';
 import { CMDB_ANY_MODEL } from './meta';
 

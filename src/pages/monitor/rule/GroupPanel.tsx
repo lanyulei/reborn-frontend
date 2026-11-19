@@ -1,10 +1,10 @@
 /**
  * 规则分组树（告警规则页左栏）：按数据范围只显示可访问的分组（level=0 的上级分组仅用于保持
- * 层级，置灰且不可选）。分组维护（新建下级 / 编辑 / 删除）需要元素权限 monitor.rule.group
+ * 层级，置灰且不可选）。分组维护（新建下级 / 编辑 / 删除）在分组的右键菜单里，需要元素权限 monitor.rule.group
  * 且对该分组「可管理」；新建顶级分组与「分组授权」仅超级管理员。
  * 分组不能更换上级（后端不支持），同级顺序通过「排序」调整。
  */
-import { PlusOutlined, SettingOutlined } from '@ant-design/icons';
+import { PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import {
   ModalForm,
   ProFormDigit,
@@ -12,7 +12,7 @@ import {
   ProFormTextArea,
 } from '@ant-design/pro-components';
 import type { MenuProps } from 'antd';
-import { App, Button, Dropdown, Empty, Spin, Tooltip, Tree } from 'antd';
+import { App, Button, Dropdown, Empty, Spin, Tooltip, Tree, theme } from 'antd';
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import {
@@ -65,6 +65,7 @@ export const GroupPanel: React.FC<{
   const rules = useFormRules();
   const submitter = useSubmitter();
   const { styles, cx } = useMonitorStyles();
+  const { token } = theme.useToken();
   const canMaintain = has('monitor.rule.group');
   const canGrant = isAdmin && has('monitor.rule.scope');
 
@@ -132,50 +133,41 @@ export const GroupPanel: React.FC<{
     const toNode = (node: TreeNode<RuleGroup>): GroupDataNode => {
       const visible = (node.level ?? 0) >= 1;
       const menu = menuOf(node);
+      const row = (
+        <span className={styles.treeNode}>
+          <span
+            className={cx(
+              styles.treeNodeName,
+              !visible && styles.treeNodeMuted,
+            )}
+            title={node.description || node.name}
+          >
+            {node.name}
+          </span>
+          {visible && (
+            <span className={styles.treeNodeCount}>{node.ruleCount ?? 0}</span>
+          )}
+        </span>
+      );
       return {
         key: node.id,
         selectable: visible,
-        title: (
-          <span className={styles.treeNode}>
-            <span
-              className={cx(
-                styles.treeNodeName,
-                !visible && styles.treeNodeMuted,
-              )}
-              title={node.description || node.name}
+        // 分组的维护操作在右键菜单里（没有可用操作的分组不挂菜单，保留浏览器默认的右键）
+        title:
+          menu && menu.length > 0 ? (
+            <Dropdown
+              menu={{
+                items: menu,
+                // 菜单在浮层里，但 React 事件仍会冒泡到树节点：不要因此改变选中的分组
+                onClick: ({ domEvent }) => domEvent.stopPropagation(),
+              }}
+              trigger={['contextMenu']}
             >
-              {node.name}
-            </span>
-            {visible && (
-              <span className={styles.treeNodeCount}>
-                {node.ruleCount ?? 0}
-              </span>
-            )}
-            {menu && menu.length > 0 && (
-              <Dropdown
-                menu={{
-                  items: menu,
-                  // 菜单在浮层里，但 React 事件仍会冒泡到树节点：不要因此改变选中的分组
-                  onClick: ({ domEvent }) => domEvent.stopPropagation(),
-                }}
-                trigger={['click']}
-              >
-                <Button
-                  type="text"
-                  size="small"
-                  className={styles.treeNodeCount}
-                  icon={<SettingOutlined />}
-                  aria-label={t('pages.monitor.group.actions', {
-                    name: node.name,
-                  })}
-                  // 点击与键盘操作都不要冒泡到树节点（否则会改变选中的分组）
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                />
-              </Dropdown>
-            )}
-          </span>
-        ),
+              {row}
+            </Dropdown>
+          ) : (
+            row
+          ),
         children: node.children?.map(toNode),
       };
     };
@@ -183,11 +175,31 @@ export const GroupPanel: React.FC<{
   }, [groups, canMaintain, canGrant, styles, cx, t, selectedId]);
 
   const editing = form?.mode === 'edit' ? form.group : undefined;
+  /** 可访问分组（level ≥ 1）的规则总数：分组上的 ruleCount 不含下级，求和即全部规则数 */
+  const totalRules = groups.reduce(
+    (sum, group) =>
+      (group.level ?? 0) >= 1 ? sum + (group.ruleCount ?? 0) : sum,
+    0,
+  );
 
   return (
     <aside className={styles.splitSide}>
       <div className={styles.splitSideTitle}>
-        <span>{t('pages.monitor.group.title')}</span>
+        <span style={{ flex: 1 }}>
+          {t('pages.monitor.group.title')}
+          {/* 维护操作在右键菜单里，没有可见入口：有维护权限时在标题旁说明一下 */}
+          {(canMaintain || canGrant) && (
+            <Tooltip title={t('pages.monitor.group.contextTip')}>
+              <QuestionCircleOutlined
+                style={{
+                  marginInlineStart: 6,
+                  color: token.colorTextTertiary,
+                  fontSize: token.fontSizeSM,
+                }}
+              />
+            </Tooltip>
+          )}
+        </span>
         {/* 顶级分组仅超级管理员可建 */}
         {canMaintain && isAdmin && (
           <Tooltip title={t('pages.monitor.group.createRoot')}>
@@ -223,7 +235,10 @@ export const GroupPanel: React.FC<{
               aria-pressed={!selectedId}
               onClick={() => onSelect(undefined)}
             >
-              {t('pages.monitor.group.all')}
+              <span className={styles.treeNodeName}>
+                {t('pages.monitor.group.all')}
+              </span>
+              <span className={styles.treeNodeCount}>{totalRules}</span>
             </button>
             <Tree
               blockNode
@@ -295,6 +310,14 @@ export const GroupPanel: React.FC<{
               },
             ]}
           />
+          <ProFormDigit
+            name="sort"
+            label={t('pages.monitor.group.form.sort')}
+            tooltip={t('pages.monitor.group.form.sort.tooltip')}
+            min={0}
+            max={MONITOR_LIMITS.groupSortMax}
+            fieldProps={{ precision: 0 }}
+          />
           <ProFormTextArea
             name="description"
             label={t('pages.monitor.common.description')}
@@ -303,14 +326,6 @@ export const GroupPanel: React.FC<{
               maxLength: MONITOR_LIMITS.groupDescMax,
               showCount: true,
             }}
-          />
-          <ProFormDigit
-            name="sort"
-            label={t('pages.monitor.group.form.sort')}
-            tooltip={t('pages.monitor.group.form.sort.tooltip')}
-            min={0}
-            max={MONITOR_LIMITS.groupSortMax}
-            fieldProps={{ precision: 0 }}
           />
         </ModalForm>
       )}

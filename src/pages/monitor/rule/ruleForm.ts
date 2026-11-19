@@ -3,6 +3,12 @@
  * 加载路径只走 specToValues（入参是归一化后的 spec，缺失字段已补成零值）；
  * 新建缺省值只在 createValues 里。
  */
+
+import {
+  type KeyValue,
+  kvToRecord,
+  recordToKv,
+} from '@/components/KeyValueEditor';
 import type {
   NormalizedRelabelStep,
   NormalizedRuleSpec,
@@ -18,11 +24,6 @@ import type {
   RuleTicketAction,
   RuleWorkflowAction,
 } from '@/services/monitor/typings';
-import {
-  type KeyValue,
-  kvToRecord,
-  recordToKv,
-} from '../components/KeyValueEditor';
 import { localTimezone } from '../components/TimeWindowsEditor';
 
 /** 生效方式的界面选项：按时间窗（落库为 '' 或 'windows'，二者同义）/ 仅工作时间 / 仅非工作时间 */

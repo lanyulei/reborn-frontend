@@ -31,11 +31,13 @@ export const useMonitorStyles = createStyles(({ token, css }) => ({
     flex: 1;
     min-width: 0;
   `,
+  /** 分组树的一行：上下留白把行撑高一点；右键菜单挂在它上面，所以要占满整行 */
   treeNode: css`
     display: flex;
     gap: 8px;
     align-items: center;
     min-width: 0;
+    padding-block: 3px;
   `,
   treeNodeName: css`
     flex: 1;
@@ -44,17 +46,19 @@ export const useMonitorStyles = createStyles(({ token, css }) => ({
     white-space: nowrap;
     text-overflow: ellipsis;
   `,
-  /** 分组树上方的「全部」（button 元素）：外观同树节点 */
+  /** 分组树上方的「全部」（button 元素）：外观同树节点（名称 + 右侧数量） */
   treeAll: css`
-    display: block;
+    display: flex;
+    gap: 8px;
+    align-items: center;
     width: 100%;
     padding: 4px 8px;
+    margin-bottom: 4px;
     overflow: hidden;
     color: ${token.colorText};
     font: inherit;
     white-space: nowrap;
     text-align: start;
-    text-overflow: ellipsis;
     background: none;
     border: 0;
     border-radius: ${token.borderRadiusSM}px;

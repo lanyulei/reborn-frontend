@@ -17,6 +17,11 @@ import {
 import { App, Button, Col, Form, theme } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
+import {
+  type KeyValue,
+  KeyValueEditor,
+  validateKeyValues,
+} from '@/components/KeyValueEditor';
 import { SectionTitle } from '@/components/SectionTitle';
 import { FULL, HALF } from '@/constants/layout';
 import {
@@ -33,11 +38,6 @@ import { usePermissions } from '@/services/system/permissions';
 import { useFormRules, useSubmitter, useT } from '@/utils/i18n';
 import { GroupTreeSelect } from '../components/GroupTreeSelect';
 import type { DatasourceOptionsState } from '../components/hooks';
-import {
-  type KeyValue,
-  KeyValueEditor,
-  validateKeyValues,
-} from '../components/KeyValueEditor';
 import { LABEL_NAME_REGEX, MONITOR_LIMITS } from '../components/meta';
 import { RuleActionsSection } from './RuleActionsSection';
 import { RuleCmdbSection } from './RuleCmdbSection';

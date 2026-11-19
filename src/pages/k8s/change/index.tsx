@@ -29,10 +29,11 @@ import { cancelChange, getChange, listChanges } from '@/services/k8s/change';
 import { listClusterOptions } from '@/services/k8s/cluster';
 import { usePermissions } from '@/services/system/permissions';
 import type { Translate } from '@/utils/i18n';
-import { useT } from '@/utils/i18n';
+import { t, useT } from '@/utils/i18n';
 import { toTableResult } from '@/utils/table';
 import { formatTime } from '../components/cells';
 import { SECURITY_TABS } from '../components/groups';
+import { kindTextId } from '../components/meta';
 import { useK8sStyles } from '../components/styles';
 import { YamlDiff, YamlEditor } from '../components/YamlEditor';
 
@@ -63,8 +64,11 @@ const targetText = (item: {
     (typeof item.kind === 'string' ? item.kind : '') ||
     item.resource ||
     '';
+  // 资源名走本地化（已知类型）；未知（CRD 等）原样
+  const kindId = kindTextId(kind);
+  const kindText = kindId ? t(kindId) : kind;
   const name = `${item.namespace ? `${item.namespace}/` : ''}${item.name ?? ''}`;
-  return `${kind} ${name}`.trim();
+  return `${kindText} ${name}`.trim();
 };
 
 /** 有本地化文案的动作（与审计页同一套词条）；其余原样显示 */
@@ -487,14 +491,21 @@ const ChangePage: React.FC = () => {
         scroll={{ x: 'max-content' }}
         params={{ scope }}
         headerTitle={
-          <Segmented
-            value={scope}
-            onChange={(value) => setScope(value as 'mine' | 'all')}
-            options={[
-              { value: 'mine', label: t('pages.k8s.changeOrder.scope.mine') },
-              { value: 'all', label: t('pages.k8s.changeOrder.scope.all') },
-            ]}
-          />
+          // ProTable 把 headerTitle 渲染在 500 字重 / 16px 的标题容器里：
+          // 重置回常规字号字重，单选用默认样式（同 ScopeSelects / ResourceTable 的处理）
+          <span style={{ fontSize: 14, fontWeight: 400 }}>
+            <Segmented
+              value={scope}
+              onChange={(value) => setScope(value as 'mine' | 'all')}
+              options={[
+                {
+                  value: 'mine',
+                  label: t('pages.k8s.changeOrder.scope.mine'),
+                },
+                { value: 'all', label: t('pages.k8s.changeOrder.scope.all') },
+              ]}
+            />
+          </span>
         }
         request={async ({ current, pageSize, ...rest }) =>
           toTableResult(

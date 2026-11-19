@@ -4,6 +4,7 @@ import { Link, useAccess } from '@umijs/max';
 import { Descriptions, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import React from 'react';
+import { JsonView } from '@/components/JsonView';
 import {
   NOTIFY_EVENT_SOURCE_META,
   NOTIFY_EVENT_STATUS_META,
@@ -17,7 +18,6 @@ import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
 import { useEnumText, useT, useValueEnum } from '@/utils/i18n';
 import { timeRangeColumn, toTableResult } from '@/utils/table';
 import { useBizIdColumn } from '../components/bizScope';
-import { JsonView } from '../components/JsonView';
 
 /**
  * 通知事件：append-only 运行数据（先落库后应答，无写路径），

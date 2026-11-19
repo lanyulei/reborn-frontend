@@ -13,6 +13,7 @@ import { Alert, Card, Empty, Segmented, Spin, Tooltip, Typography } from 'antd';
 import { createStyles, useTheme } from 'antd-style';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSize } from '@/components/Charts';
 import { IconGlyph } from '@/components/IconPicker';
 import {
   getNeighbors,
@@ -21,7 +22,6 @@ import {
 } from '@/services/cmdb/relation';
 import type { CmdbCIStatus, CmdbModel } from '@/services/cmdb/typings';
 import { useEnumText, useT } from '@/utils/i18n';
-import { useSize } from './charts';
 import { UiIcon } from './icons';
 import { CMDB_CI_STATUS_META, CMDB_CI_STATUS_ORDER } from './meta';
 

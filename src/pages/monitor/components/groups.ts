@@ -19,7 +19,7 @@ export const NOTICE_TABS: RouteTab[] = [
   },
 ];
 
-/** 指标数据：即时查询 / 记录规则 / 数据源 */
+/** 指标数据：即时查询 / 记录规则（数据源管理已拆成独立页面，见 /monitor/datasource 路由） */
 export const METRIC_TABS: RouteTab[] = [
   {
     key: 'explore',
@@ -32,12 +32,6 @@ export const METRIC_TABS: RouteTab[] = [
     path: '/monitor/record',
     labelKey: 'menu.monitor.record',
     accessKey: 'canMonitorRecord',
-  },
-  {
-    key: 'datasource',
-    path: '/monitor/datasource',
-    labelKey: 'menu.monitor.datasource',
-    accessKey: 'canMonitorDatasource',
   },
 ];
 

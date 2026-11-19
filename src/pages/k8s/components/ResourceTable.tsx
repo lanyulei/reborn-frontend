@@ -3,10 +3,11 @@
  * - 走缓存的资源：服务端分页、关键字、状态筛选、排序与准确总数；订阅变更通知后自动刷新当前页。
  * - 其余资源（含 CRD）：只支持标签筛选，用 continue 游标「加载更多」，需手动刷新。
  */
-import { ReloadOutlined } from '@ant-design/icons';
+import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { Alert, Button, Flex, Input, Select, Tag, Tooltip } from 'antd';
+import { createStyles } from 'antd-style';
 import type React from 'react';
 import {
   useCallback,
@@ -36,6 +37,64 @@ const DEFAULT_PAGE_SIZE = 20;
 /** 变更通知触发的刷新至少间隔这么久 */
 const WATCH_REFRESH_MS = 1500;
 
+// 直接作为页签内容（flushToolbar）时工具栏容器的纵向内边距收紧：上 0、下 16px（与事件页签一致）
+const useStyles = createStyles(() => ({
+  tabToolbar: {
+    '.ant-pro-table-list-toolbar-container': {
+      paddingBlock: '0 16px',
+    },
+  },
+}));
+
+/**
+ * 紧凑模式的搜索框。缺省是带搜索按钮的样式；plain（页签布局）时与事件页签的搜索框一致：
+ * 普通输入框 + 右侧搜索图标，回车或清空时搜索，live 时输入即搜（防抖）。
+ */
+const FilterInput: React.FC<{
+  plain?: boolean;
+  live?: boolean;
+  placeholder: string;
+  maxLength: number;
+  onSearch: (value: string) => void;
+}> = ({ plain, live, placeholder, maxLength, onSearch }) => {
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const search = useRef(onSearch);
+  search.current = onSearch;
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  if (!plain) {
+    return (
+      <Input.Search
+        allowClear
+        style={{ width: 220 }}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        onSearch={(value) => onSearch(value.trim())}
+      />
+    );
+  }
+  const run = (value: string, delay: number) => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => search.current(value.trim()), delay);
+  };
+  return (
+    <Input
+      allowClear
+      style={{ width: 260 }}
+      placeholder={placeholder}
+      maxLength={maxLength}
+      suffix={<SearchOutlined />}
+      onChange={(event) => {
+        const { value } = event.target;
+        // 清空立即生效；其余按需防抖
+        if (value === '') run('', 0);
+        else if (live) run(value, 400);
+      }}
+      onPressEnter={(event) => run(event.currentTarget.value, 0)}
+    />
+  );
+};
+
 export interface ResourceTableHandle {
   reload: () => void;
 }
@@ -64,8 +123,22 @@ export interface ResourceTableProps {
   rowActions?: (row: ListRow) => React.ReactNode[];
   /** 嵌在抽屉里：小号表格、无卡片边框 */
   compact?: boolean;
+  /**
+   * 详情页签里的布局（需同时 compact）：筛选在表头左侧，右侧是刷新 / 密度 / 列设置，
+   * 常规行高、每页 10 条——与事件页签一致。
+   */
+  tabLayout?: boolean;
+  /**
+   * 表格直接作为页签内容时收紧工具栏的纵向内边距（上 0、下 16px，与事件页签一致）；
+   * 表格只是页签或页面里的一个小节时不要开。
+   */
+  flushToolbar?: boolean;
   /** 接口返回的列之后追加的列（数据由调用方另行提供，如命名空间的配额用量） */
   extraColumns?: ExtraColumn[];
+  /** 批量操作：给出后表格可勾选，勾选后在表格上方显示这些操作（返回空数组则不可勾选） */
+  /** 没有任何对象（且没有筛选条件）时的空状态内容，如带「新建」按钮的引导 */
+  emptyHint?: React.ReactNode;
+  batchActions?: (rows: ListRow[], clear: () => void) => React.ReactNode[];
   tableRef?: React.Ref<ResourceTableHandle>;
 }
 
@@ -79,10 +152,15 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
   onOpen,
   rowActions,
   compact,
+  tabLayout,
+  flushToolbar,
   extraColumns,
+  batchActions,
+  emptyHint,
   tableRef,
 }) => {
   const t = useT();
+  const { styles } = useStyles();
   const [rows, setRows] = useState<ListRow[]>([]);
   const [columns, setColumns] = useState<ListColumn[]>([]);
   const [caps, setCaps] = useState<ListCapabilities>();
@@ -92,12 +170,15 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(tabLayout ? 10 : DEFAULT_PAGE_SIZE);
   const [keyword, setKeyword] = useState('');
   const [state, setState] = useState<string>();
   const [labelSelector, setLabelSelector] = useState('');
   const [sort, setSort] = useState<{ by: string; desc: boolean }>();
   const [showWide, setShowWide] = useState(false);
+  const [selected, setSelected] = useState<ListRow[]>([]);
+  const clearSelected = useCallback(() => setSelected([]), []);
+  const batchNodes = batchActions?.(selected, clearSelected) ?? [];
   /** 请求序号：只采纳最后一次请求的结果 */
   const seq = useRef(0);
 
@@ -251,7 +332,55 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
   const tableColumns = useMemo(() => {
     const sortOrder = (key: string) =>
       sort?.by === key ? (sort.desc ? 'descend' : 'ascend') : null;
+    // 查询表单字段（与集群 / 系统管理等页一致）；抽屉内嵌的小表格仍用工具栏筛选
+    const searchFields: ProColumns<ListRow>[] = compact
+      ? []
+      : [
+          ...(caps?.keyword
+            ? ([
+                {
+                  title: t('common.column.keyword'),
+                  dataIndex: 'keyword',
+                  hideInTable: true,
+                  hideInSetting: true,
+                  fieldProps: {
+                    placeholder: t('pages.k8s.table.keyword'),
+                    maxLength: 253,
+                  },
+                },
+              ] as ProColumns<ListRow>[])
+            : []),
+          ...(caps?.filters?.includes('state')
+            ? ([
+                {
+                  title: t('common.column.status'),
+                  dataIndex: 'state',
+                  hideInTable: true,
+                  hideInSetting: true,
+                  valueType: 'select',
+                  fieldProps: {
+                    allowClear: true,
+                    options: STATE_ORDER.map((value) => ({
+                      value,
+                      label: t(STATE_META[value].textId),
+                    })),
+                  },
+                },
+              ] as ProColumns<ListRow>[])
+            : []),
+          {
+            title: t('pages.k8s.table.labelSelector.label'),
+            dataIndex: 'labelSelector',
+            hideInTable: true,
+            hideInSetting: true,
+            fieldProps: {
+              placeholder: t('pages.k8s.table.labelSelector'),
+              maxLength: 1024,
+            },
+          },
+        ];
     const list: ProColumns<ListRow>[] = [
+      ...searchFields,
       {
         title: t('pages.k8s.column.name'),
         key: 'name',
@@ -282,7 +411,10 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
     }
     for (const column of columns) {
       if (BUILTIN_KEYS.has(column.key)) continue;
-      if ((column.priority ?? 0) > 0 && !showWide) continue;
+      // 次要列：整页表格由列设置控制显隐（见 columnsState）；抽屉内嵌仍用「更多列」开关
+      // 页签布局下次要列交给列设置（默认隐藏）
+      if ((column.priority ?? 0) > 0 && compact && !tabLayout && !showWide)
+        continue;
       list.push({
         title: column.title,
         key: column.key,
@@ -330,11 +462,61 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
     onOpen,
     rowActions,
     extraColumns,
+    caps,
+    compact,
+    tabLayout,
     t,
     empty,
   ]);
 
   const resetPage = () => setPage(1);
+
+  // 紧凑模式的筛选控件：默认放在表头右侧，页签布局放在左侧
+  const filters = [
+    compact && caps?.keyword && (
+      <FilterInput
+        key="keyword"
+        plain={tabLayout}
+        // 页签布局：输入即搜（与事件页签一致）
+        live
+        placeholder={t('pages.k8s.table.keyword')}
+        maxLength={253}
+        onSearch={(value) => {
+          setKeyword(value);
+          resetPage();
+        }}
+      />
+    ),
+    compact && caps?.filters?.includes('state') && (
+      <Select
+        key="state"
+        allowClear
+        style={{ width: 130 }}
+        placeholder={t('common.column.status')}
+        value={state}
+        onChange={(value) => {
+          setState(value);
+          resetPage();
+        }}
+        options={STATE_ORDER.map((value) => ({
+          value,
+          label: t(STATE_META[value].textId),
+        }))}
+      />
+    ),
+    compact && (
+      <FilterInput
+        key="label"
+        plain={tabLayout}
+        placeholder={t('pages.k8s.table.labelSelector')}
+        maxLength={1024}
+        onSearch={(value) => {
+          setLabelSelector(value);
+          resetPage();
+        }}
+      />
+    ),
+  ];
 
   return (
     <>
@@ -361,61 +543,107 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
           })}
         />
       )}
+      {/* 不走缓存的资源：直接说明能力限制，用户不用悬停猜图标 */}
+      {caps && !caps.cached && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title={t('pages.k8s.table.uncached.tooltip')}
+        />
+      )}
       <ProTable<ListRow>
         cardBordered={!compact}
         ghost={compact}
-        size={compact ? 'small' : undefined}
+        className={flushToolbar ? styles.tabToolbar : undefined}
+        size={compact && !tabLayout ? 'small' : undefined}
         rowKey="uid"
-        search={false}
-        options={false}
+        rowSelection={
+          batchNodes.length > 0
+            ? {
+                selectedRowKeys: selected.map((row) => row.uid),
+                onChange: (_, rows) => setSelected(rows.filter(Boolean)),
+              }
+            : undefined
+        }
+        tableAlertOptionRender={() => (
+          <Flex gap={16} align="center">
+            {batchNodes}
+            <a onClick={clearSelected}>取消选择</a>
+          </Flex>
+        )}
+        search={compact ? false : { labelWidth: 'auto' }}
+        options={
+          compact && !tabLayout
+            ? false
+            : {
+                // 数据不走 request：传回调接管内置刷新按钮，图标样式与集群等页一致
+                reload: () => void load(),
+                density: true,
+                setting: true,
+              }
+        }
         loading={loading}
+        locale={
+          emptyHint && !loading && !keyword && !state && !labelSelector
+            ? { emptyText: emptyHint }
+            : undefined
+        }
         dataSource={rows}
         columns={tableColumns}
+        // 次要列默认收进列设置（勾选即显示、按资源持久化、重置回到默认）；用户的选择优先于默认值
+        columnsState={
+          compact && !tabLayout
+            ? undefined
+            : {
+                persistenceKey: `k8s-columns-${tabLayout ? 'tab-' : ''}${resource}`,
+                persistenceType: 'localStorage',
+                defaultValue: Object.fromEntries(
+                  columns
+                    .filter((column) => (column.priority ?? 0) > 0)
+                    .map((column) => [column.key, { show: false }]),
+                ),
+              }
+        }
         scroll={{ x: 'max-content' }}
-        headerTitle={toolbar}
+        // headerTitle 容器（list-toolbar-title）自身无间距：包一层统一行内 8px 间距
+        headerTitle={
+          (toolbar || tabLayout) && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                // 工具栏标题容器带 500 字重 / 16px：页签布局下恢复筛选控件的默认字体
+                ...(tabLayout ? { fontSize: 14, fontWeight: 400 } : undefined),
+              }}
+            >
+              {toolbar}
+              {tabLayout && filters}
+            </span>
+          )
+        }
+        // 数据自行管理（不走 request）：查询表单提交 / 重置时回填筛选条件
+        onSubmit={(values) => {
+          const v = values as {
+            keyword?: string;
+            state?: string;
+            labelSelector?: string;
+          };
+          setKeyword(v.keyword?.trim() ?? '');
+          setState(v.state);
+          setLabelSelector(v.labelSelector?.trim() ?? '');
+          resetPage();
+        }}
+        onReset={() => {
+          setKeyword('');
+          setState(undefined);
+          setLabelSelector('');
+          resetPage();
+        }}
         toolBarRender={() => [
-          caps?.keyword && (
-            <Input.Search
-              key="keyword"
-              allowClear
-              style={{ width: 220 }}
-              placeholder={t('pages.k8s.table.keyword')}
-              maxLength={253}
-              onSearch={(value) => {
-                setKeyword(value.trim());
-                resetPage();
-              }}
-            />
-          ),
-          caps?.filters?.includes('state') && (
-            <Select
-              key="state"
-              allowClear
-              style={{ width: 130 }}
-              placeholder={t('common.column.status')}
-              value={state}
-              onChange={(value) => {
-                setState(value);
-                resetPage();
-              }}
-              options={STATE_ORDER.map((value) => ({
-                value,
-                label: t(STATE_META[value].textId),
-              }))}
-            />
-          ),
-          <Input.Search
-            key="label"
-            allowClear
-            style={{ width: 220 }}
-            placeholder={t('pages.k8s.table.labelSelector')}
-            maxLength={1024}
-            onSearch={(value) => {
-              setLabelSelector(value.trim());
-              resetPage();
-            }}
-          />,
-          hasWide && (
+          ...(tabLayout ? [] : filters),
+          compact && !tabLayout && hasWide && (
             <Button key="wide" onClick={() => setShowWide((v) => !v)}>
               {t(
                 showWide
@@ -423,14 +651,6 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
                   : 'pages.k8s.table.moreColumns',
               )}
             </Button>
-          ),
-          caps && !caps.cached && (
-            <Tooltip
-              key="uncached"
-              title={t('pages.k8s.table.uncached.tooltip')}
-            >
-              <Tag>{t('pages.k8s.table.uncached')}</Tag>
-            </Tooltip>
           ),
           watchable && watchStopped && (
             <Tooltip key="watch" title={t('pages.k8s.table.watchStopped.tip')}>
@@ -443,9 +663,11 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
               </Tag>
             </Tooltip>
           ),
-          <Tooltip key="reload" title={t('pages.k8s.table.reload')}>
-            <Button icon={<ReloadOutlined />} onClick={() => void load()} />
-          </Tooltip>,
+          compact && !tabLayout && (
+            <Tooltip key="reload" title={t('pages.k8s.table.reload')}>
+              <Button icon={<ReloadOutlined />} onClick={() => void load()} />
+            </Tooltip>
+          ),
         ]}
         pagination={
           caps?.total
@@ -454,7 +676,9 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
                 pageSize,
                 total,
                 showSizeChanger: true,
-                pageSizeOptions: [20, 50, 100, 200],
+                pageSizeOptions: tabLayout
+                  ? [10, 20, 50, 100]
+                  : [20, 50, 100, 200],
               }
             : false
         }

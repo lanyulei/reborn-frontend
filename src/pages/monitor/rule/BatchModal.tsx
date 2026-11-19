@@ -18,6 +18,12 @@ import {
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { DeptSelect } from '@/components/DeptSelect';
+import {
+  type KeyValue,
+  KeyValueEditor,
+  kvToRecord,
+  validateKeyValues,
+} from '@/components/KeyValueEditor';
 import { UserSelect } from '@/components/UserSelect';
 import { fetchMonitorUsers } from '@/components/UserSelect/sources';
 import { NOTIFY_SEVERITY_META } from '@/constants';
@@ -36,12 +42,6 @@ import type {
 import { useEnumText, useFormRules, useOptions, useT } from '@/utils/i18n';
 import { GroupTreeSelect } from '../components/GroupTreeSelect';
 import { useNotifyTargets } from '../components/hooks';
-import {
-  type KeyValue,
-  KeyValueEditor,
-  kvToRecord,
-  validateKeyValues,
-} from '../components/KeyValueEditor';
 import {
   BATCH_ACTION_META,
   ESCALATION_MODE_META,

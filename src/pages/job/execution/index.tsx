@@ -3,12 +3,11 @@
  * （页面可见时），执行中的行实时显示已用时长。
  */
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { ProTable } from '@ant-design/pro-components';
+import { PageContainer, ProTable } from '@ant-design/pro-components';
 import { history, Link, useSearchParams } from '@umijs/max';
 import { Alert, App, Button, Tag, Tooltip } from 'antd';
 import type React from 'react';
 import { useMemo, useRef, useState } from 'react';
-import { RouteTabsPage } from '@/components/RouteTabs';
 import { ConfirmLink } from '@/components/TableActions';
 import {
   cancelJobExecution,
@@ -28,7 +27,6 @@ import {
   formatTime,
   secondsBetween,
 } from '../components/format';
-import { HISTORY_TABS } from '../components/groups';
 import { useNow, usePageVisible, usePolledRequest } from '../components/hooks';
 import {
   EXECUTION_STATUS_META,
@@ -155,7 +153,7 @@ const ExecutionList: React.FC = () => {
           {(record.sliceTotal ?? 0) > 0 && record.groupId && (
             <Tooltip title={t('pages.job.execution.slice.tooltip')}>
               <Link
-                to={`/job/execution?groupId=${record.groupId}`}
+                to={`/job/history?groupId=${record.groupId}`}
                 style={{ marginInlineStart: 8 }}
               >
                 <Tag color="cyan" style={{ marginInlineEnd: 0 }}>
@@ -200,7 +198,7 @@ const ExecutionList: React.FC = () => {
             {triggerText(source)}
             {record.triggerName && (
               <Link
-                to={`/job/execution?triggerRef=${record.triggerRef ?? ''}`}
+                to={`/job/history?triggerRef=${record.triggerRef ?? ''}`}
                 style={{ marginInlineStart: 6 }}
               >
                 {record.triggerName}
@@ -314,7 +312,7 @@ const ExecutionList: React.FC = () => {
   ];
 
   return (
-    <RouteTabsPage tabs={HISTORY_TABS}>
+    <PageContainer title={false}>
       {(triggerRef || groupId) && (
         <Alert
           type="info"
@@ -328,7 +326,7 @@ const ExecutionList: React.FC = () => {
             <Button
               size="small"
               type="link"
-              onClick={() => history.push('/job/execution')}
+              onClick={() => history.push('/job/history')}
             >
               {t('pages.job.execution.filter.clear')}
             </Button>
@@ -382,7 +380,7 @@ const ExecutionList: React.FC = () => {
           return result;
         }}
       />
-    </RouteTabsPage>
+    </PageContainer>
   );
 };
 

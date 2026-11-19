@@ -82,7 +82,10 @@ const RuleList: React.FC = () => {
   const { groups } = groupState;
   const datasources = useDatasourceOptions();
 
-  const [groupId, setGroupId] = useState<string>();
+  // 选中的分组进 URL（?group=）：刷新 / 分享不丢上下文（同 CMDB 资源实例页的 ?model=）
+  const [groupId, setGroupId] = useState<string | undefined>(
+    () => searchParams.get('group') ?? undefined,
+  );
   // undefined = 抽屉关闭；null = 新建；对象 = 编辑 / 查看
   const [formRow, setFormRow] = useState<MonitorRule | null | undefined>(
     undefined,
@@ -135,6 +138,28 @@ const RuleList: React.FC = () => {
     next.delete('ruleId');
     setSearchParams(next, { replace: true });
   };
+
+  /** 选分组：同步到地址栏（replace，不产生历史记录） */
+  const selectGroup = (id?: string) => {
+    setGroupId(id);
+    const next = new URLSearchParams(searchParams);
+    if (id) next.set('group', id);
+    else next.delete('group');
+    setSearchParams(next, { replace: true });
+  };
+
+  // 地址栏里的分组已不存在或无权访问（分组删除 / 授权变化）时收回到「全部」
+  useEffect(() => {
+    if (
+      !groupId ||
+      groupState.loading ||
+      groups.length === 0 ||
+      groups.some((group) => group.id === groupId)
+    ) {
+      return;
+    }
+    selectGroup(undefined);
+  }, [groupId, groups, groupState.loading]);
 
   const manageableGroups = groups.filter((group) => (group.level ?? 0) >= 2);
   const selectedGroup = groups.find((group) => group.id === groupId);
@@ -247,7 +272,7 @@ const RuleList: React.FC = () => {
           isAdmin={groupState.isAdmin}
           loading={groupState.loading}
           selectedId={groupId}
-          onSelect={setGroupId}
+          onSelect={selectGroup}
           onChanged={onGroupsChanged}
         />
         <div className={styles.splitMain}>
@@ -262,6 +287,11 @@ const RuleList: React.FC = () => {
             columns={columns}
             columnEmptyText={t('common.empty')}
             scroll={{ x: 'max-content' }}
+            // 用户的列显示选择记在本地（刷新不丢），同容器平台资源列表
+            columnsState={{
+              persistenceKey: 'monitor-rule-columns',
+              persistenceType: 'localStorage',
+            }}
             params={{ groupId }}
             headerTitle={
               <Space size={8}>

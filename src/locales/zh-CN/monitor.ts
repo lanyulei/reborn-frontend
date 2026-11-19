@@ -16,7 +16,7 @@ export default {
   'menu.monitor.rule': '告警规则',
   'menu.monitor.mute': '降噪规则',
   'menu.monitor.subscription': '告警订阅',
-  'menu.monitor.datasource': '数据源',
+  'menu.monitor.datasource': '数据源管理',
   'menu.monitor.explore': '即时查询',
   'permission.monitor.rule.create': '新建告警规则',
   'permission.monitor.rule.edit': '编辑 / 克隆 / 移动 / 回滚告警规则',
@@ -305,7 +305,8 @@ export default {
   'pages.monitor.alert.agg.by.label': '按标签',
   'pages.monitor.alert.agg.summary':
     '共 {total} 条活跃告警，归为 {count} 类（点击卡片筛选）',
-  'pages.monitor.alert.agg.empty': '当前没有活跃告警',
+  'pages.monitor.alert.agg.emptyFiltered': '没有符合筛选条件的活跃告警',
+  'pages.monitor.alert.agg.error': '聚合视图加载失败',
   'pages.monitor.alert.agg.noLabel': '（无 {label} 标签）',
   'pages.monitor.alert.agg.filtered': '已按「{name}」筛选',
   'pages.monitor.alert.agg.partial':
@@ -340,6 +341,7 @@ export default {
 
   // 告警规则：分组与授权
   'pages.monitor.group.title': '规则分组',
+  'pages.monitor.group.contextTip': '在分组上点击右键，可以维护该分组',
   'pages.monitor.group.all': '全部规则',
   'pages.monitor.group.empty': '没有可访问的规则分组，请联系管理员授权',
   'pages.monitor.group.createRoot': '新建顶级分组',
@@ -347,7 +349,6 @@ export default {
   'pages.monitor.group.createChild.title': '在「{name}」下新建分组',
   'pages.monitor.group.edit.title': '编辑分组 - {name}',
   'pages.monitor.group.scope': '分组授权',
-  'pages.monitor.group.actions': '分组「{name}」的操作',
   'pages.monitor.group.delete.title': '删除分组「{name}」？',
   'pages.monitor.group.delete.description':
     '分组下仍有下级分组或规则时无法删除。删除后，授权在该分组上的角色范围随之失效。',

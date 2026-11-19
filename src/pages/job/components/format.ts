@@ -1,12 +1,9 @@
 /** 作业中心域的展示格式化：时间、时长、参数值。 */
 import dayjs from 'dayjs';
 import type { JobTarget } from '@/services/job/typings';
-import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
 import type { Translate } from '@/utils/i18n';
 
-/** RFC3339 → 本地「年-月-日 时:分:秒」；空值返回空串 */
-export const formatTime = (value?: string): string =>
-  value ? dayjs(value).format(DATE_TIME_SECONDS_FORMAT) : '';
+export { formatTime } from '@/utils/format';
 
 /** 秒数 → 最多两段的可读时长（1 小时 5 分钟 / 3 分钟 20 秒） */
 export const formatDuration = (seconds: number, t: Translate): string => {

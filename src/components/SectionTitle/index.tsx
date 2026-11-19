@@ -20,11 +20,17 @@ const useStyles = createStyles(({ token, css }) => ({
   `,
 }));
 
-export const SectionTitle: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const SectionTitle: React.FC<{
+  children: React.ReactNode;
+  /** 覆盖默认边距（如表单分组标题去掉顶部外边距，与表单行距对齐） */
+  style?: React.CSSProperties;
+}> = ({ children, style }) => {
   const { styles } = useStyles();
-  return <div className={styles.section}>{children}</div>;
+  return (
+    <div className={styles.section} style={style}>
+      {children}
+    </div>
+  );
 };
 
 export default SectionTitle;

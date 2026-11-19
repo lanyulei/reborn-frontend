@@ -243,7 +243,7 @@ const ExecutionDetailView: React.FC<{ id: string }> = ({ id }) => {
           {execution.check && <CheckModeTag />}
           {(execution.sliceTotal ?? 0) > 0 && execution.groupId && (
             <Tooltip title={t('pages.job.execution.slice.tooltip')}>
-              <Link to={`/job/execution?groupId=${execution.groupId}`}>
+              <Link to={`/job/history?groupId=${execution.groupId}`}>
                 <Tag color="cyan" style={{ marginInlineEnd: 0 }}>
                   {t('pages.job.execution.slice', {
                     no: execution.sliceNo ?? 0,
@@ -606,7 +606,7 @@ const ExecutionDetailPage: React.FC = () => {
         type="link"
         icon={<LeftOutlined />}
         style={{ paddingInline: 0, marginBottom: 12 }}
-        onClick={() => history.push('/job/execution')}
+        onClick={() => history.push('/job/history')}
       >
         {t('pages.job.execution.backToList')}
       </Button>

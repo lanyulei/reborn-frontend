@@ -3,7 +3,7 @@
  * 日志 │ YAML │ 历史版本。定制资源只是多出相应的页签与要点；其余资源（含 CRD）走同一套。
  * 详情以用户身份直接读自集群（不走缓存），能否查看由集群判定。
  */
-import { ReloadOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons';
 import {
   Alert,
   App,
@@ -53,7 +53,15 @@ import {
 } from './Insight';
 import { type LogContainer, LogViewer } from './LogViewer';
 import { MetricsPanel } from './MetricsPanel';
-import { GVRS, isNamespaced, isWorkloadGVR, KIND_GVR, sameGVR } from './meta';
+import {
+  GVRS,
+  isNamespaced,
+  isWorkloadGVR,
+  KIND_GVR,
+  sameGVR,
+  useKindName,
+} from './meta';
+import { isRbacGVR, RbacSection } from './RbacSection';
 import { ResourceTable } from './ResourceTable';
 import { useClusterName } from './scope';
 import { useK8sStyles } from './styles';
@@ -198,7 +206,7 @@ const EventsTab: React.FC<{ clusterId: string; target: ResourceRef }> = ({
   );
 };
 
-const RevisionsTab: React.FC<{
+export const RevisionsTab: React.FC<{
   clusterId: string;
   target: ResourceRef;
   onChanged: () => void;
@@ -344,7 +352,7 @@ const RevisionsTab: React.FC<{
 };
 
 /** ConfigMap / Secret 的键值：Secret 的值掩码，持有权限时可查看明文（记入审计） */
-const DataSection: React.FC<{
+export const DataSection: React.FC<{
   clusterId: string;
   object: K8sObject;
   secret: boolean;
@@ -632,6 +640,7 @@ const Overview: React.FC<{
   onOpen: (target: DetailTarget) => void;
 }> = ({ clusterId, gvr, data, onOpen }) => {
   const t = useT();
+  const kindName = useKindName();
   const { object } = data;
   const meta = object.metadata ?? {};
   const conditions: Condition[] = Array.isArray(object.status?.conditions)
@@ -746,7 +755,7 @@ const Overview: React.FC<{
           <Flex gap={8} wrap>
             {owners.map((owner) => {
               const target = KIND_GVR[owner.kind ?? ''];
-              const text = `${owner.kind}/${owner.name}`;
+              const text = `${kindName(owner.kind)}/${owner.name}`;
               return target && owner.name ? (
                 <a
                   key={owner.uid}
@@ -785,6 +794,9 @@ const Overview: React.FC<{
           object={object}
           secret={sameGVR(gvr, GVRS.secret)}
         />
+      )}
+      {isRbacGVR(gvr) && (
+        <RbacSection clusterId={clusterId} gvr={gvr} object={object} />
       )}
       {conditions.length > 0 && (
         <>
@@ -827,8 +839,11 @@ export const ResourceDetail: React.FC<{
   onChanged?: () => void;
   /** 嵌套层级：从详情里再打开另一个对象的详情 */
   depth?: number;
-}> = ({ clusterId, target, onClose, onChanged, depth = 0 }) => {
+  /** 整页模式：内容直接铺在页面里（带返回），而不是抽屉；从中打开的关联对象仍用抽屉 */
+  page?: boolean;
+}> = ({ clusterId, target, onClose, onChanged, depth = 0, page = false }) => {
   const t = useT();
+  const kindName = useKindName();
   const has = usePermissions();
   const { gvr } = target;
   const [data, setData] = useState<ObjectResult>();
@@ -1094,36 +1109,32 @@ export const ResourceDetail: React.FC<{
       ]
     : [];
 
-  return (
-    <Drawer
-      open
-      size={Math.max(760, 1120 - depth * 60)}
-      destroyOnHidden
-      title={`${data?.kind ?? gvr.resource} / ${target.name}`}
-      onClose={onClose}
-      extra={
-        <Flex gap={16} align="center">
-          {object && (isPod || workloadKind) && (
-            <AskAssistantButton
-              clusterName={clusterName}
-              kind={data?.kind ?? ''}
-              namespace={target.namespace}
-              name={target.name}
-            />
-          )}
-          {object &&
-            actions.render(
-              {
-                namespace: target.namespace,
-                name: target.name,
-                uid: data?.uid,
-              },
-              { object, inline: 3 },
-            )}
-          <Button icon={<ReloadOutlined />} onClick={() => void load()} />
-        </Flex>
-      }
-    >
+  // 标题里的资源名走本地化；未知类型（CRD 等）展示原始 Kind / 资源名
+  const title = `${kindName(data?.kind) || gvr.resource} / ${target.name}`;
+  const extra = (
+    <Flex gap={16} align="center">
+      {object && (isPod || workloadKind) && (
+        <AskAssistantButton
+          clusterName={clusterName}
+          kind={data?.kind ?? ''}
+          namespace={target.namespace}
+          name={target.name}
+        />
+      )}
+      {object &&
+        actions.render(
+          {
+            namespace: target.namespace,
+            name: target.name,
+            uid: data?.uid,
+          },
+          { object, inline: 3 },
+        )}
+      <Button icon={<ReloadOutlined />} onClick={() => void load()} />
+    </Flex>
+  );
+  const content = (
+    <>
       {error && (
         <Alert
           type="error"
@@ -1156,6 +1167,52 @@ export const ResourceDetail: React.FC<{
           onChanged={changed}
         />
       )}
+    </>
+  );
+
+  if (page) {
+    return (
+      <>
+        <Flex
+          justify="space-between"
+          align="center"
+          gap={16}
+          wrap
+          style={{ marginBottom: 12 }}
+        >
+          <Flex align="center" gap={8} style={{ minWidth: 0 }}>
+            <Button
+              type="text"
+              icon={<ArrowLeftOutlined />}
+              onClick={onClose}
+              aria-label={t('common.action.back')}
+            />
+            <Typography.Title level={5} style={{ margin: 0 }} ellipsis>
+              {title}
+            </Typography.Title>
+            {target.namespace && (
+              <Typography.Text type="secondary">
+                {target.namespace}
+              </Typography.Text>
+            )}
+          </Flex>
+          {extra}
+        </Flex>
+        {content}
+      </>
+    );
+  }
+
+  return (
+    <Drawer
+      open
+      size={Math.max(760, 1120 - depth * 60)}
+      destroyOnHidden
+      title={title}
+      onClose={onClose}
+      extra={extra}
+    >
+      {content}
     </Drawer>
   );
 };

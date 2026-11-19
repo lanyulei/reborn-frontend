@@ -588,14 +588,14 @@ const AdhocPage: React.FC = () => {
           }}
         >
           <Col span={24}>
-            <Form.Item name="kind" style={{ marginBottom: 4 }}>
+            <Form.Item name="kind" style={{ marginBottom: 15 }}>
               <Segmented options={kindOptions} />
             </Form.Item>
           </Col>
 
           {/* ---------- 目标主机 ---------- */}
           <Col span={24}>
-            <SectionTitle>
+            <SectionTitle style={{ margin: '0 0 12px' }}>
               {t('pages.job.template.section.target')}
             </SectionTitle>
           </Col>
@@ -612,7 +612,7 @@ const AdhocPage: React.FC = () => {
 
           {/* ---------- 执行内容 ---------- */}
           <Col span={24}>
-            <SectionTitle>
+            <SectionTitle style={{ margin: '0 0 12px' }}>
               {t('pages.job.template.section.content')}
             </SectionTitle>
           </Col>
@@ -917,7 +917,9 @@ const AdhocPage: React.FC = () => {
           {/* ---------- 检查与提交 ---------- */}
           {check && (
             <Col span={24}>
-              <SectionTitle>{t('pages.job.adhoc.check.title')}</SectionTitle>
+              <SectionTitle style={{ margin: '0 0 12px' }}>
+                {t('pages.job.adhoc.check.title')}
+              </SectionTitle>
               <CheckResult check={check} />
             </Col>
           )}

@@ -1,10 +1,11 @@
 /**
  * 变更预检与提交（所有 YAML 改动的统一路径）：
+ * 两者都是右侧抽屉（宽度为视口一半、至少 800px）。
  * - EditObjectModal：编辑单个对象 → 预检（服务端 dry-run）→ 对比「当前 → 变更后」→ 确认后提交；
  *   提交带预检时读到的资源版本，对象已被他人修改（409）时提示并可重新加载。
  * - ManifestModal：多文档 YAML 的创建 / 更新，逐个对象预检，全部通过才允许提交，提交后给出每个对象的结果。
  */
-import { Alert, App, Button, Collapse, Flex, Modal, Spin, Tag } from 'antd';
+import { Alert, App, Button, Collapse, Drawer, Flex, Spin, Tag } from 'antd';
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -28,6 +29,9 @@ import type {
 import { useT } from '@/utils/i18n';
 import { ApprovalNotice } from './approval';
 import { YamlDiff, YamlEditor } from './YamlEditor';
+
+/** YAML 编辑抽屉的宽度：视口的一半，至少 800px */
+const YAML_DRAWER_SIZE = 'max(800px, 50vw)';
 
 const refText = (ref: ResourceRef, kind?: string): string =>
   `${kind || ref.resource} ${ref.namespace ? `${ref.namespace}/` : ''}${ref.name ?? ''}`;
@@ -116,15 +120,16 @@ export const EditObjectModal: React.FC<{
   };
 
   return (
-    <Modal
+    <Drawer
       open
-      width={1080}
+      size={YAML_DRAWER_SIZE}
+      keyboard={false}
       title={
         title ?? t('pages.k8s.yaml.edit.title', { name: target.name ?? '' })
       }
       destroyOnHidden
       mask={{ closable: false }}
-      onCancel={onClose}
+      onClose={onClose}
       footer={
         <Flex justify="end" gap={8}>
           <Button onClick={onClose}>{t('common.action.cancel')}</Button>
@@ -189,9 +194,13 @@ export const EditObjectModal: React.FC<{
           <YamlDiff before={preview.beforeYaml} after={preview.afterYaml} />
         </>
       ) : (
-        <YamlEditor value={yaml} onChange={setYaml} height={520} />
+        <YamlEditor
+          value={yaml}
+          onChange={setYaml}
+          height="calc(100vh - 200px)"
+        />
       )}
-    </Modal>
+    </Drawer>
   );
 };
 
@@ -222,7 +231,17 @@ export const ManifestModal: React.FC<{
   onClose: () => void;
   /** 有对象提交成功后调用（含部分成功） */
   onDone?: () => void;
-}> = ({ clusterId, namespace, title, initialYaml = '', onClose, onDone }) => {
+  /** 写操作被转为变更单（待审批）时调用；缺省同 onClose */
+  onSubmitted?: () => void;
+}> = ({
+  clusterId,
+  namespace,
+  title,
+  initialYaml = '',
+  onClose,
+  onDone,
+  onSubmitted,
+}) => {
   const t = useT();
   const [yaml, setYaml] = useState(initialYaml);
   const [result, setResult] = useState<ManifestResult>();
@@ -248,7 +267,7 @@ export const ManifestModal: React.FC<{
       }
     } catch (err) {
       if (isChangeSubmitted(err)) {
-        onClose();
+        (onSubmitted ?? onClose)();
         return;
       }
       setError(getK8sErrorMessage(err));
@@ -260,13 +279,14 @@ export const ManifestModal: React.FC<{
   const items = result?.items ?? [];
 
   return (
-    <Modal
+    <Drawer
       open
-      width={1080}
+      size={YAML_DRAWER_SIZE}
+      keyboard={false}
       title={title}
       destroyOnHidden
       mask={{ closable: false }}
-      onCancel={onClose}
+      onClose={onClose}
       footer={
         <Flex justify="end" gap={8}>
           <Button onClick={onClose}>
@@ -323,7 +343,11 @@ export const ManifestModal: React.FC<{
             style={{ marginBottom: 12 }}
             title={t('pages.k8s.manifest.hint')}
           />
-          <YamlEditor value={yaml} onChange={setYaml} height={480} />
+          <YamlEditor
+            value={yaml}
+            onChange={setYaml}
+            height="calc(100vh - 260px)"
+          />
         </>
       ) : (
         <>
@@ -368,6 +392,6 @@ export const ManifestModal: React.FC<{
           />
         </>
       )}
-    </Modal>
+    </Drawer>
   );
 };

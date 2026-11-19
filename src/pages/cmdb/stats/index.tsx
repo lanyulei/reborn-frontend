@@ -18,6 +18,7 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { BarList, StatCard } from '@/components/Charts';
 import { IconGlyph } from '@/components/IconPicker';
 import { getOverview, getQuality } from '@/services/cmdb/insight';
 import { listAllModels, listRelationTypes } from '@/services/cmdb/model';
@@ -28,12 +29,7 @@ import type {
   CmdbQualityRow,
 } from '@/services/cmdb/typings';
 import { useEnumText, useT } from '@/utils/i18n';
-import {
-  BarList,
-  StatCard,
-  TrendChart,
-  type TrendPoint,
-} from '../components/charts';
+import { TrendChart, type TrendPoint } from '../components/charts';
 import { CMDB_CI_STATUS_META } from '../components/meta';
 import { useCmdbStyles } from '../components/styles';
 

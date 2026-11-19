@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { listClusterOptions } from '@/services/k8s/cluster';
 import { getAlertRuleTemplate } from '@/services/k8s/governance';
 import { useT } from '@/utils/i18n';
+import { kindPath } from './meta';
 
 export const K8sRuleTemplateButton: React.FC<{
   onLoad: (content: string, name: string) => void;
@@ -74,22 +75,20 @@ export const K8sAlertLink: React.FC<{
   }, [cluster, allowed]);
   if (!clusterId || !labels) return null;
 
-  const ns = labels.namespace
-    ? `&ns=${encodeURIComponent(labels.namespace)}`
-    : '';
+  const ns = labels.namespace;
   let to: string | undefined;
-  if (labels.pod && labels.namespace && access.canK8sWorkload) {
-    to = `/k8s/workload?tab=pod&cluster=${clusterId}${ns}`;
+  if (labels.pod && ns && access.canK8sWorkload) {
+    to = kindPath('Pod', clusterId, ns);
   } else if (labels.deployment && access.canK8sWorkload) {
-    to = `/k8s/workload?tab=deployment&cluster=${clusterId}${ns}`;
+    to = kindPath('Deployment', clusterId, ns);
   } else if (labels.statefulset && access.canK8sWorkload) {
-    to = `/k8s/workload?tab=statefulset&cluster=${clusterId}${ns}`;
+    to = kindPath('StatefulSet', clusterId, ns);
   } else if (labels.daemonset && access.canK8sWorkload) {
-    to = `/k8s/workload?tab=daemonset&cluster=${clusterId}${ns}`;
+    to = kindPath('DaemonSet', clusterId, ns);
   } else if (labels.node && access.canK8sCluster) {
-    to = `/k8s/cluster?tab=node&cluster=${clusterId}`;
-  } else if (labels.namespace && access.canK8sWorkload) {
-    to = `/k8s/workload?cluster=${clusterId}${ns}`;
+    to = kindPath('Node', clusterId);
+  } else if (ns && access.canK8sWorkload) {
+    to = kindPath('Deployment', clusterId, ns);
   }
   if (!to) return null;
   return (

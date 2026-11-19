@@ -27,7 +27,7 @@ import { usePermissions } from '@/services/system/permissions';
 import { useT } from '@/utils/i18n';
 import { StateBadge } from './cells';
 import { useDangerConfirm } from './confirm';
-import { GVRS, sameGVR } from './meta';
+import { GVRS, sameGVR, useKindName } from './meta';
 
 const useStyles = createStyles(({ token, css }) => ({
   chain: css`
@@ -156,6 +156,7 @@ export const RelationsTab: React.FC<{
   onOpen: (gvr: GVR, name: string) => void;
 }> = ({ clusterId, target, onOpen }) => {
   const t = useT();
+  const kindName = useKindName();
   const { styles } = useStyles();
   const { message } = App.useApp();
   const confirm = useDangerConfirm();
@@ -186,7 +187,9 @@ export const RelationsTab: React.FC<{
       title: t('pages.k8s.relation.restart.title', {
         count: restartable.length,
       }),
-      content: restartable.map((r) => `${r.kind}/${r.ref.name}`).join('、'),
+      content: restartable
+        .map((r) => `${kindName(r.kind)}/${r.ref.name}`)
+        .join('、'),
       // 生产集群：输入被引用对象的名称确认
       name: target.name,
       namespace: target.namespace,
