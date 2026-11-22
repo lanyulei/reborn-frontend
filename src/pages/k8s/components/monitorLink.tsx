@@ -6,9 +6,9 @@
 import { Link, useAccess } from '@umijs/max';
 import { App, Button } from 'antd';
 import type React from 'react';
-import { useEffect, useState } from 'react';
-import { listClusterOptions } from '@/services/k8s/cluster';
+import { useMemo, useState } from 'react';
 import { getAlertRuleTemplate } from '@/services/k8s/governance';
+import { useClusterOptions } from '@/services/k8s/useClusterOptions';
 import { useT } from '@/utils/i18n';
 import { kindPath } from './meta';
 
@@ -41,18 +41,13 @@ export const K8sRuleTemplateButton: React.FC<{
   );
 };
 
-/** 集群名称 → ID 的映射在页面生命周期内只取一次 */
-let clusterIndex: Promise<Record<string, string>> | undefined;
-const loadClusterIndex = () => {
-  clusterIndex ??= listClusterOptions({ silent: true })
-    .then((res) =>
-      Object.fromEntries((res.items ?? []).map((c) => [c.name, c.id])),
-    )
-    .catch(() => {
-      clusterIndex = undefined;
-      return {};
-    });
-  return clusterIndex;
+/** 集群名称 → ID 的投影：复用共享缓存（同 key 不同投影，不另立缓存） */
+const useClusterNameIndex = (): Record<string, string> => {
+  const { data: clusterItems } = useClusterOptions();
+  return useMemo(
+    () => Object.fromEntries((clusterItems ?? []).map((c) => [c.name, c.id])),
+    [clusterItems],
+  );
 };
 
 export const K8sAlertLink: React.FC<{
@@ -60,19 +55,10 @@ export const K8sAlertLink: React.FC<{
 }> = ({ labels }) => {
   const t = useT();
   const access = useAccess() as Record<string, unknown>;
+  const clusterIndex = useClusterNameIndex();
   const cluster = labels?.cluster;
   const allowed = Boolean(access.canK8sWorkload || access.canK8sCluster);
-  const [clusterId, setClusterId] = useState<string>();
-  useEffect(() => {
-    if (!cluster || !allowed) return;
-    let cancelled = false;
-    void loadClusterIndex().then((index) => {
-      if (!cancelled) setClusterId(index[cluster]);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [cluster, allowed]);
+  const clusterId = cluster && allowed ? clusterIndex[cluster] : undefined;
   if (!clusterId || !labels) return null;
 
   const ns = labels.namespace;

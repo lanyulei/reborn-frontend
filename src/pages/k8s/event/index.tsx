@@ -7,9 +7,9 @@ import { ProTable } from '@ant-design/pro-components';
 import { Link } from '@umijs/max';
 import { Tag, Typography } from 'antd';
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { listClusterOptions } from '@/services/k8s/cluster';
+import { useMemo } from 'react';
 import { type ClusterEvent, listEvents } from '@/services/k8s/insight';
+import { useClusterOptions } from '@/services/k8s/useClusterOptions';
 import { useT } from '@/utils/i18n';
 import { timeRangeColumn, toTableResult } from '@/utils/table';
 import { formatTime } from '../components/cells';
@@ -43,25 +43,19 @@ const Events: React.FC = () => {
   const t = useT();
   const kindName = useKindName();
   const { styles } = useK8sStyles();
-  const [clusters, setClusters] = useState<Record<string, { text: string }>>(
-    {},
+  const { data: clusterItems } = useClusterOptions();
+  const clusters = useMemo<Record<string, { text: string }>>(
+    () =>
+      Object.fromEntries(
+        (clusterItems ?? []).map((c) => [
+          c.id,
+          {
+            text: c.displayName ? `${c.displayName}（${c.name}）` : c.name,
+          },
+        ]),
+      ),
+    [clusterItems],
   );
-  useEffect(() => {
-    listClusterOptions({ silent: true })
-      .then((res) =>
-        setClusters(
-          Object.fromEntries(
-            (res.items ?? []).map((c) => [
-              c.id,
-              {
-                text: c.displayName ? `${c.displayName}（${c.name}）` : c.name,
-              },
-            ]),
-          ),
-        ),
-      )
-      .catch(() => undefined);
-  }, []);
 
   const columns = useMemo<ProColumns<ClusterEvent>[]>(
     () => [

@@ -5,7 +5,7 @@
  */
 import { ReloadOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
-import { useSearchParams } from '@umijs/max';
+import { useQueryClient, useSearchParams } from '@umijs/max';
 import {
   Alert,
   Badge,
@@ -29,10 +29,13 @@ import {
   useState,
 } from 'react';
 import { type RouteTab, useRouteTabs } from '@/components/RouteTabs';
-import { listClusterOptions } from '@/services/k8s/cluster';
 import { getK8sErrorMessage } from '@/services/k8s/request';
 import { listNamespaceOptions } from '@/services/k8s/resource';
 import type { ClusterOption } from '@/services/k8s/typings';
+import {
+  CLUSTER_OPTIONS_KEY,
+  useClusterOptions,
+} from '@/services/k8s/useClusterOptions';
 import { useT } from '@/utils/i18n';
 import { PermissionRequestButton } from '../change/requests';
 import { ApprovalBar } from './approval';
@@ -97,8 +100,9 @@ export const useIsProd = (): boolean =>
 
 const useScopeState = (): K8sScope => {
   const [params, setParams] = useSearchParams();
-  const [clusters, setClusters] = useState<ClusterOption[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: clusterItems, isLoading: loading } = useClusterOptions();
+  const clusters = clusterItems ?? [];
   const [tick, setTick] = useState(0);
   const [ns, setNs] = useState<{
     clusterId: string;
@@ -106,22 +110,6 @@ const useScopeState = (): K8sScope => {
     all: boolean;
     error?: string;
   }>();
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    listClusterOptions({ silent: true })
-      .then((res) => {
-        if (!cancelled) setClusters(res.items ?? []);
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [tick]);
 
   const urlCluster = params.get('cluster') ?? '';
   const cluster = useMemo(() => {
@@ -205,7 +193,11 @@ const useScopeState = (): K8sScope => {
     },
     [update, clusterId],
   );
-  const reload = useCallback(() => setTick((n) => n + 1), []);
+  // 手动刷新：集群列表走共享缓存失效（全站生效），命名空间仍由 tick 驱动
+  const reload = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: CLUSTER_OPTIONS_KEY });
+    setTick((n) => n + 1);
+  }, [queryClient]);
 
   return {
     clusters,

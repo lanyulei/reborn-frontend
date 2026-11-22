@@ -29,7 +29,10 @@ Other: `npm run openapi` (regenerate `src/services/`), `npm run simple` (**irrev
 
 **Auth**: real Go Kratos backend (`/api/v1/*`, spec: `../backend/core/api/openapi.swagger.json`). `POST /api/v1/login` → accessToken + refreshToken stored in localStorage (`src/utils/auth.ts`). `getInitialState()` → `GET /api/v1/me`; 401 → single-flight refresh via `POST /api/v1/token/refresh` (`src/services/system/request.ts`) → retry → login redirect. `access.ts`: `canAdmin = currentUser.isAdmin === true` (gates `/system`). Dev proxy `/api/` → `http://127.0.0.1:8010`. System pages: `src/pages/system/{user,role}`.
 
-**State**: `useModel('@@initialState')` for currentUser/settings/permissions — the only model in use today; `src/models/` doesn't exist yet (model plugin is enabled, adding `src/models/*.ts` works out of the box). ProTable `request` prop for all data loading today. `@tanstack/react-query` is wired with default options but currently unused — sanctioned for complex server state.
+**State**: `useModel('@@initialState')` for currentUser/settings/permissions — the only model in use today; `src/models/` doesn't exist yet (model plugin is enabled, adding `src/models/*.ts` works out of the box). Three house rules for any new state:
+- **Server data → react-query** (`useQuery`/`useMutation` from `@umijs/max`; the umi `reactQuery` plugin wraps the provider). Use it for polling (`refetchInterval`), race-prone loads (put scope like clusterId in the `queryKey`), and data shared across pages; `retry: false` for supplementary/silent data. Reference migrations: `src/pages/k8s/overview/index.tsx` (polling), `src/pages/k8s/cluster/index.tsx` (per-cluster race).
+- **Shareable page state → URL searchParams** (pattern: `src/pages/k8s/components/scope.tsx`).
+- **Pure UI state → useState/useMemo.** ProTable `request` stays the norm for paginated tables. Do NOT add new hand-written `useEffect` + `useState` data fetching.
 
 **Styling priority**: Tailwind CSS v4 (layout) → antd-style v4 / `createStyles` (theme tokens) → CSS Modules → Less (legacy only).
 

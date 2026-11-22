@@ -5,13 +5,12 @@
 import { CopyOutlined, DownloadOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Form, Input, Modal, Select, Space } from 'antd';
 import type React from 'react';
-import { useEffect, useState } from 'react';
-import { listClusterOptions } from '@/services/k8s/cluster';
+import { useState } from 'react';
 import {
   type IssuedKubeconfig,
   issueKubeconfig,
 } from '@/services/k8s/governance';
-import type { ClusterOption } from '@/services/k8s/typings';
+import { useClusterOptions } from '@/services/k8s/useClusterOptions';
 import { saveBlob } from '@/utils/download';
 import { useT } from '@/utils/i18n';
 import { formatTime } from './cells';
@@ -43,15 +42,10 @@ export const KubeconfigModal: React.FC<{
   const t = useT();
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
-  const [clusters, setClusters] = useState<ClusterOption[]>([]);
+  const { data: clusterItems } = useClusterOptions();
+  const clusters = clusterItems ?? [];
   const [loading, setLoading] = useState(false);
   const [issued, setIssued] = useState<IssuedKubeconfig>();
-
-  useEffect(() => {
-    listClusterOptions({ silent: true })
-      .then((res) => setClusters(res.items ?? []))
-      .catch(() => undefined);
-  }, []);
 
   const submit = async () => {
     const values = await form.validateFields().catch(() => undefined);

@@ -1,6 +1,8 @@
 /**
  * 工作负载创建向导：表单值 → 清单的纯逻辑（不依赖 React / antd，可用 Node 直接运行校验）。
  * Job / CronJob 向导复用这里的 Pod 模板构建（buildPodTemplate），控制器专属字段只在各自的构建函数里写。
+ * 数量格式化 / 解析在 quantity.ts，表单初值在 values.ts——本文件是它们的桶（re-export），
+ * 历史导入点（./helpers）不用改；新代码按主题直接引子文件。
  */
 import { parseAllDocuments } from 'yaml';
 import type { Translate } from '@/utils/i18n';
@@ -11,6 +13,11 @@ import {
   toRecord,
 } from '../shared/manifest';
 import type { StringListEditorItem } from '../shared/StringListEditor';
+import {
+  formatCpuQuantity,
+  formatMemoryQuantity,
+  isFiniteNumber,
+} from './quantity';
 import type {
   ContainerActionFormValue,
   ContainerProbeFormValue,
@@ -34,108 +41,7 @@ const WORKLOAD_API_VERSION = 'apps/v1';
 /** maxUnavailable / maxSurge：整数或百分比 */
 const INT_OR_PERCENT_PATTERN = /^(0|[1-9]\d*)%?$/;
 
-/** 默认容器名：只用小写字母和数字（容器名必须是小写 DNS label） */
-const createRandomContainerName = () => {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  const suffix = Array.from({ length: 8 }, () =>
-    chars.charAt(Math.floor(Math.random() * chars.length)),
-  ).join('');
-
-  return `container-${suffix}`;
-};
-
-const getInitialContainerValues = (): CreateWorkloadContainerValues => ({
-  id: createId(),
-  containerName: undefined,
-  image: undefined,
-  containerType: 'worker',
-  imagePullPolicy: 'IfNotPresent',
-  cpuRequest: undefined,
-  cpuLimit: undefined,
-  memoryRequest: undefined,
-  memoryLimit: undefined,
-  containerPorts: [{ protocol: 'HTTP', name: 'http-0' }],
-  enableHealthCheck: false,
-  healthChecks: {},
-  enableLifecycle: false,
-  lifecycleActions: {},
-  enableStartupCommand: false,
-  startupCommand: [],
-  startupArgs: [],
-  enableContainerEnv: false,
-  containerEnv: [],
-  enableContainerSecurityContext: false,
-  containerPrivileged: false,
-  containerRunAsNonRoot: false,
-  containerRunAsUser: undefined,
-  containerRunAsGroup: undefined,
-  containerReadOnlyRootFilesystem: false,
-  allowPrivilegeEscalation: false,
-  containerSeLinuxLevel: undefined,
-  containerSeLinuxRole: undefined,
-  containerSeLinuxType: undefined,
-  containerSeLinuxUser: undefined,
-  containerCapabilitiesAdd: [''],
-  containerCapabilitiesDrop: [''],
-  containerSeccompProfileType: undefined,
-  containerSeccompProfileLocalhost: '',
-  enableResizePolicy: false,
-  cpuResizeRestartPolicy: undefined,
-  memoryResizeRestartPolicy: undefined,
-  syncHostTimezone: false,
-});
-
-const getInitialCreateWorkloadValues = (
-  kind: WorkloadKind,
-  namespace?: string,
-): CreateWorkloadFormValues => ({
-  namespace: namespace || undefined,
-  name: undefined,
-  replicas: kind === 'DaemonSet' ? undefined : 1,
-  updateStrategyType: 'RollingUpdate',
-  maxUnavailable: '25%',
-  maxSurge: '25%',
-  minReadySeconds: 0,
-  updatePartition: 0,
-  enablePodSecurityContext: false,
-  runAsNonRoot: false,
-  enablePodGracefulTermination: false,
-  terminationGracePeriodSeconds: 30,
-  podAnnotations: [],
-  podSchedulingRule: 'default',
-  podSchedulingCustomRules: [],
-  containers: [],
-  storageCategory: 'none',
-  storageType: 'none',
-  volumeType: 'persistentVolumeClaim',
-  configResourceType: 'configMap',
-  volumeName: 'data',
-  emptyDirSizeLimit: '200Mi',
-  hostPath: undefined,
-  claimName: undefined,
-  claimStorageClassName: undefined,
-  claimCapacity: undefined,
-  claimAccessModes: undefined,
-  pvcNamePrefix: '',
-  pvcStorageClassName: undefined,
-  pvcAccessModes: ['ReadWriteOnce'],
-  pvcSizeGi: 10,
-  configResourceName: undefined,
-  containerMounts: [],
-  selectSpecificKeys: false,
-  specificKeyPaths: [],
-  storageItems: [],
-  enableNodeSelector: false,
-  nodeSelectors: [],
-  selectedNodeNames: [],
-  labels: [],
-  annotations: [],
-});
-
 const normalizeOptionalText = (value?: string) => value?.trim() || undefined;
-
-const isFiniteNumber = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value);
 
 const isEmptyRecord = (record: Record<string, unknown>) =>
   Object.keys(record).length === 0;
@@ -156,76 +62,6 @@ const normalizeNumberListText = (value?: string) =>
     .filter(Boolean)
     .map(Number)
     .filter((item) => Number.isInteger(item) && item >= 0);
-
-/** CPU（核）→ 数量：整数核写成 "2"，小数写成毫核 "500m" */
-const formatCpuQuantity = (value?: number) => {
-  if (!isFiniteNumber(value) || value < 0) {
-    return undefined;
-  }
-
-  return Number.isInteger(value) ? `${value}` : `${Math.round(value * 1000)}m`;
-};
-
-/** 内存（Mi）→ 数量：整数写 Mi，带小数时降到 Ki / 字节表示，不四舍五入 */
-const formatMemoryQuantity = (value?: number) => {
-  if (!isFiniteNumber(value) || value < 0) {
-    return undefined;
-  }
-  if (Number.isInteger(value)) {
-    return `${value}Mi`;
-  }
-  const kibibytes = value * 1024;
-  return Number.isInteger(kibibytes)
-    ? `${kibibytes}Ki`
-    : `${Math.round(kibibytes * 1024)}`;
-};
-
-/** 数量后缀 → 倍数：十进制 SI（k/M/G/T/P/E = 1000^n）、二进制（Ki/Mi/… = 1024^n）、m/u/n */
-const QUANTITY_SUFFIX_MULTIPLIERS: Record<string, number> = {
-  n: 1e-9,
-  u: 1e-6,
-  m: 1e-3,
-  k: 1e3,
-  K: 1e3,
-  M: 1e6,
-  G: 1e9,
-  T: 1e12,
-  P: 1e15,
-  E: 1e18,
-  Ki: 1024,
-  Mi: 1024 ** 2,
-  Gi: 1024 ** 3,
-  Ti: 1024 ** 4,
-  Pi: 1024 ** 5,
-  Ei: 1024 ** 6,
-};
-
-const QUANTITY_PATTERN =
-  /^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(?:([eE][+-]?\d+)|([numkKMGTPE]i?))?$/;
-
-/**
- * Kubernetes 数量 → 基本单位的数值（字节 / 核）。支持纯数字、指数形式（1e9、1E3）、
- * 十进制 SI 与二进制后缀、毫核等小数后缀；无法识别返回 undefined。
- */
-const parseQuantity = (value: unknown): number | undefined => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : undefined;
-  }
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const matched = value.trim().match(QUANTITY_PATTERN);
-  if (!matched) {
-    return undefined;
-  }
-  const [, mantissa, exponent, suffix] = matched;
-  const multiplier = suffix ? QUANTITY_SUFFIX_MULTIPLIERS[suffix] : 1;
-  if (multiplier === undefined) {
-    return undefined;
-  }
-  const result = Number(`${mantissa}${exponent ?? ''}`) * multiplier;
-  return Number.isFinite(result) ? result : undefined;
-};
 
 /** IntOrString：纯数字必须以整数提交（字符串 "1" 会被当作非法百分比） */
 const toIntOrPercent = (value: string | undefined, fallback: string) => {
@@ -1269,6 +1105,19 @@ const inspectYamlSubmission = (
   };
 };
 
+// 桶：数量工具与表单初值切在子文件（quantity.ts / values.ts），历史 ./helpers 导入点不变；
+// 新代码按主题直接引子文件
+export {
+  formatCpuQuantity,
+  formatMemoryQuantity,
+  isFiniteNumber,
+  parseQuantity,
+} from './quantity';
+export {
+  createRandomContainerName,
+  getInitialContainerValues,
+  getInitialCreateWorkloadValues,
+} from './values';
 export type { Manifest, PodTemplateOptions };
 export {
   buildCreateWorkloadDocuments,
@@ -1279,17 +1128,10 @@ export {
   checkContainers,
   checkWorkloadValues,
   createId,
-  createRandomContainerName,
-  formatCpuQuantity,
-  formatMemoryQuantity,
-  getInitialContainerValues,
-  getInitialCreateWorkloadValues,
   hasWorkerContainer,
   INT_OR_PERCENT_PATTERN,
   inspectYamlSubmission,
-  isFiniteNumber,
   NAME_PATTERN,
-  parseQuantity,
   prune,
   toArgList,
   WORKLOAD_API_VERSION,

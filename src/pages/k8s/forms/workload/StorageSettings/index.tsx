@@ -1,12 +1,10 @@
 import {
   DeleteOutlined,
   DockerOutlined,
-  EditOutlined,
   FolderOpenOutlined,
   HddOutlined,
   PlusOutlined,
   SettingOutlined,
-  ToolOutlined,
 } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 import {
@@ -26,7 +24,6 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
-import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '@/utils/i18n';
 import { GVRS, listNames, listRows } from '../../shared/kube';
@@ -66,6 +63,7 @@ import {
   ResourceOptionContent,
   ResourcePlaceholder,
 } from './resourceOptions';
+import { StorageCardList, StorageEntry } from './StorageCards';
 import {
   accessModeOptions,
   createStorageConfigId,
@@ -83,17 +81,6 @@ type SubPathEditorState = {
   index: number;
   value: string;
   error?: string;
-};
-
-type StorageActionVariant = 'entry' | 'add';
-
-type StorageActionItem = {
-  description: string;
-  icon?: ReactNode;
-  key: string;
-  onSelect: () => void;
-  title: string;
-  wide?: boolean;
 };
 
 const StorageSettings = ({ form, type }: StorageSettingsProps) => {
@@ -731,147 +718,6 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
       storageItems.filter((_, itemIndex) => itemIndex !== index),
     );
   };
-
-  const volumeClaimTemplateActionGroup = {
-    key: 'volumeClaimTemplate',
-    actions:
-      type === 'StatefulSet'
-        ? [
-            {
-              description: t(
-                'pages.k8s.forms.workload.storage.volumeClaimTemplate.add.description',
-              ),
-              icon: <HddOutlined />,
-              key: 'volumeClaimTemplate',
-              onSelect: () => openStorageModal(selectVolumeClaimTemplate),
-              title: t(
-                'pages.k8s.forms.workload.storage.volumeClaimTemplate.add',
-              ),
-              wide: true,
-            },
-          ]
-        : [],
-    match: (item: WorkloadStorageConfigItem) =>
-      item.storageType === 'volumeClaimTemplate',
-  };
-
-  const mountStorageActionGroup = {
-    key: 'mounts',
-    actions: [
-      {
-        description: t(
-          'pages.k8s.forms.workload.storage.volume.mount.description',
-        ),
-        icon: <HddOutlined />,
-        key: 'volume',
-        onSelect: () => openStorageModal(() => selectStorageCategory('volume')),
-        title: t('pages.k8s.forms.workload.storage.volume.mount'),
-      },
-      {
-        description: t(
-          'pages.k8s.forms.workload.storage.config.mount.description',
-        ),
-        icon: <ToolOutlined />,
-        key: 'config',
-        onSelect: () => openStorageModal(() => selectStorageCategory('config')),
-        title: t('pages.k8s.forms.workload.storage.config.mount'),
-      },
-    ],
-    match: (item: WorkloadStorageConfigItem) =>
-      item.storageType !== 'volumeClaimTemplate',
-  };
-
-  const storageActionGroups = [
-    volumeClaimTemplateActionGroup,
-    mountStorageActionGroup,
-  ];
-
-  const renderStorageActionCard = (
-    action: StorageActionItem,
-    variant: StorageActionVariant,
-  ) => {
-    const isEntry = variant === 'entry';
-    const cardClassName = [
-      isEntry ? styles.entryCard : styles.addStorageCard,
-      action.wide
-        ? isEntry
-          ? styles.entryCardWide
-          : styles.addStorageCardWide
-        : '',
-    ].join(' ');
-
-    return (
-      <button
-        className={cardClassName}
-        key={action.key}
-        type="button"
-        onClick={action.onSelect}
-      >
-        {isEntry && action.icon && (
-          <span className={styles.entryIcon}>{action.icon}</span>
-        )}
-        {isEntry ? (
-          <span className={styles.entryContent}>
-            <span className={styles.entryTitle}>{action.title}</span>
-            <span className={styles.entryDescription}>
-              {action.description}
-            </span>
-          </span>
-        ) : (
-          <>
-            <span className={styles.addStorageTitle}>{action.title}</span>
-            <span className={styles.addStorageDescription}>
-              {action.description}
-            </span>
-          </>
-        )}
-      </button>
-    );
-  };
-
-  const renderStorageActionGrid = (
-    actions: StorageActionItem[],
-    variant: StorageActionVariant,
-    className: string,
-  ) => (
-    <div className={className}>
-      {actions.map((action) => renderStorageActionCard(action, variant))}
-    </div>
-  );
-
-  const renderStatefulStorageActionSections = (
-    variant: StorageActionVariant,
-  ) => (
-    <div className={styles.statefulStorageSections}>
-      {storageActionGroups.map((group) => (
-        <div className={styles.statefulStorageSection} key={group.key}>
-          {renderStorageActionGrid(
-            group.actions,
-            variant,
-            styles.statefulStorageActionGrid,
-          )}
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderEntry = () =>
-    type === 'StatefulSet'
-      ? renderStatefulStorageActionSections('entry')
-      : renderStorageActionGrid(
-          mountStorageActionGroup.actions,
-          'entry',
-          styles.entryGrid,
-        );
-
-  const renderAddStorageActions = () =>
-    type === 'StatefulSet'
-      ? renderStatefulStorageActionSections('add')
-      : renderStorageActionGrid(
-          mountStorageActionGroup.actions,
-          'add',
-          styles.addStorageGrid,
-        );
 
   const renderPvcSelector = () => (
     <div className={styles.resourceSelector}>
@@ -1585,220 +1431,13 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     return t('pages.k8s.forms.workload.storage.config.mount');
   };
 
-  const getStorageCardIcon = (item: WorkloadStorageConfigItem) => {
-    if (item.storageCategory === 'config') {
-      return getResourceIcon(item.configResourceType);
-    }
-    return item.storageType === 'hostPath' ? <ToolOutlined /> : <HddOutlined />;
+  const addStorageActions = {
+    onAddVolumeMount: () =>
+      openStorageModal(() => selectStorageCategory('volume')),
+    onAddConfigMount: () =>
+      openStorageModal(() => selectStorageCategory('config')),
+    onAddClaimTemplate: () => openStorageModal(selectVolumeClaimTemplate),
   };
-
-  const getStorageCardFields = (item: WorkloadStorageConfigItem) => {
-    if (item.storageType === 'volumeClaimTemplate') {
-      return [
-        {
-          label: t('pages.k8s.forms.common.storageClass'),
-          value: item.pvcStorageClassName || '-',
-        },
-        {
-          label: t('pages.k8s.forms.common.capacity'),
-          value: `${item.pvcSizeGi || 10}Gi`,
-        },
-        {
-          label: t('pages.k8s.forms.common.accessMode'),
-          value: item.pvcAccessModes?.join(', ') || 'ReadWriteOnce',
-        },
-      ];
-    }
-
-    if (item.storageType === 'persistentVolumeClaim') {
-      return [
-        {
-          label: t('pages.k8s.forms.common.storageClass'),
-          value: item.claimStorageClassName || '-',
-        },
-        {
-          label: t('pages.k8s.forms.common.capacity'),
-          value: item.claimCapacity || '-',
-        },
-        {
-          label: t('pages.k8s.forms.common.accessMode'),
-          value: item.claimAccessModes?.join(', ') || '-',
-        },
-      ];
-    }
-
-    if (item.storageType === 'hostPath') {
-      return [{ label: 'HostPath', value: item.hostPath || '-' }];
-    }
-
-    if (item.storageType === 'configMap' || item.storageType === 'secret') {
-      return [
-        {
-          label: getConfigResourceLabel(item.configResourceType, t),
-          value: item.configResourceName || '-',
-        },
-      ];
-    }
-
-    return [
-      {
-        label: t('pages.k8s.forms.workload.storage.volumeType'),
-        value: 'EmptyDir',
-      },
-    ];
-  };
-
-  const getStorageCardName = (item: WorkloadStorageConfigItem) => {
-    if (item.storageType === 'volumeClaimTemplate') {
-      return item.pvcNamePrefix || 'volume';
-    }
-    if (item.storageType === 'persistentVolumeClaim') {
-      return item.claimName || 'persistent-volume-claim';
-    }
-    if (item.storageType === 'configMap' || item.storageType === 'secret') {
-      return (
-        item.configResourceName ||
-        getConfigResourceLabel(item.configResourceType, t)
-      );
-    }
-    return item.volumeName || 'data';
-  };
-
-  const getStorageTypeDescription = (item: WorkloadStorageConfigItem) => {
-    if (item.storageType === 'volumeClaimTemplate') {
-      return t('pages.k8s.kind.PersistentVolumeClaim');
-    }
-    if (item.storageType === 'persistentVolumeClaim') {
-      return t('pages.k8s.kind.PersistentVolumeClaim');
-    }
-    if (item.storageType === 'hostPath') {
-      return 'HostPath';
-    }
-    if (item.storageType === 'configMap' || item.storageType === 'secret') {
-      return getConfigResourceLabel(item.configResourceType, t);
-    }
-    return 'EmptyDir';
-  };
-
-  const renderStorageMounts = (item: WorkloadStorageConfigItem) => {
-    const activeMounts = (item.containerMounts || []).filter(
-      (mount) =>
-        mount.mountMode && mount.mountMode !== 'none' && mount.mountPath,
-    );
-
-    if (activeMounts.length === 0) {
-      return null;
-    }
-
-    return (
-      <div className={styles.cardMountRows}>
-        {activeMounts.map((mount, index) => (
-          <div className={styles.cardMountRow} key={mount.id || index}>
-            <span className={styles.cardMountContainer}>
-              <DockerOutlined className={styles.containerIcon} />
-              <Typography.Text ellipsis>
-                {mount.containerName || `container-${index + 1}`}
-              </Typography.Text>
-            </span>
-            <span className={styles.cardMountMeta}>
-              <SettingOutlined />
-              {mount.mountPath}
-              {mount.mountMode === 'readWrite'
-                ? t('pages.k8s.forms.workload.storage.mount.readWrite')
-                : ''}
-              {mount.subPath
-                ? ` ${t('pages.k8s.forms.workload.storage.mount.subPath', { subPath: mount.subPath })}`
-                : ''}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderStorageCard = (
-    item: WorkloadStorageConfigItem,
-    index: number,
-  ) => (
-    <div className={styles.storageCard} key={item.id}>
-      <div className={styles.storageCardMain}>
-        <div className={styles.storageCardIcon}>{getStorageCardIcon(item)}</div>
-        <div className={styles.storageCardIdentity}>
-          <div className={styles.storageCardName}>
-            {getStorageCardName(item)}
-          </div>
-          <div className={styles.storageCardDescription}>
-            {t('pages.k8s.forms.workload.storage.volumeTypeOf', {
-              type: getStorageTypeDescription(item),
-            })}
-          </div>
-        </div>
-        {getStorageCardFields(item).map((field) => (
-          <div className={styles.storageCardMetric} key={field.label}>
-            {field.value}
-            <span>{field.label}</span>
-          </div>
-        ))}
-        <div className={styles.storageCardActions}>
-          <Button
-            aria-label={t('pages.k8s.forms.workload.storage.delete')}
-            icon={<DeleteOutlined />}
-            type="text"
-            onClick={() => deleteStorageConfig(index)}
-          />
-          <Button
-            aria-label={t('pages.k8s.forms.workload.storage.edit')}
-            icon={<EditOutlined />}
-            type="text"
-            onClick={() => editStorageConfig(item, index)}
-          />
-        </div>
-      </div>
-      <div style={{ marginBottom: 15 }}>{renderStorageMounts(item)}</div>
-    </div>
-  );
-
-  const renderStatefulSetConfiguredStorage = () => {
-    const indexedStorageItems = storageItems.map((item, index) => ({
-      index,
-      item,
-    }));
-
-    return (
-      <div className={styles.statefulStorageSections}>
-        {storageActionGroups.map((group) => (
-          <div className={styles.statefulStorageSection} key={group.key}>
-            {indexedStorageItems
-              .filter(({ item }) => group.match(item))
-              .map(({ index, item }) => renderStorageCard(item, index))}
-            {renderStorageActionGrid(
-              group.actions,
-              'add',
-              styles.statefulStorageActionGrid,
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderConfiguredStorage = () => (
-    <div className={styles.storageList}>
-      <div className={styles.storageTitle}>
-        {t('pages.k8s.forms.common.storage')}
-      </div>
-      <div className={styles.storageListPanel}>
-        {type === 'StatefulSet' ? (
-          renderStatefulSetConfiguredStorage()
-        ) : (
-          <>
-            {storageItems.map(renderStorageCard)}
-            {renderAddStorageActions()}
-          </>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <div>
@@ -1807,10 +1446,16 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
           <div className={styles.storageTitle}>
             {t('pages.k8s.forms.common.storage')}
           </div>
-          {renderEntry()}
+          <StorageEntry type={type} {...addStorageActions} />
         </>
       ) : (
-        renderConfiguredStorage()
+        <StorageCardList
+          type={type}
+          items={storageItems}
+          onEdit={editStorageConfig}
+          onDelete={deleteStorageConfig}
+          {...addStorageActions}
+        />
       )}
       <Modal
         destroyOnHidden

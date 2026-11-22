@@ -4,7 +4,7 @@
  * 形态选择：健康是状态（徽标 + 文字），水位是「占比」（进度条 + 数字），异常项与事件是清单（列表）。
  */
 import { ReloadOutlined } from '@ant-design/icons';
-import { Link } from '@umijs/max';
+import { Link, useQuery } from '@umijs/max';
 import {
   Alert,
   Badge,
@@ -18,12 +18,10 @@ import {
 } from 'antd';
 import { createStyles } from 'antd-style';
 import type React from 'react';
-import { useCallback, useEffect, useState } from 'react';
 import SectionTitle from '@/components/SectionTitle';
 import {
   type ClusterEvent,
   getOverview,
-  type Overview,
   type OverviewCluster,
   type SummaryItem,
 } from '@/services/k8s/insight';
@@ -346,30 +344,17 @@ const EventList: React.FC<{ events: ClusterEvent[] }> = ({ events }) => {
 const OverviewBody: React.FC = () => {
   const t = useT();
   const { styles } = useStyles();
-  const [data, setData] = useState<Overview>();
-  const [error, setError] = useState<string>();
-  const [loading, setLoading] = useState(true);
+  // 摘要数据：60s 轮询（页面不可见时暂停，切回窗口自动刷新）；失败保留已有数据不报错，
+  // 仅在还没有数据（首次加载失败）时展示错误。queryKey 即缓存键，与手写 useState + setInterval 等价
+  const { data, error, isFetching, refetch } = useQuery({
+    queryKey: ['k8s', 'overview'],
+    queryFn: getOverview,
+    refetchInterval: 60_000,
+    retry: false,
+  });
 
-  // background = 定时轮询：不显示加载态；失败时保留已有数据（不反复报错），页面不可见时跳过
-  const load = useCallback(async (background = false) => {
-    if (background && document.visibilityState !== 'visible') return;
-    if (!background) setLoading(true);
-    try {
-      setData(await getOverview());
-      setError(undefined);
-    } catch (err) {
-      if (!background) setError(getK8sErrorMessage(err));
-    } finally {
-      if (!background) setLoading(false);
-    }
-  }, []);
-  useEffect(() => {
-    void load();
-    const timer = window.setInterval(() => void load(true), 60_000);
-    return () => window.clearInterval(timer);
-  }, [load]);
-
-  if (error) return <Alert type="error" showIcon title={error} />;
+  if (error && !data)
+    return <Alert type="error" showIcon title={getK8sErrorMessage(error)} />;
   if (!data) return <Spin style={{ display: 'block', margin: '80px auto' }} />;
   const clusters = data.clusters ?? [];
   return (
@@ -378,8 +363,8 @@ const OverviewBody: React.FC = () => {
         <SectionTitle>{t('pages.k8s.overview.clusters')}</SectionTitle>
         <Button
           icon={<ReloadOutlined />}
-          loading={loading}
-          onClick={() => void load()}
+          loading={isFetching}
+          onClick={() => void refetch()}
         />
       </div>
       {clusters.length === 0 ? (

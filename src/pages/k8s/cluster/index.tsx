@@ -4,7 +4,7 @@
  */
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { history, useSearchParams } from '@umijs/max';
+import { history, useQuery, useQueryClient, useSearchParams } from '@umijs/max';
 import {
   Alert,
   App,
@@ -22,7 +22,7 @@ import {
   Typography,
 } from 'antd';
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import SectionTitle from '@/components/SectionTitle';
 import {
   ConfirmLink,
@@ -37,6 +37,7 @@ import {
 } from '@/services/k8s/cluster';
 import { listNamespaceQuotas, type NamespaceQuota } from '@/services/k8s/helm';
 import type { AgentInstall, Cluster } from '@/services/k8s/typings';
+import { CLUSTER_OPTIONS_KEY } from '@/services/k8s/useClusterOptions';
 import { usePermissions } from '@/services/system/permissions';
 import { useT } from '@/utils/i18n';
 import { toTableResult } from '@/utils/table';
@@ -108,6 +109,7 @@ const ClusterList: React.FC = () => {
   const t = useT();
   const has = usePermissions();
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const actionRef = useRef<ActionType>(null);
   const pageVisible = usePageVisible(() => actionRef.current?.reload());
   // undefined = 抽屉关闭；null = 接入；对象 = 编辑
@@ -115,7 +117,12 @@ const ClusterList: React.FC = () => {
   const [agent, setAgent] = useState<{ name: string; info: AgentInstall }>();
   const [envs, setEnvs] = useState<string[]>([]);
 
-  const reload = () => actionRef.current?.reload();
+  // 表格刷新 + 共享集群选项缓存失效：接入 / 删除 / Agent 变更后，scope 栏与
+  // 其他页面的集群下拉（useClusterOptions 共享缓存）同步看到最新列表
+  const reload = () => {
+    actionRef.current?.reload();
+    void queryClient.invalidateQueries({ queryKey: CLUSTER_OPTIONS_KEY });
+  };
 
   const openAgent = async (cluster: Cluster) => {
     try {
@@ -638,31 +645,25 @@ const Namespaces: React.FC = () => {
   const has = usePermissions();
   const scope = useK8sScope();
   const [tick, setTick] = useState(0);
-  const [quotas, setQuotas] = useState<Record<string, NamespaceQuota>>({});
   const settings = useChangeSettings();
+  const clusterId = scope.clusterId;
 
-  // 配额用量是列表之外的附加信息：取不到（无权限等）不影响列表；随列表每次加载一起刷新
-  const quotaSeq = useRef(0);
-  const loadQuotas = useCallback(() => {
-    if (!scope.clusterId) return;
-    const id = ++quotaSeq.current;
-    listNamespaceQuotas(scope.clusterId, undefined, { silent: true })
-      .then((res) => {
-        if (id !== quotaSeq.current) return;
-        setQuotas(
-          Object.fromEntries(
-            (res.items ?? []).map((item) => [item.namespace, item]),
-          ),
-        );
-      })
-      .catch(() => undefined);
-  }, [scope.clusterId]);
-  useEffect(
-    () => () => {
-      quotaSeq.current += 1;
+  // 配额用量是列表之外的附加信息：取不到（无权限等）不影响列表；随列表每次加载一起刷新。
+  // queryKey 带集群 ID：切换集群时旧响应只会写进旧 key 的缓存，不再需要手写序号防竞态；失败保留已有数据
+  const { data: quotas, refetch: refetchQuotas } = useQuery({
+    queryKey: ['k8s', 'namespace-quotas', clusterId],
+    queryFn: async (): Promise<Record<string, NamespaceQuota>> => {
+      if (!clusterId) return {};
+      const res = await listNamespaceQuotas(clusterId, undefined, {
+        silent: true,
+      });
+      return Object.fromEntries(
+        (res.items ?? []).map((item) => [item.namespace, item]),
+      );
     },
-    [],
-  );
+    enabled: clusterId !== undefined,
+    retry: false,
+  });
 
   const extraColumns = useMemo(
     () => [
@@ -670,12 +671,12 @@ const Namespaces: React.FC = () => {
         key: '__quota',
         title: t('pages.k8s.quota.usage'),
         render: (row: { name: string }) => (
-          <QuotaCell quota={quotas[row.name]} />
+          <QuotaCell quota={quotas?.[row.name]} />
         ),
-        onLoaded: loadQuotas,
+        onLoaded: () => void refetchQuotas(),
       },
     ],
-    [quotas, t, loadQuotas],
+    [quotas, t, refetchQuotas],
   );
   return (
     <ResourceView

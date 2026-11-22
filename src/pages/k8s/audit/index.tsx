@@ -17,8 +17,8 @@ import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import SectionTitle from '@/components/SectionTitle';
 import { getAudit, listAudits, listExecSessions } from '@/services/k8s/audit';
-import { listClusterOptions } from '@/services/k8s/cluster';
 import type { ExecSession, K8sAudit } from '@/services/k8s/typings';
+import { useClusterOptions } from '@/services/k8s/useClusterOptions';
 import { usePermissions } from '@/services/system/permissions';
 import { formatBytes } from '@/utils/format';
 import { useT } from '@/utils/i18n';
@@ -66,21 +66,16 @@ const ACTIONS = [
   'helm_uninstall',
 ];
 
-/** 集群筛选下拉：当前用户可见的集群 */
+/** 集群筛选下拉：当前用户可见的集群（共享缓存，见 useClusterOptions） */
 const useClusterEnum = () => {
-  const [items, setItems] = useState<Record<string, { text: string }>>({});
-  useEffect(() => {
-    listClusterOptions({ silent: true })
-      .then((res) =>
-        setItems(
-          Object.fromEntries(
-            (res.items ?? []).map((item) => [item.id, { text: item.name }]),
-          ),
-        ),
-      )
-      .catch(() => undefined);
-  }, []);
-  return items;
+  const { data: clusterItems } = useClusterOptions();
+  return useMemo<Record<string, { text: string }>>(
+    () =>
+      Object.fromEntries(
+        (clusterItems ?? []).map((item) => [item.id, { text: item.name }]),
+      ),
+    [clusterItems],
+  );
 };
 
 const prettyJson = (text: string): string => {

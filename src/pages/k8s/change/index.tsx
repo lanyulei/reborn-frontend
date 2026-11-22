@@ -26,7 +26,7 @@ import SectionTitle from '@/components/SectionTitle';
 import { ConfirmLink } from '@/components/TableActions';
 import type { ChangeItem, K8sChange } from '@/services/k8s/change';
 import { cancelChange, getChange, listChanges } from '@/services/k8s/change';
-import { listClusterOptions } from '@/services/k8s/cluster';
+import { useClusterOptions } from '@/services/k8s/useClusterOptions';
 import { usePermissions } from '@/services/system/permissions';
 import type { Translate } from '@/utils/i18n';
 import { t, useT } from '@/utils/i18n';
@@ -348,9 +348,14 @@ const ChangePage: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const table = useRef<ActionType>(null);
   const [scope, setScope] = useState<'mine' | 'all'>('mine');
-  const [clusterEnum, setClusterEnum] = useState<
-    Record<string, { text: string }>
-  >({});
+  const { data: clusterItems } = useClusterOptions();
+  const clusterEnum = useMemo<Record<string, { text: string }>>(
+    () =>
+      Object.fromEntries(
+        (clusterItems ?? []).map((item) => [item.id, { text: item.name }]),
+      ),
+    [clusterItems],
+  );
   const detailId = params.get('id') ?? '';
 
   const openDetail = (id?: string) => {
@@ -359,18 +364,6 @@ const ChangePage: React.FC = () => {
     else next.delete('id');
     setParams(next, { replace: true });
   };
-
-  useEffect(() => {
-    listClusterOptions({ silent: true })
-      .then((res) =>
-        setClusterEnum(
-          Object.fromEntries(
-            (res.items ?? []).map((item) => [item.id, { text: item.name }]),
-          ),
-        ),
-      )
-      .catch(() => undefined);
-  }, []);
 
   const statusEnum = useMemo(
     () =>
