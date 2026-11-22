@@ -10,6 +10,19 @@ import { useCallback } from 'react';
 /** 菜单权限码：与后端目录常量一一对应 */
 export type MenuPermissionCode =
   | 'assistant'
+  | 'knowledge'
+  | 'knowledge.admin'
+  | 'agent.task'
+  | 'agent.profile'
+  | 'agent.stats'
+  | 'incident.list'
+  | 'incident.review'
+  | 'incident.stats'
+  | 'incident.rule'
+  | 'incident.playbook'
+  | 'incident.business'
+  | 'incident.source'
+  | 'incident.setting'
   | 'cmdb.model'
   | 'cmdb.ci'
   | 'cmdb.sync'
@@ -73,7 +86,43 @@ export type MenuPermissionCode =
 
 /** 元素权限码：页面内具体操作（按钮/接口级） */
 export type ElementPermissionCode =
+  | 'knowledge.write'
+  | 'knowledge.review'
+  | 'knowledge.archive'
+  | 'knowledge.delete'
+  | 'knowledge.space'
+  | 'knowledge.admin.rebuild'
+  | 'incident.list.create'
+  | 'incident.list.handle'
+  | 'incident.list.proposal'
+  | 'incident.list.update'
+  | 'incident.list.share'
+  | 'incident.list.postmortem'
+  | 'incident.list.agent'
+  | 'incident.list.diagnose'
+  | 'agent.task.run'
+  | 'agent.task.rate'
+  | 'agent.profile.create'
+  | 'agent.profile.update'
+  | 'agent.profile.delete'
+  | 'agent.profile.test'
+  | 'incident.rule.create'
+  | 'incident.rule.update'
+  | 'incident.rule.delete'
+  | 'incident.rule.test'
+  | 'incident.playbook.create'
+  | 'incident.playbook.update'
+  | 'incident.playbook.delete'
+  | 'incident.business.create'
+  | 'incident.business.update'
+  | 'incident.business.delete'
+  | 'incident.source.manage'
+  | 'incident.source.reset'
+  | 'incident.source.delete'
+  | 'incident.source.webhook'
+  | 'incident.setting.update'
   | 'system.user.create'
+  | 'system.user.machine'
   | 'system.user.edit'
   | 'system.user.delete'
   | 'system.user.status'
@@ -270,6 +319,19 @@ export interface ElementPermissionDef {
 /** 全量菜单权限目录 */
 export const MENU_PERMISSIONS: MenuPermissionDef[] = [
   { code: 'assistant', labelKey: 'menu.assistant', parentKey: 'menu.assistant' },
+  { code: 'knowledge', labelKey: 'menu.knowledge.home', parentKey: 'menu.knowledge' },
+  { code: 'knowledge.admin', labelKey: 'menu.knowledge.admin', parentKey: 'menu.knowledge' },
+  { code: 'agent.task', labelKey: 'menu.agent.task', parentKey: 'menu.agent' },
+  { code: 'agent.profile', labelKey: 'menu.agent.profile', parentKey: 'menu.agent' },
+  { code: 'agent.stats', labelKey: 'menu.agent.stats', parentKey: 'menu.agent' },
+  { code: 'incident.list', labelKey: 'menu.incident.list', parentKey: 'menu.incident' },
+  { code: 'incident.review', labelKey: 'menu.incident.review', parentKey: 'menu.incident' },
+  { code: 'incident.stats', labelKey: 'menu.incident.stats', parentKey: 'menu.incident' },
+  { code: 'incident.rule', labelKey: 'menu.incident.rule', parentKey: 'menu.incident.config' },
+  { code: 'incident.playbook', labelKey: 'menu.incident.playbook', parentKey: 'menu.incident.config' },
+  { code: 'incident.business', labelKey: 'menu.incident.business', parentKey: 'menu.incident.config' },
+  { code: 'incident.source', labelKey: 'menu.incident.source', parentKey: 'menu.incident.config' },
+  { code: 'incident.setting', labelKey: 'menu.incident.setting', parentKey: 'menu.incident.config' },
   { code: 'workflow.definition', labelKey: 'menu.workflow.definition', parentKey: 'menu.workflow' },
   { code: 'workflow.instance', labelKey: 'menu.workflow.instance', parentKey: 'menu.workflow' },
   { code: 'workflow.config', labelKey: 'menu.workflow.config', parentKey: 'menu.workflow' },
@@ -321,7 +383,7 @@ export const MENU_PERMISSIONS: MenuPermissionDef[] = [
   { code: 'job.stats', labelKey: 'menu.job.stats', parentKey: 'menu.job' },
   { code: 'k8s.overview', labelKey: 'menu.k8s.overview', parentKey: 'menu.k8s' },
   { code: 'k8s.cluster', labelKey: 'menu.k8s.cluster', parentKey: 'menu.k8s' },
-  { code: 'k8s.workload', labelKey: 'menu.k8s.workload', parentKey: 'menu.k8s' },
+  { code: 'k8s.workload', labelKey: 'menu.k8s.workloads', parentKey: 'menu.k8s' },
   { code: 'k8s.config', labelKey: 'menu.k8s.config', parentKey: 'menu.k8s' },
   { code: 'k8s.resource', labelKey: 'menu.k8s.resource', parentKey: 'menu.k8s' },
   { code: 'k8s.app', labelKey: 'menu.k8s.app', parentKey: 'menu.k8s' },
@@ -334,6 +396,41 @@ export const MENU_PERMISSIONS: MenuPermissionDef[] = [
 
 /** 全量元素权限目录 */
 export const ELEMENT_PERMISSIONS: ElementPermissionDef[] = [
+  { code: 'knowledge.write', labelKey: 'permission.knowledge.write', parentCode: 'knowledge' },
+  { code: 'knowledge.review', labelKey: 'permission.knowledge.review', parentCode: 'knowledge' },
+  { code: 'knowledge.archive', labelKey: 'permission.knowledge.archive', parentCode: 'knowledge' },
+  { code: 'knowledge.delete', labelKey: 'permission.knowledge.delete', parentCode: 'knowledge' },
+  { code: 'knowledge.space', labelKey: 'permission.knowledge.space', parentCode: 'knowledge' },
+  { code: 'knowledge.admin.rebuild', labelKey: 'permission.knowledge.admin.rebuild', parentCode: 'knowledge.admin' },
+  { code: 'agent.task.run', labelKey: 'permission.agent.task.run', parentCode: 'agent.task' },
+  { code: 'agent.task.rate', labelKey: 'permission.agent.task.rate', parentCode: 'agent.task' },
+  { code: 'agent.profile.create', labelKey: 'permission.agent.profile.create', parentCode: 'agent.profile' },
+  { code: 'agent.profile.update', labelKey: 'permission.agent.profile.update', parentCode: 'agent.profile' },
+  { code: 'agent.profile.delete', labelKey: 'permission.agent.profile.delete', parentCode: 'agent.profile' },
+  { code: 'agent.profile.test', labelKey: 'permission.agent.profile.test', parentCode: 'agent.profile' },
+  { code: 'incident.list.diagnose', labelKey: 'permission.incident.list.diagnose', parentCode: 'incident.list' },
+  { code: 'incident.list.create', labelKey: 'permission.incident.list.create', parentCode: 'incident.list' },
+  { code: 'incident.list.handle', labelKey: 'permission.incident.list.handle', parentCode: 'incident.list' },
+  { code: 'incident.list.proposal', labelKey: 'permission.incident.list.proposal', parentCode: 'incident.list' },
+  { code: 'incident.list.update', labelKey: 'permission.incident.list.update', parentCode: 'incident.list' },
+  { code: 'incident.list.share', labelKey: 'permission.incident.list.share', parentCode: 'incident.list' },
+  { code: 'incident.list.postmortem', labelKey: 'permission.incident.list.postmortem', parentCode: 'incident.list' },
+  { code: 'incident.list.agent', labelKey: 'permission.incident.list.agent', parentCode: 'incident.list' },
+  { code: 'incident.rule.create', labelKey: 'permission.incident.rule.create', parentCode: 'incident.rule' },
+  { code: 'incident.rule.update', labelKey: 'permission.incident.rule.update', parentCode: 'incident.rule' },
+  { code: 'incident.rule.delete', labelKey: 'permission.incident.rule.delete', parentCode: 'incident.rule' },
+  { code: 'incident.rule.test', labelKey: 'permission.incident.rule.test', parentCode: 'incident.rule' },
+  { code: 'incident.playbook.create', labelKey: 'permission.incident.playbook.create', parentCode: 'incident.playbook' },
+  { code: 'incident.playbook.update', labelKey: 'permission.incident.playbook.update', parentCode: 'incident.playbook' },
+  { code: 'incident.playbook.delete', labelKey: 'permission.incident.playbook.delete', parentCode: 'incident.playbook' },
+  { code: 'incident.business.create', labelKey: 'permission.incident.business.create', parentCode: 'incident.business' },
+  { code: 'incident.business.update', labelKey: 'permission.incident.business.update', parentCode: 'incident.business' },
+  { code: 'incident.business.delete', labelKey: 'permission.incident.business.delete', parentCode: 'incident.business' },
+  { code: 'incident.source.manage', labelKey: 'permission.incident.source.manage', parentCode: 'incident.source' },
+  { code: 'incident.source.reset', labelKey: 'permission.incident.source.reset', parentCode: 'incident.source' },
+  { code: 'incident.source.delete', labelKey: 'permission.incident.source.delete', parentCode: 'incident.source' },
+  { code: 'incident.source.webhook', labelKey: 'permission.incident.source.webhook', parentCode: 'incident.source' },
+  { code: 'incident.setting.update', labelKey: 'permission.incident.setting.update', parentCode: 'incident.setting' },
   { code: 'workflow.definition.create', labelKey: 'permission.workflow.definition.create', parentCode: 'workflow.definition' },
   { code: 'workflow.definition.edit', labelKey: 'permission.workflow.definition.edit', parentCode: 'workflow.definition' },
   { code: 'workflow.definition.publish', labelKey: 'permission.workflow.definition.publish', parentCode: 'workflow.definition' },
@@ -349,6 +446,7 @@ export const ELEMENT_PERMISSIONS: ElementPermissionDef[] = [
   { code: 'ticket.catalog.category', labelKey: 'permission.ticket.catalog.category', parentCode: 'ticket.catalog' },
   { code: 'ticket.catalog.template', labelKey: 'permission.ticket.catalog.template', parentCode: 'ticket.catalog' },
   { code: 'system.user.create', labelKey: 'permission.system.user.create', parentCode: 'system.user' },
+  { code: 'system.user.machine', labelKey: 'permission.system.user.machine', parentCode: 'system.user' },
   { code: 'system.user.edit', labelKey: 'permission.system.user.edit', parentCode: 'system.user' },
   { code: 'system.user.status', labelKey: 'permission.system.user.status', parentCode: 'system.user' },
   { code: 'system.user.reset_password', labelKey: 'permission.system.user.reset_password', parentCode: 'system.user' },

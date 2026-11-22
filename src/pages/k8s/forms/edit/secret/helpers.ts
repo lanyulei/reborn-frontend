@@ -6,6 +6,8 @@
  * - 没动过的键留在 data（保持加载到的值）；改过或新增的键进 stringData 并从 data 移除；删除的键从 data 移除；
  * - 明文只来自「查看明文」接口，仅用于展示与预填；看过但没改的键仍按没动过处理。
  */
+
+import type { Translate } from '@/utils/i18n';
 import {
   DOCKER_CONFIG_JSON_KEY,
   getDockerConfigJson,
@@ -100,11 +102,12 @@ const TYPED_FIELDS: Record<SecretType, { field: TypedField; key: string }[]> = {
   ],
 };
 
-const TYPED_FIELD_TITLES: Record<TypedField, string> = {
-  basicAuthPassword: '密码',
-  basicAuthUsername: '用户名',
-  tlsCertificate: '证书',
-  tlsPrivateKey: '私钥',
+/** 专用表单项的标题文案 id（用 t 翻译） */
+const TYPED_FIELD_TITLE_IDS: Record<TypedField, string> = {
+  basicAuthPassword: 'pages.k8s.forms.common.password',
+  basicAuthUsername: 'pages.k8s.forms.common.username',
+  tlsCertificate: 'pages.k8s.forms.secret.certificate',
+  tlsPrivateKey: 'pages.k8s.forms.secret.privateKey',
 };
 
 const REGISTRY_FIELDS: (keyof RegistryValues)[] = [
@@ -311,11 +314,20 @@ const isSecretImmutable = (manifest?: Manifest) => manifest?.immutable === true;
 const getSecretEditError = (
   manifest: Manifest,
   values: SecretEditFormValues,
+  t: Translate,
   reveal?: SecretPlaintext,
 ): string | undefined => {
   const metadataError =
-    validateSecretMetadataItems(values.labels, '标签') ||
-    validateSecretMetadataItems(values.annotations, '注解');
+    validateSecretMetadataItems(
+      values.labels,
+      t('pages.k8s.forms.common.labels'),
+      t,
+    ) ||
+    validateSecretMetadataItems(
+      values.annotations,
+      t('pages.k8s.forms.common.annotations'),
+      t,
+    );
   if (metadataError) {
     return metadataError;
   }
@@ -331,19 +343,22 @@ const getSecretEditError = (
     const keyName = item.keyName.trim();
 
     if (!keyName) {
-      return '请填写数据键';
+      return t('pages.k8s.forms.configmap.data.keyRequired');
     }
     if (keyName.length > 253) {
-      return '键最长 253 个字符';
+      return t('pages.k8s.forms.common.key.maxLength');
     }
     if (!SECRET_KEY_PATTERN.test(keyName)) {
-      return '键只能包含字母、数字、点（.）、下划线（_）和连字符（-）';
+      return t('pages.k8s.forms.common.key.pattern');
     }
     if (keys.has(keyName)) {
-      return '数据键不能重复';
+      return t('pages.k8s.forms.common.dataKeyDuplicate');
     }
     if (item.value === SECRET_MASK) {
-      return `键 ${keyName} 的值不能是掩码 ${SECRET_MASK}`;
+      return t('pages.k8s.forms.edit.secret.mask.keyValueNotAllowed', {
+        keyName,
+        mask: SECRET_MASK,
+      });
     }
     if (
       item.sourceKey !== undefined &&
@@ -351,32 +366,37 @@ const getSecretEditError = (
       item.value === undefined &&
       (item.binary || item.revealed === undefined)
     ) {
-      return `键 ${item.sourceKey} 的值已隐藏，改名前请先输入新值`;
+      return t('pages.k8s.forms.edit.secret.data.renameHidden', {
+        sourceKey: item.sourceKey,
+      });
     }
 
     keys.add(keyName);
   }
 
   for (const { field, key } of typedFields) {
-    const title = TYPED_FIELD_TITLES[field];
+    const title = t(TYPED_FIELD_TITLE_IDS[field]);
 
     if (values[field] === SECRET_MASK) {
-      return `${title}不能是掩码 ${SECRET_MASK}`;
+      return t('pages.k8s.forms.edit.secret.mask.fieldNotAllowed', {
+        title,
+        mask: SECRET_MASK,
+      });
     }
     if (!values[field] && !loadedKeys.includes(key)) {
-      return `请输入${title}`;
+      return t('common.validation.required', { label: title });
     }
   }
 
   if (getDockerEditState(manifest, values, reveal) === 'editable') {
     if (!normalizeText(values.registryAddress)) {
-      return '请输入镜像服务地址';
+      return t('pages.k8s.forms.secret.registryAddress.required');
     }
     if (!normalizeText(values.registryUsername)) {
-      return '请输入用户名';
+      return t('pages.k8s.forms.common.username.required');
     }
     if (!values.registryPassword) {
-      return '请输入密码';
+      return t('pages.k8s.forms.common.password.required');
     }
   }
 

@@ -2,6 +2,7 @@ import { QuestionCircleOutlined } from '@ant-design/icons';
 import { Checkbox, Col, Form, InputNumber, Row, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
 import type { CSSProperties } from 'react';
+import { useT } from '@/utils/i18n';
 
 const useStyles = createStyles(({ token }) => ({
   terminationWrapper: {
@@ -74,13 +75,14 @@ const PodGracefulTerminationFields = ({
   terminationConfigMarginTop,
 }: PodGracefulTerminationFieldsProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const form = Form.useFormInstance();
   const enabled = Form.useWatch('enablePodGracefulTermination', form);
-  const terminationTip = '设置容器终止前等待的时间，超时后容器将强制终止。';
+  const terminationTip = t('pages.k8s.forms.workload.termination.tip');
   const enableCheckbox = (
     <Form.Item name="enablePodGracefulTermination" valuePropName="checked">
       <Checkbox
-        aria-label="启用容器组优雅终止"
+        aria-label={t('pages.k8s.forms.workload.termination.enable')}
         onChange={(event) => {
           if (
             event.target.checked &&
@@ -98,13 +100,13 @@ const PodGracefulTerminationFields = ({
       <div className={styles.terminationCheckbox}>{enableCheckbox}</div>
       <div>
         <div className={styles.terminationTitle}>
-          <span>容器组优雅终止</span>
+          <span>{t('pages.k8s.forms.workload.termination.title')}</span>
           <Tooltip title={terminationTip}>
             <QuestionCircleOutlined className={styles.terminationHelpIcon} />
           </Tooltip>
         </div>
         <div className={styles.terminationDescription}>
-          设置容器终止前的等待时间。
+          {t('pages.k8s.forms.workload.termination.description')}
         </div>
       </div>
     </div>
@@ -120,15 +122,22 @@ const PodGracefulTerminationFields = ({
             : undefined
         }
       >
-        终止配置
+        {t('pages.k8s.forms.workload.termination.config')}
       </div>
       <div className={styles.terminationGroup}>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
-              label="终止宽限时间 (s)"
+              label={t('pages.k8s.forms.workload.termination.gracePeriod')}
               name="terminationGracePeriodSeconds"
-              rules={[{ required: true, message: '请输入终止宽限时间' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t(
+                    'pages.k8s.forms.workload.termination.gracePeriod.required',
+                  ),
+                },
+              ]}
             >
               <InputNumber min={0} precision={0} style={{ width: '100%' }} />
             </Form.Item>

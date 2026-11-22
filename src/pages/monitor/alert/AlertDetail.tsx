@@ -21,7 +21,9 @@ import {
 import dayjs from 'dayjs';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
+import { KnowledgeSidebar } from '@/components/KnowledgeSidebar';
 import { SectionTitle } from '@/components/SectionTitle';
+import { AlertIncidentBlock } from '@/pages/incident/components/AlertIncidentBlock';
 import { K8sAlertLink } from '@/pages/k8s/components/monitorLink';
 import {
   type AlertDetail,
@@ -368,6 +370,15 @@ export const AlertDetailView: React.FC<{
         ticket={detail.ticket}
         workflowInstanceId={alert.workflowInstanceId}
       />
+      {/* 所属故障：由故障域提供，仅有故障列表菜单的用户可见 */}
+      {canViewRule && <AlertIncidentBlock alert={alert} />}
+      {access.canKnowledge && (
+        <KnowledgeSidebar
+          targetType="monitor_alert"
+          targetId={alert.id}
+          query={alert.ruleName}
+        />
+      )}
 
       <SectionTitle>{t('pages.monitor.alert.section.expr')}</SectionTitle>
       <div className={styles.codeBlock}>{alert.expr}</div>

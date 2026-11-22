@@ -3,6 +3,8 @@
  * 只把表单建模的部分（data、标签、注解）写到已加载对象的深拷贝上；
  * 没有改动的部分保持原样，原样打开再保存得到的对象与加载的对象完全一致。
  */
+
+import type { Translate } from '@/utils/i18n';
 import {
   buildConfigMapData,
   buildMetadataRecord,
@@ -104,13 +106,23 @@ const getConfigMapEditValues = (
 const getConfigMapEditError = (
   manifest: Manifest,
   values: ConfigMapEditFormValues,
+  t: Translate,
 ) =>
-  validateConfigMapMetadataItems(values.labels, '标签') ||
-  validateConfigMapMetadataItems(values.annotations, '注解') ||
+  validateConfigMapMetadataItems(
+    values.labels,
+    t('pages.k8s.forms.common.labels'),
+    t,
+  ) ||
+  validateConfigMapMetadataItems(
+    values.annotations,
+    t('pages.k8s.forms.common.annotations'),
+    t,
+  ) ||
   (isConfigMapImmutable(manifest)
     ? undefined
     : validateConfigMapDataItems(
         values.dataItems,
+        t,
         getConfigMapBinaryKeys(manifest),
       ));
 

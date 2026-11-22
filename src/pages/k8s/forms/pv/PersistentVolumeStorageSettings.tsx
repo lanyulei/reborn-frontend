@@ -10,6 +10,7 @@ import {
   Space,
 } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import { STORAGE_UNITS } from './helpers';
 import type { CreatePersistentVolumeFormValues } from './types';
 
@@ -80,6 +81,7 @@ const PersistentVolumeStorageSettings = ({
   storageClassNames,
 }: PersistentVolumeStorageSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const capacitySize = Form.useWatch('capacitySize', {
     form,
     preserve: true,
@@ -91,8 +93,8 @@ const PersistentVolumeStorageSettings = ({
     <div className={styles.settings}>
       <Form.Item
         className={styles.capacityFormItem}
-        extra="定义持久卷对外声明的存储容量。"
-        label="容量"
+        extra={t('pages.k8s.forms.pv.capacity.extra')}
+        label={t('pages.k8s.forms.common.capacity')}
         required
       >
         <div className={styles.capacityRow}>
@@ -116,12 +118,17 @@ const PersistentVolumeStorageSettings = ({
               name="capacitySize"
               noStyle
               rules={[
-                { required: true, message: '请输入容量' },
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.common.capacity.required'),
+                },
                 {
                   validator: (_, value?: number | null) =>
                     value === undefined || value === null || value > 0
                       ? Promise.resolve()
-                      : Promise.reject(new Error('容量必须大于 0')),
+                      : Promise.reject(
+                          new Error(t('pages.k8s.forms.pv.capacity.positive')),
+                        ),
                 },
               ]}
             >
@@ -129,12 +136,12 @@ const PersistentVolumeStorageSettings = ({
                 className={styles.capacityInput}
                 controls={false}
                 min={0}
-                placeholder="请输入容量"
+                placeholder={t('pages.k8s.forms.common.capacity.required')}
               />
             </Form.Item>
             <Form.Item name="capacityUnit" noStyle>
               <Select
-                aria-label="容量单位"
+                aria-label={t('pages.k8s.forms.pv.capacity.unit')}
                 className={styles.capacityUnit}
                 options={STORAGE_UNITS.map((unit) => ({
                   label: unit,
@@ -149,28 +156,38 @@ const PersistentVolumeStorageSettings = ({
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            extra="选择一个或多个访问模式，需与后端卷能力保持一致。"
-            label="访问模式"
+            extra={t('pages.k8s.forms.pv.accessModes.extra')}
+            label={t('pages.k8s.forms.common.accessMode')}
             name="accessModes"
-            rules={[{ required: true, message: '请选择访问模式' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.accessMode.required'),
+              },
+            ]}
           >
             <Select
               mode="multiple"
               options={accessModeOptions}
-              placeholder="请选择访问模式"
+              placeholder={t('pages.k8s.forms.common.accessMode.required')}
             />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
-            extra="删除 PVC 后，持久卷应如何处理。"
-            label="回收策略"
+            extra={t('pages.k8s.forms.pv.reclaimPolicy.extra')}
+            label={t('pages.k8s.forms.pv.reclaimPolicy')}
             name="persistentVolumeReclaimPolicy"
-            rules={[{ required: true, message: '请选择回收策略' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.pv.reclaimPolicy.required'),
+              },
+            ]}
           >
             <Select
               options={reclaimPolicyOptions}
-              placeholder="请选择回收策略"
+              placeholder={t('pages.k8s.forms.pv.reclaimPolicy.required')}
             />
           </Form.Item>
         </Col>
@@ -179,17 +196,25 @@ const PersistentVolumeStorageSettings = ({
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            label="卷模式"
+            label={t('pages.k8s.forms.pv.volumeMode')}
             name="volumeMode"
-            rules={[{ required: true, message: '请选择卷模式' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.volumeMode.required'),
+              },
+            ]}
           >
-            <Select options={volumeModeOptions} placeholder="请选择卷模式" />
+            <Select
+              options={volumeModeOptions}
+              placeholder={t('pages.k8s.forms.common.volumeMode.required')}
+            />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
-            extra="留空表示不指定存储类。"
-            label="存储类"
+            extra={t('pages.k8s.forms.pv.storageClass.extra')}
+            label={t('pages.k8s.forms.common.storageClass')}
             name="storageClassName"
           >
             <AutoComplete
@@ -198,7 +223,7 @@ const PersistentVolumeStorageSettings = ({
                 label: item,
                 value: item,
               }))}
-              placeholder="请输入存储类名称"
+              placeholder={t('pages.k8s.forms.pv.storageClass.placeholder')}
               showSearch={{
                 filterOption: (input, option) =>
                   String(option?.value ?? '')

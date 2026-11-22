@@ -3,6 +3,7 @@ import type { FormInstance } from 'antd';
 import { App, Button, Checkbox, Form } from 'antd';
 import { createStyles } from 'antd-style';
 import { useState } from 'react';
+import { useT } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import KeyValueEditor from '../shared/KeyValueEditor';
 import { createId } from './helpers';
@@ -115,6 +116,7 @@ const WorkloadAdvancedSettings = ({
 }: WorkloadAdvancedSettingsProps) => {
   const { styles } = useStyles();
   const { message } = App.useApp();
+  const t = useT();
   const [metadataOpen, setMetadataOpen] = useState(defaultMetadataOpen);
   const [nodeModalOpen, setNodeModalOpen] = useState(false);
   const showNodeSelector = type !== 'DaemonSet';
@@ -129,7 +131,9 @@ const WorkloadAdvancedSettings = ({
     <div className={styles.stack}>
       {showNodeSelector && (
         <div>
-          <div className={styles.sectionTitle}>选择节点</div>
+          <div className={styles.sectionTitle}>
+            {t('pages.k8s.forms.workload.node.select')}
+          </div>
           <div className={styles.option}>
             <div className={styles.optionHeader}>
               <Form.Item
@@ -137,12 +141,16 @@ const WorkloadAdvancedSettings = ({
                 name="enableNodeSelector"
                 valuePropName="checked"
               >
-                <Checkbox aria-label="选择节点" />
+                <Checkbox
+                  aria-label={t('pages.k8s.forms.workload.node.select')}
+                />
               </Form.Item>
               <span>
-                <div className={styles.title}>选择节点</div>
+                <div className={styles.title}>
+                  {t('pages.k8s.forms.workload.node.select')}
+                </div>
                 <div className={styles.description}>
-                  将容器组副本分配给特定的节点。您可以使用标签选择节点或手动指定节点
+                  {t('pages.k8s.forms.workload.node.select.description')}
                 </div>
               </span>
             </div>
@@ -151,17 +159,21 @@ const WorkloadAdvancedSettings = ({
                 <Form.Item name="nodeSelectors">
                   <KeyValueEditor
                     addIcon={false}
-                    addText="添加节点选择器"
-                    deleteAriaLabel="删除节点选择器"
+                    addText={t('pages.k8s.forms.workload.node.selector.add')}
+                    deleteAriaLabel={t(
+                      'pages.k8s.forms.workload.node.selector.delete',
+                    )}
                     minRows={1}
                     footerExtra={
                       <Button onClick={() => setNodeModalOpen(true)}>
-                        指定节点
+                        {t('pages.k8s.forms.workload.node.assign')}
                       </Button>
                     }
                     footerJustify="space-between"
                     onAddBlocked={() =>
-                      message.warning('请先填写已有节点选择器的键。')
+                      message.warning(
+                        t('pages.k8s.forms.workload.node.selector.keyFirst'),
+                      )
                     }
                     onCreateItem={createKeyValueItem}
                   />
@@ -173,7 +185,9 @@ const WorkloadAdvancedSettings = ({
       )}
 
       <div>
-        <div className={styles.sectionTitle}>元数据</div>
+        <div className={styles.sectionTitle}>
+          {t('pages.k8s.forms.common.metadata')}
+        </div>
         <div className={styles.option}>
           <button
             className={styles.optionHeaderButton}
@@ -184,37 +198,49 @@ const WorkloadAdvancedSettings = ({
               {metadataOpen ? <UpOutlined /> : <DownOutlined />}
             </span>
             <span>
-              <div className={styles.title}>添加元数据</div>
-              <div className={styles.description}>为资源添加元数据</div>
+              <div className={styles.title}>
+                {t('pages.k8s.forms.common.addMetadata')}
+              </div>
+              <div className={styles.description}>
+                {t('pages.k8s.forms.workload.metadata.description')}
+              </div>
             </span>
           </button>
           {metadataOpen && (
             <div className={styles.metadataBody}>
               <div>
-                <div className={styles.fieldLabel}>标签</div>
+                <div className={styles.fieldLabel}>
+                  {t('pages.k8s.forms.common.labels')}
+                </div>
                 <Form.Item name="labels">
                   <KeyValueEditor
                     addIcon={false}
-                    addText="添加"
-                    deleteAriaLabel="删除标签"
+                    addText={t('pages.k8s.form.add')}
+                    deleteAriaLabel={t('pages.k8s.forms.common.deleteLabel')}
                     minRows={1}
                     onAddBlocked={() =>
-                      message.warning('请先填写已有标签的键。')
+                      message.warning(t('pages.k8s.forms.common.labelKeyFirst'))
                     }
                     onCreateItem={createKeyValueItem}
                   />
                 </Form.Item>
               </div>
               <div>
-                <div className={styles.fieldLabel}>注解</div>
+                <div className={styles.fieldLabel}>
+                  {t('pages.k8s.forms.common.annotations')}
+                </div>
                 <Form.Item name="annotations">
                   <KeyValueEditor
                     addIcon={false}
-                    addText="添加"
-                    deleteAriaLabel="删除注解"
+                    addText={t('pages.k8s.form.add')}
+                    deleteAriaLabel={t(
+                      'pages.k8s.forms.common.deleteAnnotation',
+                    )}
                     minRows={1}
                     onAddBlocked={() =>
-                      message.warning('请先填写已有注解的键。')
+                      message.warning(
+                        t('pages.k8s.forms.common.annotationKeyFirst'),
+                      )
                     }
                     onCreateItem={createKeyValueItem}
                   />

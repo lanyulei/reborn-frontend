@@ -8,6 +8,7 @@ import {
 import { Empty, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
+import { useT } from '@/utils/i18n';
 import { statusLabel } from '../../components/statusText';
 import SubTitle from '../shared/SubTitle';
 import { formatValue } from './helpers';
@@ -148,23 +149,23 @@ const conditionContent: Record<
   { title: string; description: string; icon: ReactNode }
 > = {
   PodScheduled: {
-    title: '容器组调度完成',
-    description: '将容器组调度到集群中的一个节点。',
+    title: 'pages.k8s.detail.pod.cond.scheduled',
+    description: 'pages.k8s.detail.pod.cond.scheduled.desc',
     icon: <PartitionOutlined />,
   },
   Initialized: {
-    title: '初始化完成',
-    description: '启动所有初始化容器。',
+    title: 'pages.k8s.detail.pod.cond.initialized',
+    description: 'pages.k8s.detail.pod.cond.initialized.desc',
     icon: <ClusterOutlined />,
   },
   ContainersReady: {
-    title: '所有容器就绪',
-    description: '启动容器组中的所有容器。',
+    title: 'pages.k8s.detail.pod.cond.containersReady',
+    description: 'pages.k8s.detail.pod.cond.containersReady.desc',
     icon: <ClusterOutlined />,
   },
   Ready: {
-    title: '容器组就绪',
-    description: '开始运行并允许访问容器组。',
+    title: 'pages.k8s.detail.pod.cond.ready',
+    description: 'pages.k8s.detail.pod.cond.ready.desc',
     icon: <CheckCircleFilled />,
   },
 };
@@ -186,6 +187,7 @@ const PodSchedulingInfo = ({
   conditions = [],
   pod,
 }: PodSchedulingInfoProps) => {
+  const t = useT();
   const { styles } = useStyles();
 
   if (!pod) {
@@ -198,7 +200,7 @@ const PodSchedulingInfo = ({
   return (
     <div className={styles.schedulingInfo}>
       <div>
-        <SubTitle>调度结果</SubTitle>
+        <SubTitle>{t('pages.k8s.detail.pod.scheduleResult')}</SubTitle>
         <div className={styles.resultCard}>
           <div className={styles.resultIcon}>
             <PartitionOutlined />
@@ -208,8 +210,17 @@ const PodSchedulingInfo = ({
           </div>
           <div className={styles.resultContent}>
             <div className={styles.title}>
-              <span>调度至 {formatValue(pod.node_name)}</span>
-              <Tooltip title={scheduledCondition?.message || '容器组调度结果'}>
+              <span>
+                {t('pages.k8s.detail.pod.scheduledTo', {
+                  node: formatValue(pod.node_name),
+                })}
+              </span>
+              <Tooltip
+                title={
+                  scheduledCondition?.message ||
+                  t('pages.k8s.detail.pod.scheduleResultTip')
+                }
+              >
                 <QuestionCircleFilled className={styles.helpIcon} />
               </Tooltip>
             </div>
@@ -220,7 +231,7 @@ const PodSchedulingInfo = ({
         </div>
       </div>
       <div>
-        <SubTitle>状态信息</SubTitle>
+        <SubTitle>{t('pages.k8s.detail.pod.statusInfo')}</SubTitle>
         <div className={styles.currentStatus}>
           <div className={styles.currentIcon}>
             <ClusterOutlined />
@@ -230,7 +241,9 @@ const PodSchedulingInfo = ({
           </div>
           <div className={styles.resultContent}>
             <div className={styles.title}>{statusLabel(pod.status) || '-'}</div>
-            <div className={styles.description}>当前状态</div>
+            <div className={styles.description}>
+              {t('pages.k8s.detail.pod.currentStatus')}
+            </div>
           </div>
         </div>
       </div>
@@ -240,7 +253,7 @@ const PodSchedulingInfo = ({
           const content = conditionContent[type];
           const healthy = isConditionReady(condition);
           const description =
-            condition?.message || condition?.reason || content.description;
+            condition?.message || condition?.reason || t(content.description);
 
           return (
             <div className={styles.conditionCard} key={type}>
@@ -257,7 +270,7 @@ const PodSchedulingInfo = ({
                 )}
               </div>
               <div className={styles.resultContent}>
-                <div className={styles.title}>{content.title}</div>
+                <div className={styles.title}>{t(content.title)}</div>
                 <Tooltip title={description} placement="topLeft">
                   <div className={styles.description}>{description}</div>
                 </Tooltip>

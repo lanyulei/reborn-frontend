@@ -23,6 +23,7 @@ import type {
   EngineStatus,
 } from '@/services/monitor/typings';
 import { type Translate, useT } from '@/utils/i18n';
+import { usePageVisible } from '@/utils/usePageVisible';
 import { formatDuration, formatTime } from '../components/format';
 import { INSIGHT_TABS } from '../components/groups';
 import { StatTile } from '../stats/StatTile';
@@ -76,11 +77,17 @@ const EngineStatusPage: React.FC = () => {
     void load();
   }, [load]);
 
+  // 后台标签页不轮询，回到前台时（开着自动刷新）补一次
+  const refreshRef = useRef(refreshS);
+  refreshRef.current = refreshS;
+  const visible = usePageVisible(() => {
+    if (refreshRef.current) void load();
+  });
   useEffect(() => {
-    if (!refreshS) return;
+    if (!refreshS || !visible) return;
     const timer = window.setInterval(() => void load(), refreshS * 1000);
     return () => window.clearInterval(timer);
-  }, [refreshS, load]);
+  }, [refreshS, load, visible]);
 
   /** 「自何时起」+ 已持续多久（以最近一次加载的时刻为准） */
   const sinceText = (since?: string) => {

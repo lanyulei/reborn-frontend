@@ -21,11 +21,23 @@ export interface UploadedFile {
 export const FileField: React.FC<{
   value?: UploadedFile;
   onChange?: (value?: UploadedFile) => void;
-}> = ({ onChange }) => {
+}> = ({ value, onChange }) => {
   const t = useT();
   const { message } = App.useApp();
+  // 初始列表从表单值还原：组件被重建（如切换模式又切回）时仍能显示已上传的文件
   const [fileList, setFileList] = useState<UploadFile<Pick<FileMeta, 'id'>>[]>(
-    [],
+    () =>
+      value
+        ? [
+            {
+              uid: value.id,
+              name: value.name,
+              size: value.size,
+              status: 'done',
+              response: { id: value.id },
+            },
+          ]
+        : [],
   );
   return (
     <Upload<Pick<FileMeta, 'id'>>

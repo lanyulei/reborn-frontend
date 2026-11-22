@@ -611,4 +611,8 @@ export default {
   'pages.k8s.audit.action.helm_upgrade': '升级应用',
   'pages.k8s.audit.action.helm_rollback': '回滚应用',
   'pages.k8s.audit.action.helm_uninstall': '卸载应用',
+  'pages.k8s.quota.delete.title': '确认移除配额 / 限制范围？',
+  'pages.k8s.quota.delete.content':
+    '将删除该命名空间的 {kinds}，删除后容器组不再受其约束。',
+  'pages.k8s.detail.pods.noSelector': '没有选择器，不选中任何容器组',
 };

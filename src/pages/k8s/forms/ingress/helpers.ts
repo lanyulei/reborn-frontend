@@ -1,3 +1,4 @@
+import { type Translate, t } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import {
   createId,
@@ -358,18 +359,19 @@ export const buildCreateIngressManifest = (values: CreateIngressFormValues) => {
   };
 };
 
-/** 整张表单的跨步骤校验（提交前兜底）：返回第一条错误信息 */
+/** 整张表单的跨步骤校验（提交前兜底）：返回第一条错误信息；组件内请传入 useT() 的结果 */
 export const getIngressFormError = (
   values: CreateIngressFormValues,
+  tr: Translate = t,
 ): string | undefined => {
   if (!values.name?.trim() || !values.namespace?.trim()) {
-    return '请填写名称和命名空间';
+    return tr('pages.k8s.forms.ingress.nameNamespaceRequired');
   }
   if (!(values.rules || []).some(isValidIngressRule)) {
-    return '请添加至少一个路由规则';
+    return tr('pages.k8s.forms.ingress.rules.required');
   }
   if (values.enablePathRewrite && !values.rewriteTarget?.trim()) {
-    return '请输入重写路径';
+    return tr('pages.k8s.forms.ingress.rewriteTarget.required');
   }
   return undefined;
 };

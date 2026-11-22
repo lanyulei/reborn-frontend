@@ -192,8 +192,12 @@ const ModelDetailPage: React.FC = () => {
   const loadedRef = useRef(false);
   // 详情布局是否已被显式配置过（false = 后端返回的是缺省布局：全部字段一组）
   const configuredRef = useRef(false);
+  /** 请求序号：切换模型 / 卸载后丢弃在途结果，不把上一个模型的数据写进来 */
+  const seq = useRef(0);
+  const [loadError, setLoadError] = useState(false);
   const load = useCallback(async () => {
     if (!code) return;
+    const id = ++seq.current;
     if (!loadedRef.current) setLoading(true);
     try {
       const [detail, view, modelsRes] = await Promise.all([
@@ -201,6 +205,8 @@ const ModelDetailPage: React.FC = () => {
         getModelView(code),
         listAllModels(),
       ]);
+      if (id !== seq.current) return;
+      setLoadError(false);
       setModel(detail.model);
       setFields(detail.fields);
       setRelationTypes(detail.relationTypes);
@@ -212,13 +218,23 @@ const ModelDetailPage: React.FC = () => {
       );
       loadedRef.current = true;
       return view.sections;
+    } catch {
+      // authRequest 已提示；这里只把页面切到错误态
+      if (id === seq.current) setLoadError(true);
+      return undefined;
     } finally {
-      setLoading(false);
+      if (id === seq.current) setLoading(false);
     }
   }, [code]);
 
   useEffect(() => {
+    // 换了模型：重新整页加载，不沿用上一个模型的字段 / 布局
+    loadedRef.current = false;
+    setModel(null);
     void load();
+    return () => {
+      seq.current += 1;
+    };
   }, [load]);
 
   const groupName =
@@ -372,7 +388,11 @@ const ModelDetailPage: React.FC = () => {
       <Card variant="outlined">
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={t('pages.cmdb.modelDetail.notFound')}
+          description={t(
+            loadError
+              ? 'pages.cmdb.modelDetail.loadFailed'
+              : 'pages.cmdb.modelDetail.notFound',
+          )}
         >
           <Button type="primary" onClick={() => history.push('/cmdb/model')}>
             {t('pages.cmdb.modelDetail.backToList')}

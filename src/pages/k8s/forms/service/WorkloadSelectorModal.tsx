@@ -2,6 +2,7 @@ import { AppstoreOutlined } from '@ant-design/icons';
 import { Button, Empty, Modal, Spin } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import { fetchObject, GVRS, listRows } from '../shared/kube';
 import SegmentedTabs from '../shared/SegmentedTabs';
 import { getWorkloadSelectorDetail } from './helpers';
@@ -11,12 +12,6 @@ export type WorkloadSelectorTab = {
   label: string;
   value: WorkloadSelectorType;
 };
-
-const DEFAULT_WORKLOAD_TABS: WorkloadSelectorTab[] = [
-  { label: '部署', value: 'Deployment' },
-  { label: '有状态副本集', value: 'StatefulSet' },
-  { label: '守护进程集', value: 'DaemonSet' },
-];
 
 const WORKLOAD_GVRS = {
   Deployment: GVRS.deployment,
@@ -96,18 +91,26 @@ type WorkloadSelectorModalProps = {
 const WorkloadSelectorModal = ({
   clusterId,
   detail = true,
-  hint = '使用工作负载的标签作为选择器。',
+  hint,
   namespace,
   open,
-  tabs = DEFAULT_WORKLOAD_TABS,
-  title = '指定工作负载',
+  tabs,
+  title,
   onCancel,
   onOk,
 }: WorkloadSelectorModalProps) => {
   const { styles, cx } = useStyles();
-  const enabledTabs = useMemo(
-    () => (tabs.length > 0 ? tabs : DEFAULT_WORKLOAD_TABS),
-    [tabs],
+  const t = useT();
+  const enabledTabs = useMemo<WorkloadSelectorTab[]>(
+    () =>
+      tabs && tabs.length > 0
+        ? tabs
+        : [
+            { label: t('pages.k8s.kind.Deployment'), value: 'Deployment' },
+            { label: t('pages.k8s.kind.StatefulSet'), value: 'StatefulSet' },
+            { label: t('pages.k8s.kind.DaemonSet'), value: 'DaemonSet' },
+          ],
+    [t, tabs],
   );
   const [activeType, setActiveType] = useState<WorkloadSelectorType>(
     enabledTabs[0].value,
@@ -188,23 +191,25 @@ const WorkloadSelectorModal = ({
       destroyOnHidden
       footer={
         <div className={styles.footer}>
-          <Button onClick={onCancel}>取消</Button>
+          <Button onClick={onCancel}>{t('common.action.cancel')}</Button>
           <Button
             disabled={!selected}
             loading={confirming}
             type="primary"
             onClick={handleOk}
           >
-            确定
+            {t('common.action.confirm')}
           </Button>
         </div>
       }
       open={open}
-      title={title}
+      title={title ?? t('pages.k8s.forms.service.workloadSelector.pick')}
       width={520}
       onCancel={onCancel}
     >
-      <div className={styles.hint}>{hint}</div>
+      <div className={styles.hint}>
+        {hint ?? t('pages.k8s.forms.service.workloadSelector.hint')}
+      </div>
       <SegmentedTabs
         className={styles.tabs}
         items={enabledTabs}
@@ -217,7 +222,7 @@ const WorkloadSelectorModal = ({
           {!items.length && !loading ? (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="暂无数据"
+              description={t('pages.k8s.metrics.noData')}
             />
           ) : (
             items.map((item) => (

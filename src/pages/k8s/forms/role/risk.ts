@@ -3,11 +3,30 @@
  * 等级：Critical（严重）> High（高危）> Medium（中危）> None（未发现风险）。
  */
 
+import type { Translate } from '@/utils/i18n';
+
 type RbacRiskLevel = 'Critical' | 'High' | 'Medium' | 'None';
+
+type RbacRiskReasonId =
+  | 'all'
+  | 'writeSecret'
+  | 'readSecret'
+  | 'writeRbac'
+  | 'podAccess'
+  | 'impersonate'
+  | 'wildcard'
+  | 'clusterAdmin'
+  | 'broadGroup';
+
+/** 风险原因：以 id 表达，broadGroup 附带组名；文案在渲染时用 formatRbacRiskReason 翻译 */
+type RbacRiskReason = {
+  id: RbacRiskReasonId;
+  name?: string;
+};
 
 type RbacRisk = {
   level: RbacRiskLevel;
-  reasons: string[];
+  reasons: RbacRiskReason[];
 };
 
 type RbacPolicyRule = {
@@ -36,21 +55,38 @@ type RbacBindingLike = {
   subjects?: RbacSubject[] | null;
 };
 
-const RISK_LEVEL_TEXT: Record<RbacRiskLevel, string> = {
-  Critical: '严重',
-  High: '高危',
-  Medium: '中危',
-  None: '无',
+/** 风险等级文案的 i18n 键 */
+const RISK_LEVEL_TEXT_ID: Record<RbacRiskLevel, string> = {
+  Critical: 'pages.k8s.forms.role.risk.level.critical',
+  High: 'pages.k8s.forms.role.risk.level.high',
+  Medium: 'pages.k8s.forms.role.risk.level.medium',
+  None: 'pages.k8s.forms.role.risk.level.none',
 };
 
-const REASON_ALL = '拥有所有 API 组、所有资源和所有动作权限';
-const REASON_WRITE_SECRET = '可写 Secret';
-const REASON_READ_SECRET = '可读取 Secret';
-const REASON_WRITE_RBAC = '可修改 RBAC 授权资源';
-const REASON_POD_ACCESS = '可进入或转发 Pod 运行环境';
-const REASON_IMPERSONATE = '可模拟其他主体身份';
-const REASON_WILDCARD = '存在通配符权限';
-const REASON_CLUSTER_ADMIN = '绑定 cluster-admin';
+/** 风险原因文案的 i18n 键（broadGroup 带 {name} 占位） */
+const RISK_REASON_TEXT_ID: Record<RbacRiskReasonId, string> = {
+  all: 'pages.k8s.forms.role.risk.reason.all',
+  writeSecret: 'pages.k8s.forms.role.risk.reason.writeSecret',
+  readSecret: 'pages.k8s.forms.role.risk.reason.readSecret',
+  writeRbac: 'pages.k8s.forms.role.risk.reason.writeRbac',
+  podAccess: 'pages.k8s.forms.role.risk.reason.podAccess',
+  impersonate: 'pages.k8s.forms.role.risk.reason.impersonate',
+  wildcard: 'pages.k8s.forms.role.risk.reason.wildcard',
+  clusterAdmin: 'pages.k8s.forms.role.risk.reason.clusterAdmin',
+  broadGroup: 'pages.k8s.forms.role.risk.reason.broadGroup',
+};
+
+/** 风险原因 → 当前语言文案 */
+const formatRbacRiskReason = (reason: RbacRiskReason, t: Translate) =>
+  reason.name === undefined
+    ? t(RISK_REASON_TEXT_ID[reason.id])
+    : t(RISK_REASON_TEXT_ID[reason.id], { name: reason.name });
+
+const reasonKey = (reason: RbacRiskReason) =>
+  `${reason.id}:${reason.name ?? ''}`;
+
+const hasReason = (reasons: RbacRiskReason[], id: RbacRiskReasonId) =>
+  reasons.some((reason) => reason.id === id);
 
 const RBAC_RESOURCES = [
   'roles',
@@ -84,7 +120,17 @@ const maxRbacRiskLevel = (levels: RbacRiskLevel[]) =>
     'None',
   );
 
-const uniqueText = (values: string[]) => Array.from(new Set(values));
+const uniqueReasons = (reasons: RbacRiskReason[]) => {
+  const seen = new Set<string>();
+  return reasons.filter((reason) => {
+    const key = reasonKey(reason);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+};
 
 const hasAny = (values?: string[]) => Boolean(values?.includes('*'));
 
@@ -102,45 +148,42 @@ const hasReadVerb = (verbs: string[]) =>
 
 /** 单条权限规则的风险 */
 const analyzeRbacRuleRisk = (rule: RbacPolicyRule): RbacRisk => {
-  const reasons: string[] = [];
+  const reasons: RbacRiskReason[] = [];
   const resources = rule.resources || [];
   const verbs = rule.verbs || [];
 
   if (hasAny(rule.apiGroups) && hasAny(resources) && hasAny(verbs)) {
-    reasons.push(REASON_ALL);
+    reasons.push({ id: 'all' });
   }
   if (resources.includes('secrets') && hasWriteVerb(verbs)) {
-    reasons.push(REASON_WRITE_SECRET);
+    reasons.push({ id: 'writeSecret' });
   }
   if (resources.includes('secrets') && hasReadVerb(verbs)) {
-    reasons.push(REASON_READ_SECRET);
+    reasons.push({ id: 'readSecret' });
   }
   if (
     resources.some((resource) => RBAC_RESOURCES.includes(resource)) &&
     hasWriteVerb(verbs)
   ) {
-    reasons.push(REASON_WRITE_RBAC);
+    reasons.push({ id: 'writeRbac' });
   }
   if (
     resources.some((resource) => POD_ACCESS_RESOURCES.includes(resource)) &&
     hasWriteVerb(verbs)
   ) {
-    reasons.push(REASON_POD_ACCESS);
+    reasons.push({ id: 'podAccess' });
   }
   if (verbs.includes('impersonate')) {
-    reasons.push(REASON_IMPERSONATE);
+    reasons.push({ id: 'impersonate' });
   }
   if (hasAny(resources) || hasAny(verbs)) {
-    reasons.push(REASON_WILDCARD);
+    reasons.push({ id: 'wildcard' });
   }
 
-  if (reasons.includes(REASON_ALL) || reasons.includes(REASON_WRITE_RBAC)) {
+  if (hasReason(reasons, 'all') || hasReason(reasons, 'writeRbac')) {
     return { level: 'Critical', reasons };
   }
-  if (
-    reasons.includes(REASON_WRITE_SECRET) ||
-    reasons.includes(REASON_IMPERSONATE)
-  ) {
+  if (hasReason(reasons, 'writeSecret') || hasReason(reasons, 'impersonate')) {
     return { level: 'High', reasons };
   }
   if (reasons.length) {
@@ -156,7 +199,7 @@ const analyzeRbacRulesRisk = (rules?: RbacPolicyRule[] | null): RbacRisk => {
 
   return {
     level: maxRbacRiskLevel(risks.map((risk) => risk.level)),
-    reasons: uniqueText(risks.flatMap((risk) => risk.reasons)),
+    reasons: uniqueReasons(risks.flatMap((risk) => risk.reasons)),
   };
 };
 
@@ -173,14 +216,17 @@ const analyzeRbacBindingRisk = (
   rules?: RbacPolicyRule[] | null,
 ): RbacRisk => {
   const ruleRisk = analyzeRbacRulesRisk(rules);
-  const subjectReasons = (binding.subjects || []).flatMap((subject) =>
-    subject.kind === 'Group' && BROAD_GROUPS.includes(subject.name || '')
-      ? [`授权给宽泛系统组 ${subject.name}`]
-      : [],
+  const subjectReasons = (binding.subjects || []).flatMap<RbacRiskReason>(
+    (subject) =>
+      subject.kind === 'Group' && BROAD_GROUPS.includes(subject.name || '')
+        ? [{ id: 'broadGroup', name: subject.name }]
+        : [],
   );
   const roleReasons =
-    binding.roleRef?.name === 'cluster-admin' ? [REASON_CLUSTER_ADMIN] : [];
-  const reasons = uniqueText([
+    binding.roleRef?.name === 'cluster-admin'
+      ? [{ id: 'clusterAdmin' as const }]
+      : [];
+  const reasons = uniqueReasons([
     ...ruleRisk.reasons,
     ...subjectReasons,
     ...roleReasons,
@@ -188,7 +234,10 @@ const analyzeRbacBindingRisk = (
 
   if (
     roleReasons.length ||
-    subjectReasons.includes('授权给宽泛系统组 system:masters')
+    subjectReasons.some(
+      (reason) =>
+        reason.id === 'broadGroup' && reason.name === 'system:masters',
+    )
   ) {
     return { level: 'Critical', reasons };
   }
@@ -204,6 +253,8 @@ export type {
   RbacPolicyRule,
   RbacRisk,
   RbacRiskLevel,
+  RbacRiskReason,
+  RbacRiskReasonId,
   RbacRoleLike,
   RbacSubject,
 };
@@ -213,6 +264,8 @@ export {
   analyzeRbacRuleRisk,
   analyzeRbacRulesRisk,
   compareRbacRiskLevel,
+  formatRbacRiskReason,
   maxRbacRiskLevel,
-  RISK_LEVEL_TEXT,
+  RISK_LEVEL_TEXT_ID,
+  RISK_REASON_TEXT_ID,
 };

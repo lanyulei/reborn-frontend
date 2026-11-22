@@ -310,7 +310,7 @@ const DefinitionDesign: React.FC = () => {
     setSaving(true);
     const sent = editSeq.current;
     try {
-      const result = await saveDefinitionDraft(id, toGraph(flow), revision, {
+      const result = await saveDefinitionDraft(id, toGraph(flow, t), revision, {
         silent: true,
       });
       setDefinition((d) => (d ? { ...d, revision: result.revision } : d));
@@ -436,10 +436,13 @@ const DefinitionDesign: React.FC = () => {
     };
   }, [definitionKey]);
 
-  /** 版本对比里的「当前草稿」：编辑中的内容（含未保存的修改）；接口创建的图用原图 */
+  /**
+   * 版本对比里的「当前草稿」：编辑中的内容（含未保存的修改）；接口创建的图用原图。
+   * 只在对比抽屉打开时生成，不随每次编辑重算整张图。
+   */
   const draftGraph = useMemo(
-    () => (flow ? toGraph(flow) : rawGraph),
-    [flow, rawGraph],
+    () => (compareOpen ? (flow ? toGraph(flow, t) : rawGraph) : undefined),
+    [compareOpen, flow, rawGraph, t],
   );
 
   const target = flow ? findTarget(flow, selectedId) : {};

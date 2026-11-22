@@ -31,8 +31,14 @@ import {
   Typography,
 } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { linkCitations } from '@/components/Citations';
 import { JsonView } from '@/components/JsonView';
-import type { AssistantToolStatus } from '@/services/assistant/typings';
+import { getAgentErrorMessage } from '@/services/agent/request';
+import { runForIncident } from '@/services/agent/task';
+import type {
+  AssistantToolStatus,
+  ChatContext,
+} from '@/services/assistant/typings';
 import { type Translate, useT } from '@/utils/i18n';
 import type {
   AssistantChatMessage,
@@ -41,7 +47,7 @@ import type {
   ConversationGroup,
 } from './data';
 import { useStyles } from './style';
-import { useAssistantChat } from './useAssistantChat';
+import { DRAFT_KEY, useAssistantChat } from './useAssistantChat';
 
 const TypewriterTitle: React.FC = () => {
   const { styles } = useStyles();
@@ -76,15 +82,28 @@ const STREAMING_ACTIVE = { hasNextChunk: true, enableAnimation: true };
 const STREAMING_IDLE = { hasNextChunk: false, enableAnimation: true };
 
 /** 助手消息正文：Markdown 渲染 + 主题化排版（标题/列表/表格/代码/引用分层） */
+/** 页内助手里的 @Agent 召唤：在故障页输入「@Agent 关注点」即召唤运维 Agent 分析当前故障（设计 §9） */
+const AGENT_MENTION = /^@(?:agent|运维\s*agent|運維\s*agent)\b[\s,，:：]*/i;
+
+const parseAgentMention = (content: string): string | null => {
+  const m = AGENT_MENTION.exec(content.trim());
+  return m ? content.trim().slice(m[0].length).trim() : null;
+};
+
 const MarkdownBody: React.FC<{ content: string; updating: boolean }> = ({
   content,
   updating,
 }) => {
   const { styles } = useStyles();
+  const t = useT();
+  const text = useMemo(
+    () => linkCitations(content, (n) => t('component.chat.citation', { n })),
+    [content, t],
+  );
   return (
     <div className={styles.markdown}>
       <XMarkdown streaming={updating ? STREAMING_ACTIVE : STREAMING_IDLE}>
-        {content}
+        {text}
       </XMarkdown>
     </div>
   );
@@ -293,17 +312,56 @@ const AssistantHeader: React.FC<{
  * 助手以当前登录用户身份经后端工具调用操作系统；写操作先在此确认。
  */
 const ChatPanel: React.FC<{
-  /** 外部交来的问题：填进输入框（不自动发送）；seq 变化即重新填入 */
-  draft?: { text: string; seq: number };
-}> = ({ draft }) => {
+  /** 外部交来的问题：填进输入框（不自动发送）；seq 变化即重新填入；带 context 时新开会话并随消息发送 */
+  draft?: { text: string; seq: number; context?: ChatContext };
+  /** 是否可见（弹窗宿主传入）：从不可见变为可见时刷新会话列表；整页使用时省略 */
+  visible?: boolean;
+}> = ({ draft, visible = true }) => {
   const { styles } = useStyles();
   const t = useT();
   const { modal } = App.useApp();
   const [inputValue, setInputValue] = useState('');
   const chat = useAssistantChat();
+  // 页内上下文：只随它新开的那个会话发送；切到别的会话即失效
+  const contextRef = useRef<{ context: ChatContext; conv: string } | null>(
+    null,
+  );
+  // 只在 seq 变化时填入：draft / newChat 经 ref 读取最新值，语言切换等重渲染不会重复填入
+  const latestRef = useRef({ draft, newChat: chat.newChat });
+  latestRef.current = { draft, newChat: chat.newChat };
   useEffect(() => {
-    if (draft) setInputValue(draft.text);
-  }, [draft]);
+    const { draft: current, newChat } = latestRef.current;
+    if (!current) return;
+    setInputValue(current.text);
+    if (current.context) {
+      newChat();
+      contextRef.current = { context: current.context, conv: DRAFT_KEY };
+    }
+  }, [draft?.seq]);
+  // 弹窗收起再打开：期间整页助手 / 其他标签页可能新增了会话，刷新列表（挂载时 hook 自己已拉过）
+  const { reload } = chat;
+  const wasVisible = useRef(visible);
+  useEffect(() => {
+    if (visible && !wasVisible.current) void reload();
+    wasVisible.current = visible;
+  }, [visible, reload]);
+  // 草稿项的名称按当前语言在渲染时填入（列表数据本身不随语言变化，避免切换语言重新拉取）
+  const conversationItems = useMemo(
+    () =>
+      chat.conversations.map((c) =>
+        c.isDraft ? { ...c, label: t('component.chat.newConversation') } : c,
+      ),
+    [chat.conversations, t],
+  );
+  useEffect(() => {
+    const current = contextRef.current;
+    if (!current) return;
+    if (current.conv === DRAFT_KEY && chat.activeKey !== DRAFT_KEY) {
+      current.conv = chat.activeKey; // 首条消息已创建会话
+    } else if (chat.activeKey !== current.conv) {
+      contextRef.current = null;
+    }
+  }, [chat.activeKey]);
   const { initialState } = useModel('@@initialState');
   const roleConfig = useMemo(
     () => buildRoleConfig(initialState?.currentUser?.avatar),
@@ -312,7 +370,36 @@ const ChatPanel: React.FC<{
 
   const sendMessage = (content: string) => {
     setInputValue('');
-    chat.send(content);
+    const context = contextRef.current?.context;
+    const focus = parseAgentMention(content);
+    if (focus === null) {
+      chat.send(content, context);
+      return;
+    }
+    // @Agent：不走模型，直接召唤运维 Agent 对当前故障分析；结果写入故障时间线与「AI 分析」页签
+    if (context?.type !== 'incident') {
+      chat.appendLocal(content, t('component.chat.agent.noIncident'));
+      return;
+    }
+    void runForIncident({ incidentId: context.id, input: focus || undefined })
+      .then((res) =>
+        chat.appendLocal(
+          content,
+          t(
+            res.existing
+              ? 'component.chat.agent.existing'
+              : 'component.chat.agent.queued',
+          ),
+        ),
+      )
+      .catch((e) =>
+        chat.appendLocal(
+          content,
+          t('component.chat.agent.failed', {
+            reason: getAgentErrorMessage(e),
+          }),
+        ),
+      );
   };
 
   // 按消息对象缓存气泡项：流式输出时只有正在生成的那条消息对象会被替换，
@@ -413,7 +500,7 @@ const ChatPanel: React.FC<{
       <div className={styles.layout}>
         <div className={styles.sidebar}>
           <Conversations
-            items={chat.conversations}
+            items={conversationItems}
             activeKey={chat.activeKey}
             onActiveChange={(key) => void chat.select(key)}
             groupable={{

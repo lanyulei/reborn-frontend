@@ -4,6 +4,7 @@ import { App, Checkbox, Form, Input, Select } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
+import { useT } from '@/utils/i18n';
 import { createKeyValueItem } from '../../service/helpers';
 import type { CreateServiceFormValues } from '../../service/types';
 import type { EditFormProps } from '../../shared/edit';
@@ -84,6 +85,7 @@ const ServiceExternalAccessForm = ({
   form,
 }: ServiceExternalAccessFormProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
   const externalAccessMode = Form.useWatch('externalAccessMode', form);
   const externalAccessAnnotations =
@@ -101,15 +103,18 @@ const ServiceExternalAccessForm = ({
   return (
     <div className={styles.formStack}>
       <ServiceEditSection
-        description="设置从集群外访问服务的方式。"
-        title="访问模式"
+        description={t('pages.k8s.forms.edit.service.accessMode.description')}
+        title={t('pages.k8s.forms.common.accessMode')}
       >
         <Form.Item name="externalAccessMode">
           <Select
-            aria-label="访问模式"
+            aria-label={t('pages.k8s.forms.common.accessMode')}
             className={styles.externalAccessField}
             options={[
-              { label: '无', value: 'None' },
+              {
+                label: t('pages.k8s.forms.edit.service.accessMode.none'),
+                value: 'None',
+              },
               { label: 'NodePort', value: 'NodePort' },
               { label: 'LoadBalancer', value: 'LoadBalancer' },
             ]}
@@ -119,13 +124,15 @@ const ServiceExternalAccessForm = ({
 
       {externalAccessMode === 'LoadBalancer' && (
         <ServiceEditSection
-          description="指定由哪类负载均衡器实现接管该 Service。"
+          description={t('pages.k8s.forms.edit.service.lbClass.description')}
           title="LoadBalancer Class"
         >
           <Form.Item name="loadBalancerClass">
             <Input
               className={styles.externalAccessField}
-              placeholder="例如 service.k8s.aws/nlb"
+              placeholder={t(
+                'pages.k8s.forms.edit.service.lbClass.placeholder',
+              )}
             />
           </Form.Item>
         </ServiceEditSection>
@@ -133,14 +140,18 @@ const ServiceExternalAccessForm = ({
 
       {externalAccessMode === 'LoadBalancer' && (
         <ServiceEditSection
-          description="控制 LoadBalancer 是否自动分配 NodePort。"
-          title="NodePort 分配"
+          description={t(
+            'pages.k8s.forms.edit.service.nodePortAllocation.description',
+          )}
+          title={t('pages.k8s.forms.edit.service.nodePortAllocation')}
         >
           <Form.Item
             name="allocateLoadBalancerNodePorts"
             valuePropName="checked"
           >
-            <Checkbox>为 LoadBalancer 服务自动分配 NodePort</Checkbox>
+            <Checkbox>
+              {t('pages.k8s.forms.edit.service.nodePortAllocation.checkbox')}
+            </Checkbox>
           </Form.Item>
         </ServiceEditSection>
       )}
@@ -148,8 +159,10 @@ const ServiceExternalAccessForm = ({
       {(externalAccessMode === 'NodePort' ||
         externalAccessMode === 'LoadBalancer') && (
         <ServiceEditSection
-          description="Local 可保留客户端源 IP，Cluster 会在集群范围内转发。"
-          title="外部流量策略"
+          description={t(
+            'pages.k8s.forms.edit.service.externalTrafficPolicy.description',
+          )}
+          title={t('pages.k8s.forms.edit.service.externalTrafficPolicy')}
         >
           <Form.Item name="externalTrafficPolicy">
             <Select
@@ -159,7 +172,9 @@ const ServiceExternalAccessForm = ({
                 { label: 'Cluster', value: 'Cluster' },
                 { label: 'Local', value: 'Local' },
               ]}
-              placeholder="默认由集群决定"
+              placeholder={t(
+                'pages.k8s.forms.edit.service.externalTrafficPolicy.placeholder',
+              )}
             />
           </Form.Item>
         </ServiceEditSection>
@@ -167,17 +182,21 @@ const ServiceExternalAccessForm = ({
 
       {externalAccessMode === 'LoadBalancer' && (
         <ServiceEditSection
-          description="通过注解补充负载均衡器相关配置。"
-          title="注解"
+          description={t(
+            'pages.k8s.forms.edit.service.annotations.description',
+          )}
+          title={t('pages.k8s.forms.common.annotations')}
         >
           <Form.Item name="externalAccessAnnotations">
             <KeyValueEditor
               addIcon={false}
-              addText="添加"
-              deleteAriaLabel="删除注解"
-              keyPlaceholder="键"
-              valuePlaceholder="值"
-              onAddBlocked={() => message.warning('请先填写已有注解的键。')}
+              addText={t('pages.k8s.form.add')}
+              deleteAriaLabel={t('pages.k8s.forms.common.deleteAnnotation')}
+              keyPlaceholder={t('pages.k8s.form.key')}
+              valuePlaceholder={t('pages.k8s.form.value')}
+              onAddBlocked={() =>
+                message.warning(t('pages.k8s.forms.common.annotationKeyFirst'))
+              }
               onCreateItem={() => createKeyValueItem()}
             />
           </Form.Item>
@@ -188,6 +207,7 @@ const ServiceExternalAccessForm = ({
 };
 
 const ServiceExternalAccessEdit = (props: EditFormProps) => {
+  const t = useT();
   const state = useEditObject(props.clusterId, props.target);
   const [form] = Form.useForm<CreateServiceFormValues>();
   const initial = useEditFormValues(form, state.object, buildServiceEditValues);
@@ -197,7 +217,7 @@ const ServiceExternalAccessEdit = (props: EditFormProps) => {
       {...props}
       size="600px"
       state={state}
-      title="编辑外部访问"
+      title={t('pages.k8s.forms.edit.service.externalAccessTitle')}
       onBuild={async (object) => {
         if (!initial) {
           return undefined;

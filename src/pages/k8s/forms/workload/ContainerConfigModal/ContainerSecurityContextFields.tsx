@@ -11,6 +11,7 @@ import {
 } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect } from 'react';
+import { useT } from '@/utils/i18n';
 import type { ContainerSeccompProfileType } from '../types';
 
 const seccompProfileOptions: {
@@ -161,6 +162,7 @@ const SecuritySwitchField = ({
 
 const CapabilityList = ({ label, name, placeholder }: CapabilityListProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const form = Form.useFormInstance();
   const values = (Form.useWatch(name, form) as string[] | undefined) || [];
   const addDisabled = values.some((value) => !value?.trim());
@@ -181,7 +183,10 @@ const CapabilityList = ({ label, name, placeholder }: CapabilityListProps) => {
                     />
                   </Form.Item>
                   <Button
-                    aria-label={`删除${label}权能`}
+                    aria-label={t(
+                      'pages.k8s.forms.workload.container.security.capability.delete',
+                      { label },
+                    )}
                     className={styles.capabilityDelete}
                     icon={<DeleteOutlined />}
                     type="text"
@@ -193,7 +198,7 @@ const CapabilityList = ({ label, name, placeholder }: CapabilityListProps) => {
             <div className={styles.capabilityActions}>
               <Button disabled={addDisabled} onClick={() => add('')}>
                 <PlusOutlined />
-                添加
+                {t('pages.k8s.form.add')}
               </Button>
             </div>
           </>
@@ -205,6 +210,7 @@ const CapabilityList = ({ label, name, placeholder }: CapabilityListProps) => {
 
 const ContainerSecurityContextFields = () => {
   const { styles } = useStyles();
+  const t = useT();
   const form = Form.useFormInstance();
   const privileged = Form.useWatch('containerPrivileged', form);
   const seccompProfileType = Form.useWatch('containerSeccompProfileType', form);
@@ -235,70 +241,96 @@ const ContainerSecurityContextFields = () => {
   return (
     <div className={styles.securityStack}>
       <section>
-        <div className={styles.groupTitle}>访问控制</div>
+        <div className={styles.groupTitle}>
+          {t('pages.k8s.forms.workload.container.security.access')}
+        </div>
         <div className={styles.group}>
           <div className={styles.switchStack}>
             <SecuritySwitchField
-              description="以主机上的 root 用户运行容器进程。"
+              description={t(
+                'pages.k8s.forms.workload.container.security.privileged.description',
+              )}
               name="containerPrivileged"
-              title="特权模式"
+              title={t('pages.k8s.form.security.privileged')}
             />
             <SecuritySwitchField
-              description="允许容器进程获取比父进程更多的特权。当特权模式启用时，此选项默认启用。"
+              description={t(
+                'pages.k8s.forms.workload.container.security.allowPrivilegeEscalation.description',
+              )}
               disabled={privileged}
               name="allowPrivilegeEscalation"
-              title="允许特权提升"
+              title={t(
+                'pages.k8s.forms.workload.container.security.allowPrivilegeEscalation',
+              )}
             />
             <SecuritySwitchField
-              description="将容器文件系统的根目录设置为只读。"
+              description={t(
+                'pages.k8s.forms.workload.container.security.readOnlyRootFilesystem.description',
+              )}
               name="containerReadOnlyRootFilesystem"
-              title="根目录只读"
+              title={t(
+                'pages.k8s.forms.workload.container.security.readOnlyRootFilesystem',
+              )}
             />
           </div>
         </div>
       </section>
 
       <section>
-        <div className={styles.groupTitle}>用户和用户组</div>
+        <div className={styles.groupTitle}>
+          {t('pages.k8s.forms.workload.container.security.userGroup')}
+        </div>
         <div className={styles.group}>
           <SecuritySwitchField
-            description="启动容器之前检查容器是否将以 root 用户运行。如果容器将以 root 用户运行则不启动容器。"
+            description={t(
+              'pages.k8s.forms.workload.container.security.runAsNonRoot.description',
+            )}
             name="containerRunAsNonRoot"
-            title="仅允许非 root 用户运行"
+            title={t(
+              'pages.k8s.forms.workload.container.security.runAsNonRoot',
+            )}
           />
           <Row gutter={18}>
             <Col xs={24} md={12}>
               <Form.Item
                 className={styles.formItem}
-                label="用户"
+                label={t('pages.k8s.forms.common.user')}
                 name="containerRunAsUser"
               >
                 <InputNumber
                   min={0}
-                  placeholder="请输入用户 ID"
+                  placeholder={t(
+                    'pages.k8s.forms.workload.container.security.runAsUser.placeholder',
+                  )}
                   precision={0}
                   style={{ width: '100%' }}
                 />
               </Form.Item>
               <div className={styles.fieldHelp}>
-                执行容器进程入口点的 UID。默认为镜像元数据中指定的 UID。
+                {t(
+                  'pages.k8s.forms.workload.container.security.runAsUser.help',
+                )}
               </div>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item
                 className={styles.formItem}
-                label="用户组"
+                label={t('pages.k8s.forms.workload.container.security.group')}
                 name="containerRunAsGroup"
               >
                 <InputNumber
                   min={0}
-                  placeholder="请输入用户组 ID"
+                  placeholder={t(
+                    'pages.k8s.forms.workload.container.security.runAsGroup.placeholder',
+                  )}
                   precision={0}
                   style={{ width: '100%' }}
                 />
               </Form.Item>
               <div className={styles.fieldHelp}>
-                执行容器进程入口点的 GID。默认为容器运行时的默认 GID。
+                {t(
+                  'pages.k8s.forms.workload.container.security.runAsGroup.help',
+                )}
               </div>
             </Col>
           </Row>
@@ -306,45 +338,65 @@ const ContainerSecurityContextFields = () => {
       </section>
 
       <section>
-        <div className={styles.groupTitle}>SELinux 上下文</div>
+        <div className={styles.groupTitle}>
+          {t('pages.k8s.forms.workload.container.security.seLinux')}
+        </div>
         <div className={styles.group}>
           <Row gutter={18}>
             <Col xs={24} md={12}>
               <Form.Item
                 className={styles.seLinuxField}
-                label="等级"
+                label={t(
+                  'pages.k8s.forms.workload.container.security.seLinux.level',
+                )}
                 name="containerSeLinuxLevel"
                 style={{ marginBottom: `16px` }}
               >
-                <Input placeholder="请输入 SELinux 等级" />
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.workload.container.security.seLinux.level.placeholder',
+                  )}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item
                 className={styles.seLinuxField}
-                label="角色"
+                label={t('pages.k8s.kind.Role')}
                 name="containerSeLinuxRole"
                 style={{ marginBottom: `16px` }}
               >
-                <Input placeholder="请输入 SELinux 角色" />
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.workload.container.security.seLinux.role.placeholder',
+                  )}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item
                 className={styles.formItem}
-                label="类型"
+                label={t('pages.k8s.forms.common.type')}
                 name="containerSeLinuxType"
               >
-                <Input placeholder="请输入 SELinux 类型" />
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.workload.container.security.seLinux.type.placeholder',
+                  )}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item
                 className={styles.formItem}
-                label="用户"
+                label={t('pages.k8s.forms.common.user')}
                 name="containerSeLinuxUser"
               >
-                <Input placeholder="请输入 SELinux 用户" />
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.workload.container.security.seLinux.user.placeholder',
+                  )}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -352,35 +404,47 @@ const ContainerSecurityContextFields = () => {
       </section>
 
       <section>
-        <div className={styles.groupTitle}>权能</div>
+        <div className={styles.groupTitle}>
+          {t('pages.k8s.forms.workload.container.security.capabilities')}
+        </div>
         <div className={styles.group}>
           <CapabilityList
-            label="添加"
+            label={t('pages.k8s.form.add')}
             name="containerCapabilitiesAdd"
-            placeholder="例如 NET_ADMIN"
+            placeholder={t(
+              'pages.k8s.forms.workload.container.security.capabilities.add.placeholder',
+            )}
           />
           <CapabilityList
-            label="移除"
+            label={t('common.action.remove')}
             name="containerCapabilitiesDrop"
-            placeholder="例如 ALL"
+            placeholder={t(
+              'pages.k8s.forms.workload.container.security.capabilities.drop.placeholder',
+            )}
           />
         </div>
       </section>
 
       <section>
-        <div className={styles.groupTitle}>Seccomp 配置</div>
+        <div className={styles.groupTitle}>
+          {t('pages.k8s.forms.workload.container.security.seccomp')}
+        </div>
         <div className={styles.group}>
           <Row gutter={18}>
             <Col xs={24} md={12}>
               <Form.Item
                 className={styles.formItem}
-                label="配置类型"
+                label={t(
+                  'pages.k8s.forms.workload.container.security.seccomp.type',
+                )}
                 name="containerSeccompProfileType"
               >
                 <Select
                   allowClear
                   options={seccompProfileOptions}
-                  placeholder="请选择 Seccomp 类型"
+                  placeholder={t(
+                    'pages.k8s.forms.workload.container.security.seccomp.type.placeholder',
+                  )}
                 />
               </Form.Item>
             </Col>
@@ -388,18 +452,30 @@ const ContainerSecurityContextFields = () => {
               <Col xs={24} md={12}>
                 <Form.Item
                   className={styles.formItem}
-                  label="本地配置路径"
+                  label={t(
+                    'pages.k8s.forms.workload.container.security.seccomp.localhost',
+                  )}
                   name="containerSeccompProfileLocalhost"
-                  rules={[{ required: true, message: '请输入本地配置路径' }]}
+                  rules={[
+                    {
+                      required: true,
+                      message: t(
+                        'pages.k8s.forms.workload.container.security.seccomp.localhost.required',
+                      ),
+                    },
+                  ]}
                 >
-                  <Input placeholder="例如 profiles/audit.json" />
+                  <Input
+                    placeholder={t(
+                      'pages.k8s.forms.workload.container.security.seccomp.localhost.placeholder',
+                    )}
+                  />
                 </Form.Item>
               </Col>
             )}
           </Row>
           <div className={styles.fieldHelp}>
-            RuntimeDefault 使用容器运行时默认配置；Localhost
-            需要填写节点上的配置文件路径。
+            {t('pages.k8s.forms.workload.container.security.seccomp.help')}
           </div>
         </div>
       </section>

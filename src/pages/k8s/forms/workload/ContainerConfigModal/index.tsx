@@ -3,6 +3,7 @@ import type { FormInstance } from 'antd';
 import { Col, Form, Input, Modal, Row, Select } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import { NAME_PATTERN } from '../helpers';
 import type { CreateWorkloadContainerValues } from '../types';
 import ContainerAdvancedOptions from './ContainerAdvancedOptions';
@@ -97,6 +98,7 @@ const ContainerConfigModal = ({
   onOk,
 }: ContainerConfigModalProps) => {
   const { styles, theme } = useStyles();
+  const t = useT();
   const [advancedOpen, setAdvancedOpen] = useState(true);
 
   useEffect(() => {
@@ -109,7 +111,7 @@ const ContainerConfigModal = ({
     <Modal
       destroyOnHidden
       mask={{ closable: false }}
-      okText="保存"
+      okText={t('common.action.save')}
       open={open}
       styles={{
         container: { padding: 0, overflow: 'hidden' },
@@ -131,7 +133,7 @@ const ContainerConfigModal = ({
           background: theme.colorBgContainer,
         },
       }}
-      title="编辑容器配置"
+      title={t('pages.k8s.forms.workload.container.edit')}
       width={960}
       onCancel={onCancel}
       onOk={onOk}
@@ -140,21 +142,34 @@ const ContainerConfigModal = ({
         <div className={styles.stack}>
           <div>
             <div className={styles.sectionTitle}>
-              容器设置
+              {t('pages.k8s.forms.workload.container.settings')}
               {/* <Tooltip title="配置容器的镜像、名称、类型和计算资源">
                 <QuestionCircleOutlined className={styles.sectionHelpIcon} />
               </Tooltip> */}
             </div>
-            <ContainerFormSection description="配置容器的镜像、名称、类型和计算资源">
+            <ContainerFormSection
+              description={t(
+                'pages.k8s.forms.workload.container.settings.description',
+              )}
+            >
               <Form.Item
-                label="镜像"
+                label={t('pages.k8s.column.image')}
                 name="image"
-                tooltip="如需使用私有镜像服务，您需要先创建镜像服务保密字典"
-                rules={[{ required: true, message: '请输入容器镜像' }]}
+                tooltip={t('pages.k8s.forms.workload.container.image.tooltip')}
+                rules={[
+                  {
+                    required: true,
+                    message: t(
+                      'pages.k8s.forms.workload.container.image.required',
+                    ),
+                  },
+                ]}
               >
                 <Input
                   className={styles.imageInput}
-                  placeholder="镜像名称或路径，例如 nginx:latest"
+                  placeholder={t(
+                    'pages.k8s.forms.workload.container.image.placeholder',
+                  )}
                   suffix={
                     <CodeSandboxOutlined className={styles.imageSuffix} />
                   }
@@ -174,36 +189,70 @@ const ContainerConfigModal = ({
                   <Row gutter={18}>
                     <Col span={12}>
                       <Form.Item
-                        label="容器名称"
+                        label={t('pages.k8s.forms.workload.container.name')}
                         name="containerName"
-                        tooltip="名称只能包含小写字母、数字和连字符（-），必须以小写字母或数字开头和结尾，最长 63 个字符"
+                        tooltip={t('pages.k8s.forms.common.name.dnsLabel')}
                         rules={[
-                          { required: true, message: '请输入容器名称' },
-                          { max: 63, message: '容器名称最长 63 个字符' },
+                          {
+                            required: true,
+                            message: t(
+                              'pages.k8s.forms.workload.container.name.required',
+                            ),
+                          },
+                          {
+                            max: 63,
+                            message: t(
+                              'pages.k8s.forms.workload.container.name.maxLength',
+                            ),
+                          },
                           {
                             pattern: NAME_PATTERN,
-                            message:
-                              '容器名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+                            message: t(
+                              'pages.k8s.forms.workload.container.name.pattern',
+                            ),
                           },
                           {
                             validator: (_, value?: string) =>
                               value && usedNames.includes(value.trim())
-                                ? Promise.reject(new Error('容器名称已存在'))
+                                ? Promise.reject(
+                                    new Error(
+                                      t(
+                                        'pages.k8s.forms.workload.container.name.duplicate',
+                                      ),
+                                    ),
+                                  )
                                 : Promise.resolve(),
                           },
                         ]}
                       >
-                        <Input placeholder="例如 container-ab12cd34" />
+                        <Input
+                          placeholder={t(
+                            'pages.k8s.forms.workload.container.name.placeholder',
+                          )}
+                        />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item label="容器类型" name="containerType">
+                      <Form.Item
+                        label={t('pages.k8s.forms.workload.container.type')}
+                        name="containerType"
+                      >
                         <Select
                           options={[
-                            { label: '工作容器', value: 'worker' },
-                            { label: '初始化容器', value: 'init' },
+                            {
+                              label: t(
+                                'pages.k8s.forms.workload.container.type.worker',
+                              ),
+                              value: 'worker',
+                            },
+                            {
+                              label: t('pages.k8s.form.section.initContainers'),
+                              value: 'init',
+                            },
                           ]}
-                          placeholder="请选择容器类型"
+                          placeholder={t(
+                            'pages.k8s.forms.workload.container.type.required',
+                          )}
                         />
                       </Form.Item>
                     </Col>
@@ -215,8 +264,10 @@ const ContainerConfigModal = ({
           </div>
 
           <ContainerFormSection
-            description="设置用于访问容器的端口。"
-            title="端口设置"
+            description={t(
+              'pages.k8s.forms.workload.container.ports.description',
+            )}
+            title={t('pages.k8s.forms.workload.container.ports')}
           >
             <ContainerPortFields />
           </ContainerFormSection>

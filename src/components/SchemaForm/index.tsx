@@ -208,7 +208,11 @@ export const renderSchemaValue = (
     case 'float':
       return field.unit ? `${String(value)} ${field.unit}` : String(value);
     case 'bool':
-      return value ? 'true' : 'false';
+      return t(
+        value
+          ? 'component.schemaForm.field.bool.true'
+          : 'component.schemaForm.field.bool.false',
+      );
     case 'datetime':
       return dayjs(String(value)).isValid()
         ? dayjs(String(value)).format(DATE_TIME_SECONDS_FORMAT)

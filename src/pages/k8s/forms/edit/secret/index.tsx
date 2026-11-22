@@ -8,6 +8,7 @@ import { createStyles } from 'antd-style';
 import { useEffect, useState } from 'react';
 import { revealSecret } from '@/services/k8s/resource';
 import { usePermissions } from '@/services/system/permissions';
+import { useT } from '@/utils/i18n';
 import type { EditFormProps } from '../../shared/edit';
 import { EditSubmit, useEditObject } from '../../shared/edit';
 import { toYaml } from '../../shared/kube';
@@ -73,8 +74,6 @@ const useStyles = createStyles(({ token }) => ({
   },
 }));
 
-const TITLE = '编辑设置';
-
 const SecretSettingsEditDrawer = ({
   clusterId,
   target,
@@ -82,6 +81,8 @@ const SecretSettingsEditDrawer = ({
   onDone,
 }: EditFormProps) => {
   const { styles } = useStyles();
+  const t = useT();
+  const title = t('pages.k8s.forms.common.editSettings');
   const { message } = App.useApp();
   const has = usePermissions();
   const canReveal = has('k8s.config.secret_reveal');
@@ -148,7 +149,7 @@ const SecretSettingsEditDrawer = ({
     }
 
     const values: SecretEditFormValues = form.getFieldsValue(true);
-    const formError = getSecretEditError(object, values, reveal);
+    const formError = getSecretEditError(object, values, t, reveal);
 
     if (formError) {
       message.warning(formError);
@@ -166,7 +167,7 @@ const SecretSettingsEditDrawer = ({
       return (
         <div className={styles.reveal}>
           <span className={styles.revealHint}>
-            已显示明文。未修改的数据保存时保持原值。
+            {t('pages.k8s.forms.edit.secret.revealed')}
           </span>
         </div>
       );
@@ -175,7 +176,7 @@ const SecretSettingsEditDrawer = ({
       return (
         <div className={styles.reveal}>
           <span className={styles.revealHint}>
-            已有数据的值已隐藏，当前账号没有查看明文的权限；可以直接输入新值替换。
+            {t('pages.k8s.forms.edit.secret.hiddenNoPermission')}
           </span>
         </div>
       );
@@ -184,10 +185,10 @@ const SecretSettingsEditDrawer = ({
     return (
       <div className={styles.reveal}>
         <Button loading={revealing} size="small" onClick={handleReveal}>
-          查看明文
+          {t('pages.k8s.forms.edit.secret.reveal')}
         </Button>
         <span className={styles.revealHint}>
-          已有数据的值已隐藏。查看明文会记入操作审计；也可以直接输入新值替换。
+          {t('pages.k8s.forms.edit.secret.hiddenHint')}
         </span>
       </div>
     );
@@ -201,13 +202,13 @@ const SecretSettingsEditDrawer = ({
         destroyOnHidden
         footer={
           <div className={styles.footer}>
-            <Button onClick={onClose}>取消</Button>
+            <Button onClick={onClose}>{t('common.action.cancel')}</Button>
             <Button
               disabled={!object || loading}
               type="primary"
               onClick={handleSubmit}
             >
-              保存
+              {t('common.action.save')}
             </Button>
           </div>
         }
@@ -215,7 +216,7 @@ const SecretSettingsEditDrawer = ({
         mask={{ closable: false }}
         open
         size="78vw"
-        title={TITLE}
+        title={title}
         onClose={onClose}
       >
         <Spin spinning={loading}>
@@ -224,7 +225,7 @@ const SecretSettingsEditDrawer = ({
               <Alert
                 action={
                   <Button size="small" onClick={reload}>
-                    重试
+                    {t('pages.k8s.table.retry')}
                   </Button>
                 }
                 className={styles.notice}
@@ -239,7 +240,7 @@ const SecretSettingsEditDrawer = ({
                   <Alert
                     className={styles.notice}
                     showIcon
-                    title="该保密字典已设为不可变（immutable），数据无法修改，仅可编辑标签与注解。"
+                    title={t('pages.k8s.forms.edit.secret.immutable')}
                     type="warning"
                   />
                 ) : (
@@ -266,7 +267,7 @@ const SecretSettingsEditDrawer = ({
           clusterId={clusterId}
           resourceVersion={resourceVersion}
           target={target}
-          title={TITLE}
+          title={title}
           yaml={pending}
           onBack={() => setPending(undefined)}
           onClose={onClose}

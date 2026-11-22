@@ -1,5 +1,6 @@
 import { Alert, Checkbox, Form } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import ResourceFormSection from '../shared/ResourceFormSection';
 import { hasSelectorContent } from './helpers';
 import LabelSelectorEditor from './LabelSelectorEditor';
@@ -21,27 +22,27 @@ const useStyles = createStyles(({ token }) => ({
   },
 }));
 
-const POLICY_TYPE_OPTIONS = [
-  {
-    label: '入站流量',
-    value: 'Ingress',
-  },
-  {
-    label: '出站流量',
-    value: 'Egress',
-  },
-];
-
 const NetworkPolicySelectorSettings = () => {
+  const t = useT();
   const { styles } = useStyles();
   const podSelector = Form.useWatch('podSelector');
+  const policyTypeOptions = [
+    {
+      label: t('pages.k8s.forms.networkpolicy.policyTypes.ingress'),
+      value: 'Ingress',
+    },
+    {
+      label: t('pages.k8s.forms.networkpolicy.policyTypes.egress'),
+      value: 'Egress',
+    },
+  ];
 
   return (
     <div className={styles.stack}>
       <ResourceFormSection
-        description="为空时会匹配当前命名空间内的所有 Pod。"
-        title="Pod 选择器"
-        tooltip="对应 spec.podSelector，可使用 matchLabels 与 matchExpressions。"
+        description={t('pages.k8s.forms.networkpolicy.podSelector.description')}
+        title={t('pages.k8s.forms.common.podSelector')}
+        tooltip={t('pages.k8s.forms.networkpolicy.podSelector.tooltip')}
       >
         <Form.Item name="podSelector">
           <LabelSelectorEditor />
@@ -50,16 +51,16 @@ const NetworkPolicySelectorSettings = () => {
           <Alert
             className={styles.hint}
             showIcon
-            title="未填写任何匹配条件：将输出 podSelector: {}，策略作用于该命名空间内的所有 Pod。"
+            title={t('pages.k8s.forms.networkpolicy.podSelector.emptyHint')}
             type="info"
           />
         )}
       </ResourceFormSection>
 
       <ResourceFormSection
-        description="选择网络策略生效的流量方向。未选择的方向不会输出对应规则。"
-        title="策略类型"
-        tooltip="对应 spec.policyTypes。"
+        description={t('pages.k8s.forms.networkpolicy.policyTypes.description')}
+        title={t('pages.k8s.forms.networkpolicy.policyTypes')}
+        tooltip={t('pages.k8s.forms.networkpolicy.policyTypes.tooltip')}
       >
         <Form.Item
           className={styles.policyTypes}
@@ -68,13 +69,15 @@ const NetworkPolicySelectorSettings = () => {
             {
               validator: async (_, value) => {
                 if (!value?.length) {
-                  throw new Error('请至少选择一种策略类型');
+                  throw new Error(
+                    t('pages.k8s.forms.networkpolicy.policyTypes.required'),
+                  );
                 }
               },
             },
           ]}
         >
-          <Checkbox.Group options={POLICY_TYPE_OPTIONS} />
+          <Checkbox.Group options={policyTypeOptions} />
         </Form.Item>
       </ResourceFormSection>
     </div>

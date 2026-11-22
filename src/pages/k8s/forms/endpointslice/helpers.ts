@@ -1,4 +1,6 @@
 // 纯函数：不要在这里引入 React / antd（校验脚本会用 Node 直接加载本文件）
+
+import type { Translate } from '@/utils/i18n';
 import {
   createId,
   createKeyValueItem,
@@ -291,18 +293,26 @@ const isValidEndpointAddress = (
   return false;
 };
 
-const validateEndpointAddresses = (values: CreateEndpointSliceFormValues) => {
+const validateEndpointAddresses = (
+  values: CreateEndpointSliceFormValues,
+  t: Translate,
+) => {
   const endpoints = values.endpoints || [];
 
   if (endpoints.length === 0) {
-    return '请至少添加一个端点';
+    return t('pages.k8s.forms.endpointslice.validation.endpoints.required');
   }
 
   for (const [index, endpoint] of endpoints.entries()) {
     const addresses = toStringList(endpoint.addresses);
 
     if (addresses.length === 0) {
-      return `端点 ${index + 1} 至少需要填写一个地址`;
+      return t(
+        'pages.k8s.forms.endpointslice.validation.endpoint.addressRequired',
+        {
+          index: index + 1,
+        },
+      );
     }
 
     const invalidAddress = addresses.find(
@@ -310,14 +320,24 @@ const validateEndpointAddresses = (values: CreateEndpointSliceFormValues) => {
     );
 
     if (invalidAddress) {
-      return `端点 ${index + 1} 的地址 ${invalidAddress} 与地址类型 ${values.addressType} 不匹配`;
+      return t(
+        'pages.k8s.forms.endpointslice.validation.endpoint.addressMismatch',
+        {
+          index: index + 1,
+          address: invalidAddress,
+          addressType: values.addressType,
+        },
+      );
     }
   }
 
   return undefined;
 };
 
-const validatePorts = (ports?: EndpointSlicePortItem[]) => {
+const validatePorts = (
+  ports: EndpointSlicePortItem[] | undefined,
+  t: Translate,
+) => {
   const names = new Set<string>();
 
   for (const [index, port] of (ports || []).entries()) {
@@ -325,7 +345,10 @@ const validatePorts = (ports?: EndpointSlicePortItem[]) => {
 
     if (name) {
       if (names.has(name)) {
-        return `端口 ${index + 1} 的名称不能重复`;
+        return t(
+          'pages.k8s.forms.endpointslice.validation.port.nameDuplicate',
+          { index: index + 1 },
+        );
       }
       names.add(name);
     }
@@ -333,34 +356,39 @@ const validatePorts = (ports?: EndpointSlicePortItem[]) => {
       port.port !== undefined &&
       (!Number.isInteger(port.port) || port.port < 1 || port.port > 65535)
     ) {
-      return `端口 ${index + 1} 的端口号必须在 1-65535 之间`;
+      return t('pages.k8s.forms.endpointslice.validation.port.range', {
+        index: index + 1,
+      });
     }
   }
 
   return undefined;
 };
 
-const validateBasicInfo = (values: CreateEndpointSliceFormValues) => {
+const validateBasicInfo = (
+  values: CreateEndpointSliceFormValues,
+  t: Translate,
+) => {
   const name = trimValue(values.name);
   const serviceName = trimValue(values.serviceName);
 
   if (!name) {
-    return '请输入名称';
+    return t('pages.k8s.forms.common.name.required');
   }
   if (name.length > 63 || !NAME_PATTERN.test(name)) {
-    return '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾，最长 63 个字符';
+    return t('pages.k8s.forms.endpointslice.validation.name.invalid');
   }
   if (!trimValue(values.namespace)) {
-    return '请选择命名空间';
+    return t('pages.k8s.forms.common.namespace.required');
   }
   if (!serviceName) {
-    return '请选择或输入关联服务';
+    return t('pages.k8s.forms.endpointslice.serviceName.required');
   }
   if (serviceName.length > 63 || !NAME_PATTERN.test(serviceName)) {
-    return '服务名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾，最长 63 个字符';
+    return t('pages.k8s.forms.endpointslice.validation.serviceName.invalid');
   }
   if (!values.addressType || !ADDRESS_TYPES.includes(values.addressType)) {
-    return '请选择地址类型';
+    return t('pages.k8s.forms.endpointslice.addressType.required');
   }
 
   return undefined;
@@ -369,15 +397,16 @@ const validateBasicInfo = (values: CreateEndpointSliceFormValues) => {
 export const validateEndpointSliceStep = (
   values: CreateEndpointSliceFormValues,
   step: number,
+  t: Translate,
 ) => {
   if (step === 0) {
-    return validateBasicInfo(values);
+    return validateBasicInfo(values, t);
   }
   if (step === 1) {
-    return validateEndpointAddresses(values);
+    return validateEndpointAddresses(values, t);
   }
   if (step === 2) {
-    return validatePorts(values.ports);
+    return validatePorts(values.ports, t);
   }
 
   return undefined;
@@ -385,9 +414,10 @@ export const validateEndpointSliceStep = (
 
 export const validateEndpointSliceFormValues = (
   values: CreateEndpointSliceFormValues,
+  t: Translate,
 ) => {
   for (const step of [0, 1, 2]) {
-    const message = validateEndpointSliceStep(values, step);
+    const message = validateEndpointSliceStep(values, step, t);
     if (message) {
       return message;
     }
@@ -400,51 +430,65 @@ const validateYamlEndpoint = (
   endpoint: unknown,
   addressType: EndpointSliceAddressType,
   index: number,
+  t: Translate,
 ) => {
   const endpointRecord = getRecordValue(endpoint);
   if (!endpointRecord) {
-    return `YAML endpoints[${index}] 必须为对象`;
+    return t('pages.k8s.forms.endpointslice.yaml.endpoint.notObject', {
+      index,
+    });
   }
 
   if (!Array.isArray(endpointRecord.addresses)) {
-    return `YAML endpoints[${index}].addresses 必须为字符串数组`;
+    return t('pages.k8s.forms.endpointslice.yaml.endpoint.addressesNotArray', {
+      index,
+    });
   }
 
   const hasInvalidAddressItem = endpointRecord.addresses.some(
     (item) => typeof item !== 'string' || !item.trim(),
   );
   if (hasInvalidAddressItem) {
-    return `YAML endpoints[${index}].addresses 必须全部为非空字符串`;
+    return t(
+      'pages.k8s.forms.endpointslice.yaml.endpoint.addressesNotStrings',
+      { index },
+    );
   }
 
   const addresses = endpointRecord.addresses.map((item) => item.trim());
   if (addresses.length === 0) {
-    return `YAML endpoints[${index}].addresses 必须至少包含一个字符串地址`;
+    return t('pages.k8s.forms.endpointslice.yaml.endpoint.addressesEmpty', {
+      index,
+    });
   }
 
   const invalidAddress = addresses.find(
     (address) => !isValidEndpointAddress(addressType, address),
   );
   if (invalidAddress) {
-    return `YAML endpoints[${index}] 的地址 ${invalidAddress} 与地址类型 ${addressType} 不匹配`;
+    return t('pages.k8s.forms.endpointslice.yaml.endpoint.addressMismatch', {
+      index,
+      address: invalidAddress,
+      addressType,
+    });
   }
 
   return undefined;
 };
 
-const validateYamlPorts = (ports: unknown) => {
+const validateYamlPorts = (ports: unknown, t: Translate) => {
   if (ports === undefined) {
     return undefined;
   }
   if (!Array.isArray(ports)) {
-    return 'YAML ports 必须为数组';
+    return t('pages.k8s.forms.endpointslice.yaml.ports.notArray');
   }
 
   const names = new Set<string>();
   for (const [index, port] of ports.entries()) {
     const portRecord = getRecordValue(port);
     if (!portRecord) {
-      return `YAML ports[${index}] 必须为对象`;
+      return t('pages.k8s.forms.endpointslice.yaml.port.notObject', { index });
     }
 
     const protocol = portRecord.protocol;
@@ -453,7 +497,9 @@ const validateYamlPorts = (ports: unknown) => {
       (typeof protocol !== 'string' ||
         !ENDPOINT_PROTOCOLS.includes(protocol as EndpointSliceProtocol))
     ) {
-      return `YAML ports[${index}].protocol 必须为 SCTP、TCP 或 UDP`;
+      return t('pages.k8s.forms.endpointslice.yaml.port.protocolInvalid', {
+        index,
+      });
     }
     if (
       portRecord.port !== undefined &&
@@ -462,18 +508,26 @@ const validateYamlPorts = (ports: unknown) => {
         portRecord.port < 1 ||
         portRecord.port > 65535)
     ) {
-      return `YAML ports[${index}].port 必须为 1-65535 的整数`;
+      return t('pages.k8s.forms.endpointslice.yaml.port.portInvalid', {
+        index,
+      });
     }
     if (portRecord.name !== undefined && typeof portRecord.name !== 'string') {
-      return `YAML ports[${index}].name 必须为字符串`;
+      return t('pages.k8s.forms.endpointslice.yaml.port.nameNotString', {
+        index,
+      });
     }
     if (typeof portRecord.name === 'string' && portRecord.name.trim()) {
       const name = portRecord.name.trim();
       if (name.length > 15 || !PORT_NAME_PATTERN.test(name)) {
-        return `YAML ports[${index}].name 只能包含小写字母、数字和连字符（-），最长 15 个字符`;
+        return t('pages.k8s.forms.endpointslice.yaml.port.nameInvalid', {
+          index,
+        });
       }
       if (names.has(name)) {
-        return `YAML ports[${index}].name 不能重复`;
+        return t('pages.k8s.forms.endpointslice.yaml.port.nameDuplicate', {
+          index,
+        });
       }
       names.add(name);
     }
@@ -481,7 +535,9 @@ const validateYamlPorts = (ports: unknown) => {
       portRecord.appProtocol !== undefined &&
       typeof portRecord.appProtocol !== 'string'
     ) {
-      return `YAML ports[${index}].appProtocol 必须为字符串`;
+      return t('pages.k8s.forms.endpointslice.yaml.port.appProtocolNotString', {
+        index,
+      });
     }
   }
 
@@ -490,6 +546,7 @@ const validateYamlPorts = (ports: unknown) => {
 
 export const getEndpointSliceYamlValidationError = (
   resource: Record<string, unknown>,
+  t: Translate,
 ) => {
   const metadataRecord = getRecordValue(resource.metadata);
   const labelsRecord = getRecordValue(metadataRecord?.labels);
@@ -512,32 +569,38 @@ export const getEndpointSliceYamlValidationError = (
       : '';
 
   if (!name || !namespace) {
-    return 'YAML 必须包含 metadata.name 和 metadata.namespace';
+    return t('pages.k8s.forms.common.yaml.nameNamespaceRequired');
   }
   if (!serviceName) {
-    return `YAML 必须包含 metadata.labels.${ENDPOINT_SLICE_SERVICE_LABEL}`;
+    return t('pages.k8s.forms.endpointslice.yaml.serviceLabelRequired', {
+      label: ENDPOINT_SLICE_SERVICE_LABEL,
+    });
   }
   if (kind !== ENDPOINT_SLICE_KIND) {
-    return `YAML kind 必须为 ${ENDPOINT_SLICE_KIND}`;
+    return t('pages.k8s.forms.common.yaml.kindMismatch', {
+      kind: ENDPOINT_SLICE_KIND,
+    });
   }
   if (apiVersion !== ENDPOINT_SLICE_API_VERSION) {
-    return `YAML apiVersion 必须为 ${ENDPOINT_SLICE_API_VERSION}`;
+    return t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+      apiVersion: ENDPOINT_SLICE_API_VERSION,
+    });
   }
   if (!addressType || !ADDRESS_TYPES.includes(addressType)) {
-    return 'YAML addressType 必须为 FQDN、IPv4 或 IPv6';
+    return t('pages.k8s.forms.endpointslice.yaml.addressTypeInvalid');
   }
   if (!Array.isArray(resource.endpoints) || resource.endpoints.length === 0) {
-    return 'YAML endpoints 必须至少包含一个端点';
+    return t('pages.k8s.forms.endpointslice.yaml.endpointsRequired');
   }
 
   for (const [index, endpoint] of resource.endpoints.entries()) {
-    const endpointError = validateYamlEndpoint(endpoint, addressType, index);
+    const endpointError = validateYamlEndpoint(endpoint, addressType, index, t);
     if (endpointError) {
       return endpointError;
     }
   }
 
-  return validateYamlPorts(resource.ports);
+  return validateYamlPorts(resource.ports, t);
 };
 
 /** 清单里的 metadata.namespace（没有时为空串） */

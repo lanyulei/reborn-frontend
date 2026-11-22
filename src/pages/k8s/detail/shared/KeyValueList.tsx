@@ -1,6 +1,7 @@
 import { Empty, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
+import { useT } from '@/utils/i18n';
 
 const defaultItemBackgroundColor = 'rgba(0, 0, 0, 0.03)';
 
@@ -86,10 +87,13 @@ const KeyValueList = ({
   data,
   items,
   itemBackgroundColor = defaultItemBackgroundColor,
-  keyLabel = '键:',
+  keyLabel: keyLabelProp,
   keyTextColor,
-  valueLabel = '值:',
+  valueLabel: valueLabelProp,
 }: KeyValueListProps) => {
+  const t = useT();
+  const keyLabel = keyLabelProp ?? t('pages.k8s.detail.keyLabel');
+  const valueLabel = valueLabelProp ?? t('pages.k8s.detail.valueLabel');
   const { styles } = useStyles();
   const list = getItems(data, items);
   const showKeyLabel = hasLabel(keyLabel);

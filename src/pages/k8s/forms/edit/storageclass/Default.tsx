@@ -5,6 +5,7 @@
 import { Alert, Button, Modal, Spin } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import type { EditFormProps } from '../../shared/edit';
 import { EditSubmit, useEditObject } from '../../shared/edit';
 import { GVRS, listRows, toYaml } from '../../shared/kube';
@@ -38,6 +39,7 @@ const StorageClassDefaultModal = ({
   onDone,
 }: EditFormProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { object, resourceVersion, loading, error, reload } = useEditObject(
     clusterId,
     target,
@@ -48,7 +50,9 @@ const StorageClassDefaultModal = ({
   const [pending, setPending] = useState<string>();
   const isDefault = isDefaultStorageClass(object);
   const name = target.name || '';
-  const title = isDefault ? '取消默认存储类' : '设为默认存储类';
+  const title = isDefault
+    ? t('pages.k8s.forms.edit.storageclass.default.unset.title')
+    : t('pages.k8s.forms.edit.storageclass.default.set.title');
 
   useEffect(() => {
     if (!object) {
@@ -78,7 +82,7 @@ const StorageClassDefaultModal = ({
         keyboard={false}
         mask={{ closable: false }}
         okButtonProps={{ disabled: !object || loading }}
-        okText="确定"
+        okText={t('common.action.confirm')}
         open
         title={title}
         width={520}
@@ -95,7 +99,7 @@ const StorageClassDefaultModal = ({
               <Alert
                 action={
                   <Button size="small" onClick={reload}>
-                    重试
+                    {t('pages.k8s.table.retry')}
                   </Button>
                 }
                 className={styles.notice}
@@ -108,7 +112,11 @@ const StorageClassDefaultModal = ({
               <Alert
                 className={styles.notice}
                 showIcon
-                title={`已有默认存储类：${otherDefaults.join('、')}。同时存在多个默认存储类时，未指定存储类的持久卷声明将使用最新创建的那个，建议先取消原有的默认存储类。`}
+                title={t('pages.k8s.forms.edit.storageclass.default.others', {
+                  names: otherDefaults.join(
+                    t('pages.k8s.forms.storageclass.listSeparator'),
+                  ),
+                })}
                 type="warning"
               />
             )}
@@ -116,19 +124,25 @@ const StorageClassDefaultModal = ({
               (isDefault ? (
                 <>
                   <div className={styles.text}>
-                    确定取消存储类 {name} 的默认设置吗？
+                    {t(
+                      'pages.k8s.forms.edit.storageclass.default.unset.confirm',
+                      { name },
+                    )}
                   </div>
                   <div className={styles.hint}>
-                    取消后，未指定存储类的持久卷声明将不再使用它；已创建的持久卷声明不受影响。
+                    {t('pages.k8s.forms.edit.storageclass.default.unset.hint')}
                   </div>
                 </>
               ) : (
                 <>
                   <div className={styles.text}>
-                    确定将存储类 {name} 设为默认存储类吗？
+                    {t(
+                      'pages.k8s.forms.edit.storageclass.default.set.confirm',
+                      { name },
+                    )}
                   </div>
                   <div className={styles.hint}>
-                    设置后，未指定存储类的持久卷声明将使用它；已创建的持久卷声明不受影响。
+                    {t('pages.k8s.forms.edit.storageclass.default.set.hint')}
                   </div>
                 </>
               ))}

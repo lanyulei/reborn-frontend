@@ -380,7 +380,8 @@ const RouteList: React.FC = () => {
       {/* 收件策略：仅邮件渠道依赖固定收件人/订阅者解析收件地址；Webhook 以实例 URL、
           群机器人以实例绑定群为隐含收件，可整组留空（与后端按渠道类型的校验一致） */}
       <ProFormDependency name={['recipientSubscription', 'channelIds']}>
-        {({ recipientSubscription, channelIds }) => {
+        {({ channelIds }) => {
+          // 仅用于占位提示：渠道列表取不到时判断不可靠，收件人是否必填以后端按渠道类型的校验为准
           const needsRecipient = (
             (channelIds as string[] | undefined) ?? []
           ).some(
@@ -408,17 +409,6 @@ const RouteList: React.FC = () => {
                 {
                   validator: (_, value?: string[]) => {
                     const list = value ?? [];
-                    if (
-                      needsRecipient &&
-                      !list.length &&
-                      !recipientSubscription
-                    ) {
-                      return Promise.reject(
-                        new Error(
-                          t('pages.notify.route.form.recipientFixed.required'),
-                        ),
-                      );
-                    }
                     if (list.length > 100) {
                       return Promise.reject(
                         new Error(

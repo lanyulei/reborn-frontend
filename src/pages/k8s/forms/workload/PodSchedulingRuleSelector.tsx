@@ -9,6 +9,7 @@ import type { NamePath } from 'antd/es/form/interface';
 import { createStyles } from 'antd-style';
 import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import { fetchObject, GVRS, listNames } from '../shared/kube';
 import CreatableSelect from './CreatableSelect';
 import { useWizardScope } from './context';
@@ -159,60 +160,62 @@ const useStyles = createStyles(({ token }) => ({
 }));
 
 const schedulingRuleOptions: {
-  title: string;
+  titleId: string;
   value: PodSchedulingRuleType;
-  description: string;
+  descriptionId: string;
 }[] = [
   {
-    title: '默认规则',
+    titleId: 'pages.k8s.forms.workload.scheduling.default',
     value: 'default',
-    description: '按照默认的规则将容器组副本调度到节点。',
+    descriptionId: 'pages.k8s.forms.workload.scheduling.default.description',
   },
   {
-    title: '分散调度',
+    titleId: 'pages.k8s.forms.workload.scheduling.spread',
     value: 'spread',
-    description: '尽可能将容器组副本调度到不同的节点上。',
+    descriptionId: 'pages.k8s.forms.workload.scheduling.spread.description',
   },
   {
-    title: '集中调度',
+    titleId: 'pages.k8s.forms.workload.scheduling.centralized',
     value: 'centralized',
-    description: '尽可能将容器组副本调度到同一节点上。',
+    descriptionId:
+      'pages.k8s.forms.workload.scheduling.centralized.description',
   },
   {
-    title: '自定义规则',
+    titleId: 'pages.k8s.forms.workload.scheduling.custom',
     value: 'custom',
-    description: '按照自定义的规则将容器组副本调度到节点。',
+    descriptionId: 'pages.k8s.forms.workload.scheduling.custom.description',
   },
 ];
 
 const customTypeOptions = [
   {
-    label: '与目标调度到一起',
+    labelId: 'pages.k8s.forms.workload.scheduling.type.affinity',
     value: 'affinity',
   },
   {
-    label: '远离目标调度',
+    labelId: 'pages.k8s.forms.workload.scheduling.type.antiAffinity',
     value: 'antiAffinity',
   },
 ];
 
 const customStrategyOptions = [
   {
-    label: '尽可能匹配',
+    labelId: 'pages.k8s.forms.workload.scheduling.strategy.preferred',
     value: 'preferred',
   },
   {
-    label: '必须匹配',
+    labelId: 'pages.k8s.forms.workload.scheduling.strategy.must',
     value: 'required',
   },
 ];
 
 const PodSchedulingRuleSelector = ({
-  label = '容器组调度规则',
+  label,
   marginTop,
   name = 'podSchedulingRule',
 }: PodSchedulingRuleSelectorProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const form = Form.useFormInstance();
   const [open, setOpen] = useState(false);
   const { clusterId, namespace } = useWizardScope();
@@ -323,8 +326,10 @@ const PodSchedulingRuleSelector = ({
       }
     >
       <span>
-        <span className={styles.ruleTitle}>{option.title}</span>
-        <span className={styles.ruleDescription}>{option.description}</span>
+        <span className={styles.ruleTitle}>{t(option.titleId)}</span>
+        <span className={styles.ruleDescription}>
+          {t(option.descriptionId)}
+        </span>
       </span>
       {showArrow && (
         <span className={styles.ruleArrow}>
@@ -340,8 +345,8 @@ const PodSchedulingRuleSelector = ({
       style={marginTop !== undefined ? { marginTop } : undefined}
     >
       <div className={styles.schedulingLabel}>
-        <span>{label}</span>
-        <Tooltip title="设置容器组副本调度到节点的规则">
+        <span>{label ?? t('pages.k8s.forms.workload.scheduling.label')}</span>
+        <Tooltip title={t('pages.k8s.forms.workload.scheduling.tip')}>
           <QuestionCircleOutlined className={styles.schedulingHelpIcon} />
         </Tooltip>
       </div>
@@ -360,7 +365,9 @@ const PodSchedulingRuleSelector = ({
       </div>
       {schedulingRule === 'custom' && (
         <div className={styles.customRule}>
-          <div className={styles.customRuleLabel}>自定义规则</div>
+          <div className={styles.customRuleLabel}>
+            {t('pages.k8s.forms.workload.scheduling.custom')}
+          </div>
           <Form.List name="podSchedulingCustomRules">
             {(fields, { add, remove }) => (
               <>
@@ -368,44 +375,77 @@ const PodSchedulingRuleSelector = ({
                   <div className={styles.customRuleRow} key={field.key}>
                     <Form.Item
                       name={[field.name, 'type']}
-                      rules={[{ required: true, message: '请选择类型' }]}
+                      rules={[
+                        {
+                          required: true,
+                          message: t('pages.k8s.forms.common.type.required'),
+                        },
+                      ]}
                       style={{ marginBottom: 0 }}
                     >
                       <Select
-                        options={customTypeOptions}
+                        options={customTypeOptions.map((option) => ({
+                          label: t(option.labelId),
+                          value: option.value,
+                        }))}
                         showSearch={{ optionFilterProp: 'label' }}
-                        placeholder="请选择类型"
+                        placeholder={t('pages.k8s.forms.common.type.required')}
                       />
                     </Form.Item>
                     <Form.Item
                       name={[field.name, 'strategy']}
-                      rules={[{ required: true, message: '请选择策略' }]}
+                      rules={[
+                        {
+                          required: true,
+                          message: t(
+                            'pages.k8s.forms.workload.scheduling.strategy.required',
+                          ),
+                        },
+                      ]}
                       style={{ marginBottom: 0 }}
                     >
                       <Select
-                        options={customStrategyOptions}
+                        options={customStrategyOptions.map((option) => ({
+                          label: t(option.labelId),
+                          value: option.value,
+                        }))}
                         showSearch={{ optionFilterProp: 'label' }}
-                        placeholder="请选择策略"
+                        placeholder={t(
+                          'pages.k8s.forms.workload.scheduling.strategy.required',
+                        )}
                       />
                     </Form.Item>
                     <Form.Item
                       name={[field.name, 'target']}
-                      rules={[{ required: true, message: '请选择目标' }]}
+                      rules={[
+                        {
+                          required: true,
+                          message: t(
+                            'pages.k8s.forms.workload.scheduling.target.required',
+                          ),
+                        },
+                      ]}
                       style={{ marginBottom: 0 }}
                     >
                       <CreatableSelect
                         disabled={!namespace}
                         items={targetNames}
                         loading={deploymentLoading}
-                        notFoundContent="暂无目标"
-                        placeholder="请选择目标"
+                        notFoundContent={t(
+                          'pages.k8s.forms.workload.scheduling.target.empty',
+                        )}
+                        placeholder={t(
+                          'pages.k8s.forms.workload.scheduling.target.required',
+                        )}
                         onChange={(targetValue) =>
                           selectTargetDeployment(targetValue, field.name)
                         }
                       />
                     </Form.Item>
                     <Button
-                      aria-label="清空自定义调度规则"
+                      aria-label={t(
+                        'pages.k8s.forms.workload.scheduling.clearRule',
+                      )}
                       className={styles.deleteButton}
                       icon={<DeleteOutlined />}
                       type="text"
@@ -422,7 +462,7 @@ const PodSchedulingRuleSelector = ({
                     disabled={customRuleAddDisabled}
                     onClick={() => add(createEmptyCustomRule())}
                   >
-                    添加
+                    {t('pages.k8s.form.add')}
                   </Button>
                 </div>
               </>

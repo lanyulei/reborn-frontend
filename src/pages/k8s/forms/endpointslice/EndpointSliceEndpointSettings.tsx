@@ -2,6 +2,9 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 import { App, Button, Col, Form, Input, Row, Select } from 'antd';
 import { createStyles } from 'antd-style';
+import { useMemo } from 'react';
+import type { Translate } from '@/utils/i18n';
+import { useT } from '@/utils/i18n';
 import CollapsibleField from '../shared/CollapsibleField';
 import ResourceFormSection from '../shared/ResourceFormSection';
 import StringListEditor from '../shared/StringListEditor';
@@ -121,23 +124,19 @@ const useStyles = createStyles(({ token }) => ({
   },
 }));
 
-const CONDITION_OPTIONS: {
-  label: string;
-  value: EndpointSliceConditionValue;
-}[] = [
-  { label: '不输出', value: 'unset' },
-  { label: '是', value: 'true' },
-  { label: '否', value: 'false' },
-];
-
-const getAddressPlaceholder = (addressType?: EndpointSliceAddressType) => {
+const getAddressPlaceholder = (
+  addressType: EndpointSliceAddressType | undefined,
+  t: Translate,
+) => {
   if (addressType === 'FQDN') {
-    return '例如 api.example.local';
+    return t('pages.k8s.forms.endpointslice.example', {
+      value: 'api.example.local',
+    });
   }
   if (addressType === 'IPv6') {
-    return '例如 fd00::10';
+    return t('pages.k8s.forms.endpointslice.example', { value: 'fd00::10' });
   }
-  return '例如 10.0.0.10';
+  return t('pages.k8s.forms.endpointslice.example', { value: '10.0.0.10' });
 };
 
 const getDefaultAddress = (addressType?: EndpointSliceAddressType) => {
@@ -161,7 +160,21 @@ const EndpointSliceEndpointSettings = ({
   nodeNames,
 }: EndpointSliceEndpointSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
+  const conditionOptions = useMemo<
+    { label: string; value: EndpointSliceConditionValue }[]
+  >(
+    () => [
+      {
+        label: t('pages.k8s.forms.endpointslice.condition.unset'),
+        value: 'unset',
+      },
+      { label: t('pages.k8s.forms.common.yes'), value: 'true' },
+      { label: t('pages.k8s.forms.common.no'), value: 'false' },
+    ],
+    [t],
+  );
   // 地址类型在「基本信息」步骤，本步骤未挂载该表单项：需 preserve 才能读到
   const addressType = Form.useWatch('addressType', { form, preserve: true });
   const endpoints =
@@ -173,8 +186,8 @@ const EndpointSliceEndpointSettings = ({
   return (
     <ResourceFormSection
       bordered={false}
-      description="至少填写一个端点地址，格式需匹配地址类型。"
-      title="端点"
+      description={t('pages.k8s.forms.endpointslice.endpoints.description')}
+      title={t('pages.k8s.forms.endpointslice.endpoints')}
     >
       <div className={styles.unframedContent}>
         <Form.List
@@ -189,7 +202,9 @@ const EndpointSliceEndpointSettings = ({
                 ) {
                   return;
                 }
-                throw new Error('请至少添加一个端点地址');
+                throw new Error(
+                  t('pages.k8s.forms.endpointslice.endpoints.addressRequired'),
+                );
               },
             },
           ]}
@@ -201,10 +216,14 @@ const EndpointSliceEndpointSettings = ({
                   <div className={styles.endpointCard} key={field.key}>
                     <div className={styles.endpointHeader}>
                       <div className={styles.endpointTitle}>
-                        端点 {index + 1}
+                        {t('pages.k8s.forms.endpointslice.endpoint.title', {
+                          index: index + 1,
+                        })}
                       </div>
                       <Button
-                        aria-label="删除端点"
+                        aria-label={t(
+                          'pages.k8s.forms.endpointslice.endpoint.delete',
+                        )}
                         className={styles.deleteButton}
                         disabled={fields.length <= 1}
                         icon={<DeleteOutlined />}
@@ -215,20 +234,34 @@ const EndpointSliceEndpointSettings = ({
 
                     <div>
                       <div className={styles.fieldSectionHeader}>
-                        <div className={styles.fieldSectionTitle}>地址配置</div>
+                        <div className={styles.fieldSectionTitle}>
+                          {t(
+                            'pages.k8s.forms.endpointslice.endpoint.addresses',
+                          )}
+                        </div>
                       </div>
                       <Form.Item
-                        extra="格式需匹配 IPv4、IPv6 或 FQDN。"
+                        extra={t(
+                          'pages.k8s.forms.endpointslice.endpoint.addresses.extra',
+                        )}
                         name={[field.name, 'addresses']}
                       >
                         <StringListEditor
-                          addText="添加地址"
-                          deleteAriaLabel="删除地址"
+                          addText={t(
+                            'pages.k8s.forms.endpointslice.endpoint.addresses.add',
+                          )}
+                          deleteAriaLabel={t(
+                            'pages.k8s.forms.endpointslice.endpoint.addresses.delete',
+                          )}
                           minRows={1}
-                          placeholder={getAddressPlaceholder(addressType)}
+                          placeholder={getAddressPlaceholder(addressType, t)}
                           surface
                           onAddBlocked={() =>
-                            message.warning('请先填写已有地址')
+                            message.warning(
+                              t(
+                                'pages.k8s.forms.endpointslice.endpoint.addresses.fillFirst',
+                              ),
+                            )
                           }
                           onCreateItem={() => createStringListItem()}
                         />
@@ -237,44 +270,74 @@ const EndpointSliceEndpointSettings = ({
 
                     <div className={styles.separatedFieldSection}>
                       <div className={styles.fieldSectionHeader}>
-                        <div className={styles.fieldSectionTitle}>位置标识</div>
+                        <div className={styles.fieldSectionTitle}>
+                          {t('pages.k8s.forms.endpointslice.endpoint.location')}
+                        </div>
                       </div>
                       <Row gutter={16}>
                         <Col md={8} xs={24}>
                           <Form.Item
-                            label="主机名"
+                            label={t(
+                              'pages.k8s.forms.endpointslice.endpoint.hostname',
+                            )}
                             name={[field.name, 'hostname']}
                             rules={[
-                              { max: 63, message: '主机名最长 63 个字符' },
+                              {
+                                max: 63,
+                                message: t(
+                                  'pages.k8s.forms.endpointslice.endpoint.hostname.maxLength',
+                                ),
+                              },
                             ]}
                           >
-                            <Input placeholder="可选" />
+                            <Input placeholder={t('common.optional')} />
                           </Form.Item>
                         </Col>
                         <Col md={8} xs={24}>
                           <Form.Item
-                            label="节点名称"
+                            label={t(
+                              'pages.k8s.forms.endpointslice.endpoint.nodeName',
+                            )}
                             name={[field.name, 'nodeName']}
                             rules={[
-                              { max: 253, message: '节点名称最长 253 个字符' },
+                              {
+                                max: 253,
+                                message: t(
+                                  'pages.k8s.forms.endpointslice.endpoint.nodeName.maxLength',
+                                ),
+                              },
                             ]}
                           >
                             <CreatableSelect
                               allowClear
                               names={nodeNames}
-                              placeholder="可选"
+                              placeholder={t('common.optional')}
                             />
                           </Form.Item>
                         </Col>
                         <Col md={8} xs={24}>
                           <Form.Item
-                            label="可用区"
+                            label={t(
+                              'pages.k8s.forms.endpointslice.endpoint.zone',
+                            )}
                             name={[field.name, 'zone']}
                             rules={[
-                              { max: 63, message: '可用区最长 63 个字符' },
+                              {
+                                max: 63,
+                                message: t(
+                                  'pages.k8s.forms.endpointslice.endpoint.zone.maxLength',
+                                ),
+                              },
                             ]}
                           >
-                            <Input placeholder="例如 cn-shanghai-a" />
+                            <Input
+                              placeholder={t(
+                                'pages.k8s.forms.endpointslice.example',
+                                {
+                                  value: 'cn-shanghai-a',
+                                },
+                              )}
+                            />
                           </Form.Item>
                         </Col>
                       </Row>
@@ -284,19 +347,27 @@ const EndpointSliceEndpointSettings = ({
                       <CollapsibleField
                         contentClassName={styles.advancedCollapseContent}
                         defaultOpen={false}
-                        description="条件、目标引用、流量提示。"
-                        title="高级端点字段"
+                        description={t(
+                          'pages.k8s.forms.endpointslice.endpoint.advanced.description',
+                        )}
+                        title={t(
+                          'pages.k8s.forms.endpointslice.endpoint.advanced',
+                        )}
                       >
                         <div className={styles.advancedContent}>
                           <div className={styles.advancedSection}>
-                            <div className={styles.sectionTitle}>端点条件</div>
+                            <div className={styles.sectionTitle}>
+                              {t(
+                                'pages.k8s.forms.endpointslice.endpoint.conditions',
+                              )}
+                            </div>
                             <Row gutter={[16, 8]}>
                               <Col md={8} xs={24}>
                                 <Form.Item
                                   label="Ready"
                                   name={[field.name, 'ready']}
                                 >
-                                  <Select options={CONDITION_OPTIONS} />
+                                  <Select options={conditionOptions} />
                                 </Form.Item>
                               </Col>
                               <Col md={8} xs={24}>
@@ -304,7 +375,7 @@ const EndpointSliceEndpointSettings = ({
                                   label="Serving"
                                   name={[field.name, 'serving']}
                                 >
-                                  <Select options={CONDITION_OPTIONS} />
+                                  <Select options={conditionOptions} />
                                 </Form.Item>
                               </Col>
                               <Col md={8} xs={24}>
@@ -312,85 +383,118 @@ const EndpointSliceEndpointSettings = ({
                                   label="Terminating"
                                   name={[field.name, 'terminating']}
                                 >
-                                  <Select options={CONDITION_OPTIONS} />
+                                  <Select options={conditionOptions} />
                                 </Form.Item>
                               </Col>
                             </Row>
                           </div>
 
                           <div className={styles.advancedSection}>
-                            <div className={styles.sectionTitle}>目标引用</div>
+                            <div className={styles.sectionTitle}>
+                              {t(
+                                'pages.k8s.forms.endpointslice.endpoint.targetRef',
+                              )}
+                            </div>
                             <Row gutter={[16, 13]}>
                               <Col md={8} xs={24}>
                                 <Form.Item
-                                  label="API 版本"
+                                  label={t(
+                                    'pages.k8s.forms.endpointslice.endpoint.targetRef.apiVersion',
+                                  )}
                                   name={[field.name, 'targetRef', 'apiVersion']}
                                   rules={[
                                     {
                                       max: 100,
-                                      message: 'API 版本最长 100 个字符',
+                                      message: t(
+                                        'pages.k8s.forms.endpointslice.endpoint.targetRef.apiVersion.maxLength',
+                                      ),
                                     },
                                   ]}
                                 >
-                                  <Input placeholder="例如 v1" />
+                                  <Input
+                                    placeholder={t(
+                                      'pages.k8s.forms.endpointslice.example',
+                                      { value: 'v1' },
+                                    )}
+                                  />
                                 </Form.Item>
                               </Col>
                               <Col md={8} xs={24}>
                                 <Form.Item
-                                  label="类型"
+                                  label={t('pages.k8s.forms.common.type')}
                                   name={[field.name, 'targetRef', 'kind']}
                                   rules={[
-                                    { max: 63, message: '类型最长 63 个字符' },
+                                    {
+                                      max: 63,
+                                      message: t(
+                                        'pages.k8s.forms.endpointslice.endpoint.targetRef.kind.maxLength',
+                                      ),
+                                    },
                                   ]}
                                 >
-                                  <Input placeholder="例如 Pod" />
+                                  <Input
+                                    placeholder={t(
+                                      'pages.k8s.forms.endpointslice.example',
+                                      { value: 'Pod' },
+                                    )}
+                                  />
                                 </Form.Item>
                               </Col>
                               <Col md={8} xs={24}>
                                 <Form.Item
-                                  label="名称"
+                                  label={t('pages.k8s.forms.common.name')}
                                   name={[field.name, 'targetRef', 'name']}
                                   rules={[
                                     {
                                       max: 253,
-                                      message: '名称最长 253 个字符',
+                                      message: t(
+                                        'pages.k8s.forms.common.name.maxLength253',
+                                      ),
                                     },
                                   ]}
                                 >
-                                  <Input placeholder="可选" />
+                                  <Input placeholder={t('common.optional')} />
                                 </Form.Item>
                               </Col>
                               <Col md={8} xs={24}>
                                 <Form.Item
-                                  label="命名空间"
+                                  label={t('pages.k8s.forms.common.namespace')}
                                   name={[field.name, 'targetRef', 'namespace']}
                                   rules={[
                                     {
                                       max: 63,
-                                      message: '命名空间最长 63 个字符',
+                                      message: t(
+                                        'pages.k8s.forms.endpointslice.endpoint.targetRef.namespace.maxLength',
+                                      ),
                                     },
                                   ]}
                                 >
-                                  <Input placeholder="可选" />
+                                  <Input placeholder={t('common.optional')} />
                                 </Form.Item>
                               </Col>
                               <Col md={8} xs={24}>
                                 <Form.Item
-                                  label="字段路径"
+                                  label={t(
+                                    'pages.k8s.forms.endpointslice.endpoint.targetRef.fieldPath',
+                                  )}
                                   name={[field.name, 'targetRef', 'fieldPath']}
                                   rules={[
                                     {
                                       max: 250,
-                                      message: '字段路径最长 250 个字符',
+                                      message: t(
+                                        'pages.k8s.forms.endpointslice.endpoint.targetRef.fieldPath.maxLength',
+                                      ),
                                     },
                                   ]}
                                 >
-                                  <Input placeholder="可选" />
+                                  <Input placeholder={t('common.optional')} />
                                 </Form.Item>
                               </Col>
                               <Col md={8} xs={24}>
                                 <Form.Item
-                                  label="资源版本"
+                                  label={t(
+                                    'pages.k8s.forms.endpointslice.endpoint.targetRef.resourceVersion',
+                                  )}
                                   name={[
                                     field.name,
                                     'targetRef',
@@ -399,11 +503,13 @@ const EndpointSliceEndpointSettings = ({
                                   rules={[
                                     {
                                       max: 100,
-                                      message: '资源版本最长 100 个字符',
+                                      message: t(
+                                        'pages.k8s.forms.endpointslice.endpoint.targetRef.resourceVersion.maxLength',
+                                      ),
                                     },
                                   ]}
                                 >
-                                  <Input placeholder="可选" />
+                                  <Input placeholder={t('common.optional')} />
                                 </Form.Item>
                               </Col>
                               <Col span={24}>
@@ -413,31 +519,49 @@ const EndpointSliceEndpointSettings = ({
                                   rules={[
                                     {
                                       max: 100,
-                                      message: 'UID 最长 100 个字符',
+                                      message: t(
+                                        'pages.k8s.forms.endpointslice.endpoint.targetRef.uid.maxLength',
+                                      ),
                                     },
                                   ]}
                                 >
-                                  <Input placeholder="可选" />
+                                  <Input placeholder={t('common.optional')} />
                                 </Form.Item>
                               </Col>
                             </Row>
                           </div>
 
                           <div className={styles.advancedSection}>
-                            <div className={styles.sectionTitle}>流量提示</div>
+                            <div className={styles.sectionTitle}>
+                              {t(
+                                'pages.k8s.forms.endpointslice.endpoint.hints',
+                              )}
+                            </div>
                             <Row gutter={[16, 8]}>
                               <Col md={12} xs={24}>
                                 <Form.Item
-                                  label="节点提示"
+                                  label={t(
+                                    'pages.k8s.forms.endpointslice.endpoint.hints.forNodes',
+                                  )}
                                   name={[field.name, 'forNodes']}
                                 >
                                   <StringListEditor
-                                    addText="添加节点"
-                                    deleteAriaLabel="删除节点"
+                                    addText={t(
+                                      'pages.k8s.forms.endpointslice.endpoint.hints.forNodes.add',
+                                    )}
+                                    deleteAriaLabel={t(
+                                      'pages.k8s.forms.endpointslice.endpoint.hints.forNodes.delete',
+                                    )}
                                     minRows={1}
-                                    placeholder="节点名称"
+                                    placeholder={t(
+                                      'pages.k8s.forms.endpointslice.endpoint.nodeName',
+                                    )}
                                     onAddBlocked={() =>
-                                      message.warning('请先填写已有节点名称')
+                                      message.warning(
+                                        t(
+                                          'pages.k8s.forms.endpointslice.endpoint.hints.forNodes.fillFirst',
+                                        ),
+                                      )
                                     }
                                     onCreateItem={() => createStringListItem()}
                                   />
@@ -445,16 +569,28 @@ const EndpointSliceEndpointSettings = ({
                               </Col>
                               <Col md={12} xs={24}>
                                 <Form.Item
-                                  label="可用区提示"
+                                  label={t(
+                                    'pages.k8s.forms.endpointslice.endpoint.hints.forZones',
+                                  )}
                                   name={[field.name, 'forZones']}
                                 >
                                   <StringListEditor
-                                    addText="添加可用区"
-                                    deleteAriaLabel="删除可用区"
+                                    addText={t(
+                                      'pages.k8s.forms.endpointslice.endpoint.hints.forZones.add',
+                                    )}
+                                    deleteAriaLabel={t(
+                                      'pages.k8s.forms.endpointslice.endpoint.hints.forZones.delete',
+                                    )}
                                     minRows={1}
-                                    placeholder="可用区名称"
+                                    placeholder={t(
+                                      'pages.k8s.forms.endpointslice.endpoint.hints.forZones.placeholder',
+                                    )}
                                     onAddBlocked={() =>
-                                      message.warning('请先填写已有可用区名称')
+                                      message.warning(
+                                        t(
+                                          'pages.k8s.forms.endpointslice.endpoint.hints.forZones.fillFirst',
+                                        ),
+                                      )
                                     }
                                     onCreateItem={() => createStringListItem()}
                                   />
@@ -492,7 +628,7 @@ const EndpointSliceEndpointSettings = ({
                     }
                   }}
                 >
-                  添加端点
+                  {t('pages.k8s.forms.endpointslice.endpoint.add')}
                 </Button>
               </div>
             </>

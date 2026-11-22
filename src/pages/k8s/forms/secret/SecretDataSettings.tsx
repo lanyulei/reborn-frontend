@@ -1,7 +1,9 @@
 import type { FormInstance } from 'antd';
 import { Alert, Col, Form, Input, Row, Select, Space } from 'antd';
 import { createStyles } from 'antd-style';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import type { Translate } from '@/utils/i18n';
+import { useT } from '@/utils/i18n';
 import {
   createSecretDataItem,
   DOCKER_CONFIG_JSON_KEY,
@@ -77,16 +79,23 @@ type SecretDataSettingsProps = {
 const hasDataItems = (items?: SecretDataItem[]) =>
   (items || []).some((item) => item.keyName.trim());
 
-const validateDefaultData = (_: unknown, items?: SecretDataItem[]) => {
+const validateDefaultData = (
+  items: SecretDataItem[] | undefined,
+  t: Translate,
+) => {
   const normalizedKeys = (items || [])
     .map((item) => item.keyName.trim())
     .filter(Boolean);
 
   if (!hasDataItems(items)) {
-    return Promise.reject(new Error('请添加至少一条数据'));
+    return Promise.reject(
+      new Error(t('pages.k8s.forms.secret.data.atLeastOne')),
+    );
   }
   if (new Set(normalizedKeys).size !== normalizedKeys.length) {
-    return Promise.reject(new Error('数据键不能重复'));
+    return Promise.reject(
+      new Error(t('pages.k8s.forms.common.dataKeyDuplicate')),
+    );
   }
 
   return Promise.resolve();
@@ -109,6 +118,15 @@ const hasText = (value?: string) => Boolean(value?.trim());
 
 const CreateSecretDataSettings = ({ form }: SecretDataSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
+  const typeOptions = useMemo(
+    () =>
+      secretTypeOptions.map((option) => ({
+        label: t(option.labelId),
+        value: option.value,
+      })),
+    [t],
+  );
   const type = Form.useWatch('type', { form, preserve: true }) || 'Opaque';
   const registryProtocol = Form.useWatch('registryProtocol', {
     form,
@@ -211,9 +229,14 @@ const CreateSecretDataSettings = ({ form }: SecretDataSettingsProps) => {
   const renderDefaultData = () => (
     <Form.Item
       className={styles.dataField}
-      label="数据"
+      label={t('pages.k8s.forms.common.data')}
       name="dataItems"
-      rules={[{ validator: validateDefaultData }]}
+      rules={[
+        {
+          validator: (_: unknown, items?: SecretDataItem[]) =>
+            validateDefaultData(items, t),
+        },
+      ]}
       required
     >
       <SecretDataEditor />
@@ -223,22 +246,32 @@ const CreateSecretDataSettings = ({ form }: SecretDataSettingsProps) => {
   const renderTlsFields = () => (
     <div className={styles.compactField}>
       <Form.Item
-        label="证书"
+        label={t('pages.k8s.forms.secret.certificate')}
         name="tlsCertificate"
-        rules={[{ required: true, message: '请输入证书' }]}
+        rules={[
+          {
+            required: true,
+            message: t('pages.k8s.forms.secret.certificate.required'),
+          },
+        ]}
       >
         <TextArea
-          placeholder="请输入证书"
+          placeholder={t('pages.k8s.forms.secret.certificate.required')}
           autoSize={{ minRows: 6, maxRows: 10 }}
         />
       </Form.Item>
       <Form.Item
-        label="私钥"
+        label={t('pages.k8s.forms.secret.privateKey')}
         name="tlsPrivateKey"
-        rules={[{ required: true, message: '请输入私钥' }]}
+        rules={[
+          {
+            required: true,
+            message: t('pages.k8s.forms.secret.privateKey.required'),
+          },
+        ]}
       >
         <TextArea
-          placeholder="请输入私钥"
+          placeholder={t('pages.k8s.forms.secret.privateKey.required')}
           autoSize={{ minRows: 6, maxRows: 10 }}
         />
       </Form.Item>
@@ -250,8 +283,8 @@ const CreateSecretDataSettings = ({ form }: SecretDataSettingsProps) => {
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            extra="设置镜像服务地址，例如 docker.io。"
-            label="镜像服务地址"
+            extra={t('pages.k8s.forms.secret.registryAddress.extra')}
+            label={t('pages.k8s.forms.secret.registryAddress')}
             required
           >
             <Space.Compact block className={styles.compactInput}>
@@ -265,11 +298,20 @@ const CreateSecretDataSettings = ({ form }: SecretDataSettingsProps) => {
               <Form.Item
                 name="registryAddress"
                 noStyle
-                rules={[{ required: true, message: '请输入镜像服务地址' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t(
+                      'pages.k8s.forms.secret.registryAddress.required',
+                    ),
+                  },
+                ]}
               >
                 <Input
                   className={styles.compactInputValue}
-                  placeholder="例如 docker.io"
+                  placeholder={t(
+                    'pages.k8s.forms.secret.registryAddress.placeholder',
+                  )}
                 />
               </Form.Item>
             </Space.Compact>
@@ -277,40 +319,59 @@ const CreateSecretDataSettings = ({ form }: SecretDataSettingsProps) => {
         </Col>
         <Col span={12}>
           <Form.Item
-            label="用户名"
+            label={t('pages.k8s.forms.common.username')}
             name="registryUsername"
-            rules={[{ required: true, message: '请输入用户名' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.username.required'),
+              },
+            ]}
           >
-            <Input placeholder="请输入用户名" />
+            <Input
+              placeholder={t('pages.k8s.forms.common.username.required')}
+            />
           </Form.Item>
         </Col>
       </Row>
       <Row gutter={16}>
         <Col span={12}>
-          <Form.Item label="邮箱" name="registryEmail">
-            <Input placeholder="请输入邮箱" />
+          <Form.Item
+            label={t('pages.k8s.forms.secret.email')}
+            name="registryEmail"
+          >
+            <Input
+              placeholder={t('pages.k8s.forms.secret.email.placeholder')}
+            />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
-            label="密码"
+            label={t('pages.k8s.forms.common.password')}
             name="registryPassword"
-            rules={[{ required: true, message: '请输入密码' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.password.required'),
+              },
+            ]}
           >
-            <Password placeholder="请输入密码" />
+            <Password
+              placeholder={t('pages.k8s.forms.common.password.required')}
+            />
           </Form.Item>
         </Col>
       </Row>
       {showRegistryAlert && (
         <Alert
           showIcon={false}
-          title="请设置镜像服务地址、用户名和密码。"
+          title={t('pages.k8s.forms.secret.registry.incomplete')}
           type="error"
         />
       )}
       <Form.Item
         className={styles.dataField}
-        label="数据"
+        label={t('pages.k8s.forms.common.data')}
         name="dataItems"
         required
       >
@@ -322,18 +383,28 @@ const CreateSecretDataSettings = ({ form }: SecretDataSettingsProps) => {
   const renderBasicAuthFields = () => (
     <div className={styles.compactField}>
       <Form.Item
-        label="用户名"
+        label={t('pages.k8s.forms.common.username')}
         name="basicAuthUsername"
-        rules={[{ required: true, message: '请输入用户名' }]}
+        rules={[
+          {
+            required: true,
+            message: t('pages.k8s.forms.common.username.required'),
+          },
+        ]}
       >
-        <Input placeholder="请输入用户名" />
+        <Input placeholder={t('pages.k8s.forms.common.username.required')} />
       </Form.Item>
       <Form.Item
-        label="密码"
+        label={t('pages.k8s.forms.common.password')}
         name="basicAuthPassword"
-        rules={[{ required: true, message: '请输入密码' }]}
+        rules={[
+          {
+            required: true,
+            message: t('pages.k8s.forms.common.password.required'),
+          },
+        ]}
       >
-        <Password placeholder="请输入密码" />
+        <Password placeholder={t('pages.k8s.forms.common.password.required')} />
       </Form.Item>
     </div>
   );
@@ -342,11 +413,16 @@ const CreateSecretDataSettings = ({ form }: SecretDataSettingsProps) => {
     <div className={styles.settings}>
       <Form.Item
         className={styles.compactField}
-        label="类型"
+        label={t('pages.k8s.forms.common.type')}
         name="type"
-        rules={[{ required: true, message: '请选择类型' }]}
+        rules={[
+          {
+            required: true,
+            message: t('pages.k8s.forms.common.type.required'),
+          },
+        ]}
       >
-        <Select options={secretTypeOptions} onChange={handleTypeChange} />
+        <Select options={typeOptions} onChange={handleTypeChange} />
       </Form.Item>
       {type === 'kubernetes.io/tls' && renderTlsFields()}
       {type === 'kubernetes.io/dockerconfigjson' && renderRegistryFields()}

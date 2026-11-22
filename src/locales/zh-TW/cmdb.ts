@@ -553,4 +553,9 @@ export default {
   // 資源同步
   'pages.cmdb.sync.intro':
     '採集與對帳由獨立的資料面程序執行，本頁維護採集源配置、手動觸發同步並查看執行結果；憑證只寫不讀。',
+  'pages.cmdb.labelValue': '{label}：{value}',
+  'pages.cmdb.ci.option.label': '{name}（{model}）',
+  'pages.cmdb.detail.transition.cascade.failed':
+    '關聯資源影響範圍載入失敗，請謹慎操作',
+  'pages.cmdb.modelDetail.loadFailed': '模型詳情載入失敗',
 };

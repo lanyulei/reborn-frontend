@@ -1,6 +1,7 @@
 import { Form, Input, InputNumber, Select } from 'antd';
 import type { NamePath } from 'antd/es/form/interface';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 
 const SCHEME_OPTIONS = [
   { label: 'HTTP', value: 'HTTP' },
@@ -80,49 +81,72 @@ const ContainerHttpTargetFields = ({
   schemeName,
 }: ContainerHttpTargetFieldsProps) => {
   const { styles } = useStyles({ compactRow });
+  const t = useT();
 
   return (
-    <Form.Item label="路径" required>
+    <Form.Item label={t('pages.k8s.forms.workload.container.path')} required>
       <div className={styles.httpTarget}>
         <div className={styles.compactField}>
-          <span className={styles.addon}>协议</span>
+          <span className={styles.addon}>
+            {t('pages.k8s.forms.workload.container.protocol')}
+          </span>
           <Form.Item name={schemeName} noStyle>
             <Select
-              aria-label="请求协议"
+              aria-label={t(
+                'pages.k8s.forms.workload.container.http.scheme.aria',
+              )}
               options={SCHEME_OPTIONS}
-              placeholder="请选择协议"
+              placeholder={t('pages.k8s.forms.common.protocol.required')}
               style={{ width: '100%' }}
               variant="borderless"
             />
           </Form.Item>
         </div>
         <div className={styles.compactField}>
-          <span className={styles.addon}>路径</span>
+          <span className={styles.addon}>
+            {t('pages.k8s.forms.workload.container.path')}
+          </span>
           <Form.Item
             name={pathName}
             noStyle
-            rules={[{ required: true, message: '请输入路径' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.workload.container.path.required'),
+              },
+            ]}
           >
-            <Input aria-label="请求路径" placeholder="/" variant="borderless" />
+            <Input
+              aria-label={t(
+                'pages.k8s.forms.workload.container.http.path.aria',
+              )}
+              placeholder="/"
+              variant="borderless"
+            />
           </Form.Item>
         </div>
         <div className={styles.compactField}>
-          <span className={styles.addon}>端口</span>
+          <span className={styles.addon}>{t('pages.k8s.form.port')}</span>
           <Form.Item
             name={portName}
             noStyle
             rules={[
-              { required: true, message: '请输入端口' },
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.port.required'),
+              },
               {
                 type: 'number',
                 min: 1,
                 max: 65535,
-                message: '端口范围为 1-65535',
+                message: t('pages.k8s.forms.common.port.range'),
               },
             ]}
           >
             <InputNumber
-              aria-label="请求端口"
+              aria-label={t(
+                'pages.k8s.forms.workload.container.http.port.aria',
+              )}
               min={1}
               max={65535}
               placeholder="80"

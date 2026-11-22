@@ -754,6 +754,7 @@ export const ModelGraph: React.FC<{
   const token = useTheme();
   const t = useT();
   const [wrapRef, { width }] = useSize<HTMLDivElement>();
+  const hasGraph = models.length > 0;
   const [view, setView] = useState({ k: 1, x: 0, y: 0 });
   const [keyword, setKeyword] = useState('');
   const [hover, setHover] = useState<HoverTarget | null>(null);
@@ -820,7 +821,8 @@ export const ModelGraph: React.FC<{
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [wrapRef, zoomAt]);
+    // 画布容器只在有模型时渲染：随其出现 / 消失重新挂载监听
+  }, [wrapRef, zoomAt, hasGraph]);
 
   // 布局或容器变化后回到适应画布
   useEffect(() => {
@@ -964,7 +966,7 @@ export const ModelGraph: React.FC<{
     setHover({ kind: 'node', key: code });
   };
 
-  if (!models.length) {
+  if (!hasGraph) {
     return (
       <div className={styles.container}>
         <div className={styles.wrap} style={{ height }}>

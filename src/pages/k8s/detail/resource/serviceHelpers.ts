@@ -1,3 +1,4 @@
+import { t } from '@/utils/i18n';
 import { getArrayValue, getRecordValue, getStringValue } from './helpers';
 import type { ClusterServiceEndpointItem } from './types';
 
@@ -110,7 +111,7 @@ const getEndpointAddressText = (endpoint?: ClusterServiceEndpointItem) => {
   }
 
   const target = endpoint.targetName
-    ? `(${endpoint.targetKind || '目标'}: ${endpoint.targetName})`
+    ? `(${endpoint.targetKind || t('pages.k8s.detail.target')}: ${endpoint.targetName})`
     : '';
 
   return [endpoint.ip, target].filter(Boolean).join(' ');

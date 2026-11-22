@@ -469,4 +469,17 @@ export default {
   'component.icon.tag': 'Tag',
   'component.icon.home': 'Home',
   'component.icon.question': 'Inquiry',
+  'component.chat.citation': 'Knowledge #{n}',
+  'component.chat.agent.noIncident':
+    '@Agent only works on an incident page: open an incident first, then summon the ops agent.',
+  'component.chat.agent.queued':
+    'The ops agent has been summoned for this incident. It runs in the background; findings land on the incident timeline and the run is shown in the "AI analysis" tab.',
+  'component.chat.agent.existing':
+    'This incident already has a queued or running agent task; see the "AI analysis" tab for progress.',
+  'component.chat.agent.failed': 'Failed to summon the ops agent: {reason}',
+
+  // Flow designer: start / end node names (saved with the graph) and list separator
+  'component.flow.node.start': 'Start',
+  'component.flow.node.end': 'End',
+  'component.flow.separator': ', ',
 };

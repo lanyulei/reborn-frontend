@@ -64,6 +64,7 @@ export default {
   'pages.notify.channel.form.headers.add': '新增請求標頭',
   'pages.notify.channel.form.headers.key': '名稱',
   'pages.notify.channel.form.headers.value': '值',
+  'pages.notify.channel.form.headers.value.editPlaceholder': '留空保留原值',
   'pages.notify.channel.form.timeout': '出站逾時（秒）',
   'pages.notify.channel.form.timeout.tooltip': '1-10 秒；後端預設 5',
   'pages.notify.channel.form.timeout.required': '請輸入出站逾時（1-10 秒）',

@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listObjectEvents } from '@/services/k8s/resource';
 import type { K8sEvent, ResourceRef } from '@/services/k8s/typings';
+import { type Translate, useT } from '@/utils/i18n';
 import { formatTime } from '../../components/cells';
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -41,7 +42,7 @@ const useStyles = createStyles(({ token }) => ({
   },
 }));
 
-const formatRelativeTime = (value?: string) => {
+const formatRelativeTime = (t: Translate, value?: string) => {
   if (!value) {
     return '-';
   }
@@ -54,35 +55,35 @@ const formatRelativeTime = (value?: string) => {
   const diffSeconds = Math.max(0, dayjs().diff(time, 'second'));
   const diffDays = Math.floor(diffSeconds / 86400);
   if (diffDays > 0) {
-    return `${diffDays} 天前`;
+    return t('pages.k8s.detail.event.daysAgo', { count: diffDays });
   }
   const diffHours = Math.floor(diffSeconds / 3600);
   if (diffHours > 0) {
-    return `${diffHours} 小时前`;
+    return t('pages.k8s.detail.event.hoursAgo', { count: diffHours });
   }
   const diffMinutes = Math.floor(diffSeconds / 60);
   if (diffMinutes > 0) {
-    return `${diffMinutes} 分钟前`;
+    return t('pages.k8s.detail.event.minutesAgo', { count: diffMinutes });
   }
-  return '刚刚';
+  return t('pages.k8s.detail.event.justNow');
 };
 
-const getEventTypeLabel = (type?: string) => {
+const getEventTypeLabel = (t: Translate, type?: string) => {
   const normalizedType = type?.toLowerCase();
 
   if (normalizedType === 'normal') {
-    return '正常';
+    return t('pages.k8s.detail.event.normal');
   }
   if (normalizedType === 'warning') {
-    return '警告';
+    return t('pages.k8s.detail.event.warning');
   }
   return type || '-';
 };
 
-const matchEventKeyword = (event: K8sEvent, keyword: string) =>
+const matchEventKeyword = (t: Translate, event: K8sEvent, keyword: string) =>
   [
     event.type,
-    getEventTypeLabel(event.type),
+    getEventTypeLabel(t, event.type),
     event.reason,
     event.source,
     event.message,
@@ -93,6 +94,7 @@ const EventTable = ({
   target,
   compact = false,
 }: EventTableProps) => {
+  const t = useT();
   const { styles, theme: token } = useStyles();
   const [items, setItems] = useState<K8sEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,7 +124,7 @@ const EventTable = ({
   const filteredItems = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
     return normalizedKeyword
-      ? items.filter((event) => matchEventKeyword(event, normalizedKeyword))
+      ? items.filter((event) => matchEventKeyword(t, event, normalizedKeyword))
       : items;
   }, [items, keyword]);
 
@@ -135,7 +137,7 @@ const EventTable = ({
 
   const columns: ProColumns<K8sEvent>[] = [
     {
-      title: '类型',
+      title: t('pages.k8s.event.type'),
       dataIndex: 'type',
       width: 110,
       render: (_, record) => (
@@ -144,29 +146,29 @@ const EventTable = ({
             className={styles.eventTypeDot}
             style={{ backgroundColor: dotColor(record.type) }}
           />
-          <span>{getEventTypeLabel(record.type)}</span>
+          <span>{getEventTypeLabel(t, record.type)}</span>
         </span>
       ),
     },
     {
-      title: '原因',
+      title: t('pages.k8s.event.reason'),
       dataIndex: 'reason',
       width: 160,
       ellipsis: true,
       renderText: (_, record) => record.reason || '-',
     },
     {
-      title: '发生时间',
+      title: t('pages.k8s.detail.event.lastTime'),
       dataIndex: 'lastTime',
       width: 160,
       render: (_, record) => (
         <Tooltip title={formatTime(record.lastTime)}>
-          <span>{formatRelativeTime(record.lastTime)}</span>
+          <span>{formatRelativeTime(t, record.lastTime)}</span>
         </Tooltip>
       ),
     },
     {
-      title: '来源',
+      title: t('pages.k8s.detail.event.source'),
       dataIndex: 'source',
       width: 210,
       ellipsis: true,
@@ -181,7 +183,7 @@ const EventTable = ({
       },
     },
     {
-      title: '消息',
+      title: t('pages.k8s.detail.event.message'),
       dataIndex: 'message',
       ellipsis: true,
       render: (_, record) => {
@@ -217,7 +219,7 @@ const EventTable = ({
         <Input
           allowClear
           onChange={(event) => setKeyword(event.target.value)}
-          placeholder="搜索事件类型 / 原因 / 来源 / 消息"
+          placeholder={t('pages.k8s.detail.event.search')}
           /* 工具栏标题容器带 500 字重 / 16px：恢复输入框默认字体 */
           style={{ fontSize: token.fontSize, fontWeight: 400, width: 260 }}
           suffix={<SearchOutlined />}

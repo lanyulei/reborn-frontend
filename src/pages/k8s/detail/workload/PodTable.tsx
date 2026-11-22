@@ -19,6 +19,7 @@ import {
 } from 'antd';
 import { type ReactNode, useMemo, useState } from 'react';
 import { usePermissions } from '@/services/system/permissions';
+import { useT } from '@/utils/i18n';
 import { formatTime } from '../../components/cells';
 import { LogViewer } from '../../components/LogViewer';
 import { detailPath, GVRS } from '../../components/meta';
@@ -57,6 +58,7 @@ const PodTable = ({
   pods = [],
   containers = [],
 }: PodTableProps) => {
+  const t = useT();
   const has = usePermissions();
   const { token } = theme.useToken();
   const terminal = useTerminal();
@@ -137,13 +139,13 @@ const PodTable = ({
   const canExec = has('k8s.workload.exec');
   const columns: ProColumns<WorkloadPod>[] = [
     {
-      title: '序号',
+      title: t('pages.k8s.detail.index'),
       dataIndex: 'index',
       width: 72,
       renderText: (_, _record, index) => index + 1,
     },
     {
-      title: '名称',
+      title: t('pages.k8s.column.name'),
       dataIndex: 'name',
       width: 260,
       ellipsis: true,
@@ -163,14 +165,14 @@ const PodTable = ({
       ),
     },
     {
-      title: 'IP 地址',
+      title: t('pages.k8s.detail.ip'),
       dataIndex: 'ip',
       width: 140,
       ellipsis: true,
       renderText: (_, record) => record.ip || '-',
     },
     {
-      title: '状态',
+      title: t('common.column.status'),
       dataIndex: 'status',
       width: 140,
       render: (_, record) => {
@@ -192,32 +194,32 @@ const PodTable = ({
       },
     },
     {
-      title: '就绪',
+      title: t('pages.k8s.metrics.series.ready'),
       dataIndex: 'ready',
       width: 88,
       renderText: (_, record) => record.ready || '-',
     },
     {
-      title: '重启次数',
+      title: t('pages.k8s.detail.restarts'),
       dataIndex: 'restarts',
       width: 96,
     },
     {
-      title: '节点 IP',
+      title: t('pages.k8s.detail.pod.nodeIp'),
       dataIndex: 'nodeIP',
       width: 140,
       ellipsis: true,
       renderText: (_, record) => record.nodeIP || '-',
     },
     {
-      title: '节点名称',
+      title: t('pages.k8s.detail.pod.nodeName'),
       dataIndex: 'nodeName',
       width: 180,
       ellipsis: true,
       renderText: (_, record) => record.nodeName || '-',
     },
     {
-      title: '创建时间',
+      title: t('common.column.createTime'),
       dataIndex: 'createTime',
       width: 180,
       renderText: (_, record) => formatTime(record.createTime) || '-',
@@ -225,7 +227,7 @@ const PodTable = ({
     ...(canLog || canExec
       ? [
           {
-            title: '操作',
+            title: t('common.column.action'),
             valueType: 'option' as const,
             width: 108,
             // 列多时横向滚动：操作列固定在右侧
@@ -235,14 +237,14 @@ const PodTable = ({
                 {canLog &&
                   renderContainerAction(
                     record,
-                    '容器日志',
+                    t('pages.k8s.detail.pod.containerLogs'),
                     <FileTextOutlined />,
                     openContainerLog,
                   )}
                 {canExec &&
                   renderContainerAction(
                     record,
-                    '终端',
+                    t('pages.k8s.action.terminal'),
                     <CodeOutlined />,
                     openContainerTerminal,
                   )}
@@ -271,7 +273,7 @@ const PodTable = ({
           <Input
             allowClear
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder="搜索容器组名称 / IP / 节点 / 状态"
+            placeholder={t('pages.k8s.detail.pod.search')}
             /* 工具栏标题容器带 500 字重 / 16px：恢复输入框默认字体 */
             style={{ fontSize: token.fontSize, fontWeight: 400, width: 260 }}
             suffix={<SearchOutlined />}
@@ -290,7 +292,10 @@ const PodTable = ({
           footer={null}
           onCancel={() => setLogTarget(undefined)}
           open
-          title={`容器日志 · ${logTarget.pod.name} / ${logTarget.container}`}
+          title={t('pages.k8s.detail.pod.logsTitle', {
+            pod: logTarget.pod.name,
+            container: logTarget.container,
+          })}
           width="calc(100vw - 48px)"
         >
           <LogViewer

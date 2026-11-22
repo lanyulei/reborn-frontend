@@ -497,7 +497,7 @@ export const NamespaceQuotaModal: React.FC<{
   onDone?: () => void;
 }> = ({ clusterId, namespace, onClose, onDone }) => {
   const t = useT();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm<QuotaForm>();
   const current = useRef<{
     quota?: Record<string, unknown>;
@@ -658,6 +658,23 @@ export const NamespaceQuotaModal: React.FC<{
     }
   };
 
+  /** 方案里有删除（清空配额 / 限制范围）时先二次确认，再提交 */
+  const submit = () => {
+    if (!plan) return;
+    if (plan.deletes.length === 0) {
+      void apply();
+      return;
+    }
+    modal.confirm({
+      title: t('pages.k8s.quota.delete.title'),
+      content: t('pages.k8s.quota.delete.content', {
+        kinds: plan.deletes.map((del) => del.kind).join(', '),
+      }),
+      okButtonProps: { danger: true },
+      onOk: apply,
+    });
+  };
+
   const rule = {
     pattern: QUANTITY,
     message: t('pages.k8s.namespace.quantity.rule'),
@@ -700,7 +717,7 @@ export const NamespaceQuotaModal: React.FC<{
                 danger={plan.deletes.length > 0}
                 loading={busy}
                 disabled={unchanged}
-                onClick={() => void apply()}
+                onClick={submit}
               >
                 {t('pages.k8s.change.apply')}
               </Button>

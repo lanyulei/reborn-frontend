@@ -1,6 +1,7 @@
 import { DeleteOutlined } from '@ant-design/icons';
 import { App, Button, Input, Select } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import CollapsibleField from '../shared/CollapsibleField';
 import KeyValueEditor from '../shared/KeyValueEditor';
 import {
@@ -86,6 +87,7 @@ const getSelectorValue = (
 });
 
 const LabelSelectorEditor = ({ value, onChange }: LabelSelectorEditorProps) => {
+  const t = useT();
   const { styles } = useStyles();
   const { message } = App.useApp();
   const selectorValue = getSelectorValue(value);
@@ -109,7 +111,9 @@ const LabelSelectorEditor = ({ value, onChange }: LabelSelectorEditorProps) => {
 
   const addExpression = () => {
     if (expressions.some((item) => !item.keyName?.trim())) {
-      message.warning('请先填写已有表达式的键。');
+      message.warning(
+        t('pages.k8s.forms.networkpolicy.selector.expressionKeyFirst'),
+      );
       return;
     }
 
@@ -129,17 +133,21 @@ const LabelSelectorEditor = ({ value, onChange }: LabelSelectorEditorProps) => {
   return (
     <div className={styles.stack}>
       <CollapsibleField
-        description="通过 key/value 精确匹配 Kubernetes 标签。"
-        title="匹配标签"
+        description={t('pages.k8s.forms.networkpolicy.matchLabels.description')}
+        title={t('pages.k8s.forms.networkpolicy.matchLabels')}
       >
         <KeyValueEditor
           addIcon={false}
-          addText="添加"
-          deleteAriaLabel="删除匹配标签"
-          keyPlaceholder="标签键"
+          addText={t('pages.k8s.form.add')}
+          deleteAriaLabel={t(
+            'pages.k8s.forms.networkpolicy.matchLabels.delete',
+          )}
+          keyPlaceholder={t('pages.k8s.forms.common.labelKey')}
           value={selectorValue.matchLabels}
-          valuePlaceholder="标签值"
-          onAddBlocked={() => message.warning('请先填写已有标签的键。')}
+          valuePlaceholder={t('pages.k8s.forms.common.labelValue')}
+          onAddBlocked={() =>
+            message.warning(t('pages.k8s.forms.common.labelKeyFirst'))
+          }
           onChange={(nextLabels) =>
             updateValue({ ...selectorValue, matchLabels: nextLabels })
           }
@@ -148,8 +156,10 @@ const LabelSelectorEditor = ({ value, onChange }: LabelSelectorEditorProps) => {
       </CollapsibleField>
 
       <CollapsibleField
-        description="支持 In、NotIn、Exists、DoesNotExist 条件表达式。"
-        title="匹配表达式"
+        description={t(
+          'pages.k8s.forms.networkpolicy.matchExpressions.description',
+        )}
+        title={t('pages.k8s.forms.networkpolicy.matchExpressions')}
       >
         <div className={styles.expressionRows}>
           {expressions.map((item) => {
@@ -159,7 +169,7 @@ const LabelSelectorEditor = ({ value, onChange }: LabelSelectorEditorProps) => {
               <div className={styles.expressionRow} key={item.id}>
                 <Input
                   className={styles.input}
-                  placeholder="标签键"
+                  placeholder={t('pages.k8s.forms.common.labelKey')}
                   value={item.keyName}
                   onChange={(event) =>
                     updateExpression(item.id, {
@@ -184,12 +194,22 @@ const LabelSelectorEditor = ({ value, onChange }: LabelSelectorEditorProps) => {
                   className={styles.input}
                   disabled={!needsValues}
                   mode="tags"
-                  placeholder={needsValues ? '输入值后回车' : '无需填写值'}
+                  placeholder={
+                    needsValues
+                      ? t(
+                          'pages.k8s.forms.networkpolicy.matchExpressions.valuesPlaceholder',
+                        )
+                      : t(
+                          'pages.k8s.forms.networkpolicy.matchExpressions.noValues',
+                        )
+                  }
                   value={item.values}
                   onChange={(values) => updateExpression(item.id, { values })}
                 />
                 <Button
-                  aria-label="删除表达式"
+                  aria-label={t(
+                    'pages.k8s.forms.networkpolicy.matchExpressions.delete',
+                  )}
                   className={styles.deleteButton}
                   icon={<DeleteOutlined />}
                   type="text"
@@ -200,7 +220,7 @@ const LabelSelectorEditor = ({ value, onChange }: LabelSelectorEditorProps) => {
           })}
         </div>
         <div className={styles.footer}>
-          <Button onClick={addExpression}>添加</Button>
+          <Button onClick={addExpression}>{t('pages.k8s.form.add')}</Button>
         </div>
       </CollapsibleField>
     </div>

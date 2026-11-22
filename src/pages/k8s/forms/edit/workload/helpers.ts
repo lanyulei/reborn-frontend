@@ -9,6 +9,7 @@ import type { StringListEditorItem } from '../../shared/StringListEditor';
 import {
   buildCreateWorkloadManifest,
   getInitialCreateWorkloadValues,
+  parseQuantity,
 } from '../../workload/helpers';
 import type {
   ContainerActionFormValue,
@@ -107,71 +108,19 @@ const ensureRecordField = (target: ManifestRecord, key: string) => {
   return next;
 };
 
-const parseCpuValue = (value: unknown) => {
-  const text = getStringValue(value);
-  if (!text) {
-    return getNumberValue(value);
-  }
-  if (text.endsWith('m')) {
-    const millicores = Number(text.slice(0, -1));
-    return Number.isFinite(millicores) ? millicores / 1000 : undefined;
-  }
-  return getNumberValue(text);
-};
+/** CPU 数量 → 核（500m → 0.5） */
+const parseCpuValue = (value: unknown) => parseQuantity(value);
 
+/** 内存数量 → Mi（1G → 953.67，1Gi → 1024，1e9 → 953.67） */
 const parseMemoryMiValue = (value: unknown) => {
-  const text = getStringValue(value);
-  if (!text) {
-    return getNumberValue(value);
-  }
-
-  const matched = text.match(/^(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti|K|M|G|T)?$/);
-  if (!matched) {
-    return undefined;
-  }
-
-  const numberValue = Number(matched[1]);
-  if (!Number.isFinite(numberValue)) {
-    return undefined;
-  }
-
-  const unit = matched[2];
-  if (unit === 'Gi' || unit === 'G') {
-    return numberValue * 1024;
-  }
-  if (unit === 'Ti' || unit === 'T') {
-    return numberValue * 1024 * 1024;
-  }
-  if (unit === 'Ki' || unit === 'K') {
-    return numberValue / 1024;
-  }
-  return numberValue;
+  const bytes = parseQuantity(value);
+  return bytes === undefined ? undefined : bytes / 1024 ** 2;
 };
 
+/** 存储数量 → Gi */
 const parseStorageGiValue = (value: unknown) => {
-  const text = getStringValue(value);
-  if (!text) {
-    return getNumberValue(value);
-  }
-
-  const matched = text.match(/^(\d+(?:\.\d+)?)(Mi|Gi|Ti|M|G|T)?$/);
-  if (!matched) {
-    return undefined;
-  }
-
-  const numberValue = Number(matched[1]);
-  if (!Number.isFinite(numberValue)) {
-    return undefined;
-  }
-
-  const unit = matched[2];
-  if (unit === 'Mi' || unit === 'M') {
-    return numberValue / 1024;
-  }
-  if (unit === 'Ti' || unit === 'T') {
-    return numberValue * 1024;
-  }
-  return numberValue;
+  const bytes = parseQuantity(value);
+  return bytes === undefined ? undefined : bytes / 1024 ** 3;
 };
 
 const getManifestMetadata = (manifest: ManifestRecord) =>
@@ -196,8 +145,26 @@ const toKeyValueItems = (record?: ManifestRecord) =>
     value: typeof value === 'string' ? value : String(value ?? ''),
   }));
 
+/**
+ * 探针 / 生命周期动作的端口是 IntOrString：数字直接用；命名端口按容器 ports 里的同名端口解析成端口号，
+ * 解析不到则留空（表单的端口控件只接受数字），不会杜撰成 80。
+ * 留空的动作不会生成清单，与打开时的清单一致即视为未改动，原对象里的命名端口原样保留。
+ */
+const parsePortValue = (
+  value: unknown,
+  namedPorts: Record<string, number>,
+): number | undefined => {
+  const numberValue = getNumberValue(value);
+  if (numberValue !== undefined) {
+    return numberValue;
+  }
+  const name = getStringValue(value);
+  return name ? namedPorts[name] : undefined;
+};
+
 const parseActionValue = (
   value: unknown,
+  namedPorts: Record<string, number>,
 ): ContainerActionFormValue | undefined => {
   const action = getRecordValue(value);
   if (!action) {
@@ -211,7 +178,7 @@ const parseActionValue = (
       handlerType: 'httpGet',
       scheme: getStringValue(httpGet.scheme) === 'HTTPS' ? 'HTTPS' : 'HTTP',
       path: getStringValue(httpGet.path) || '/',
-      port: getNumberValue(httpGet.port) || 80,
+      port: parsePortValue(httpGet.port, namedPorts),
     };
   }
 
@@ -229,7 +196,7 @@ const parseActionValue = (
     return {
       enabled: true,
       handlerType: 'tcpSocket',
-      port: getNumberValue(tcpSocket.port) || 80,
+      port: parsePortValue(tcpSocket.port, namedPorts),
     };
   }
 
@@ -238,9 +205,10 @@ const parseActionValue = (
 
 const parseProbeValue = (
   value: unknown,
+  namedPorts: Record<string, number>,
 ): ContainerProbeFormValue | undefined => {
   const probe = getRecordValue(value);
-  const action = parseActionValue(probe);
+  const action = parseActionValue(probe, namedPorts);
   if (!probe || !action) {
     return undefined;
   }
@@ -297,12 +265,20 @@ const parseContainerValues = (
   const requests = getRecordValue(resources.requests) || {};
   const limits = getRecordValue(resources.limits) || {};
   const lifecycle = getRecordValue(manifest.lifecycle) || {};
-  const postStart = parseActionValue(lifecycle.postStart);
-  const preStop = parseActionValue(lifecycle.preStop);
+  const namedPorts: Record<string, number> = {};
+  for (const port of getRecordArray(manifest.ports)) {
+    const name = getStringValue(port.name);
+    const containerPort = getNumberValue(port.containerPort);
+    if (name && containerPort !== undefined) {
+      namedPorts[name] = containerPort;
+    }
+  }
+  const postStart = parseActionValue(lifecycle.postStart, namedPorts);
+  const preStop = parseActionValue(lifecycle.preStop, namedPorts);
   const healthChecks = {
-    liveness: parseProbeValue(manifest.livenessProbe),
-    readiness: parseProbeValue(manifest.readinessProbe),
-    startup: parseProbeValue(manifest.startupProbe),
+    liveness: parseProbeValue(manifest.livenessProbe, namedPorts),
+    readiness: parseProbeValue(manifest.readinessProbe, namedPorts),
+    startup: parseProbeValue(manifest.startupProbe, namedPorts),
   };
   const command = getStringArray(manifest.command);
   const args = getStringArray(manifest.args);
@@ -1040,19 +1016,36 @@ const setOrDelete = (target: ManifestRecord, key: string, value: unknown) => {
   }
 };
 
-/** 表单只管 CPU 与内存：其它资源（GPU、临时存储等）与 claims 沿用原对象 */
-const mergeResources = (baseValue: unknown, generatedValue: unknown) => {
+/**
+ * 表单只管 CPU 与内存：其它资源（GPU、临时存储等）与 claims 沿用原对象。
+ * CPU / 内存按 requests.cpu 等单项比较：打开时与当前生成的数量相同说明没改，
+ * 原对象里的写法（1G、1e9、1.5Gi…）原样保留，只回写改过的项。
+ * initialValue 为 undefined 表示没有打开时的基准（新容器），每一项都按改过处理。
+ */
+const mergeResources = (
+  baseValue: unknown,
+  initialValue: unknown,
+  generatedValue: unknown,
+) => {
   const base = getRecordValue(baseValue) || {};
+  const initial = getRecordValue(initialValue);
   const generated = getRecordValue(generatedValue) || {};
   const next: ManifestRecord = { ...base };
 
   for (const key of ['requests', 'limits']) {
-    const {
-      cpu: _cpu,
-      memory: _memory,
-      ...extra
-    } = getRecordValue(base[key]) || {};
-    const merged = { ...extra, ...(getRecordValue(generated[key]) || {}) };
+    const merged: ManifestRecord = { ...(getRecordValue(base[key]) || {}) };
+    const initialGroup = getRecordValue(initial?.[key]) || {};
+    const generatedGroup = getRecordValue(generated[key]) || {};
+    for (const name of ['cpu', 'memory']) {
+      if (initial && same(initialGroup[name], generatedGroup[name])) {
+        continue;
+      }
+      if (generatedGroup[name] === undefined) {
+        delete merged[name];
+      } else {
+        merged[name] = generatedGroup[name];
+      }
+    }
     setOrDelete(next, key, Object.keys(merged).length > 0 ? merged : undefined);
   }
 
@@ -1080,6 +1073,7 @@ const mergeContainerManifest = (
         field === 'resources'
           ? mergeResources(
               baseContainer?.resources,
+              tracked ? (initialContainer?.resources ?? {}) : undefined,
               generatedContainer.resources,
             )
           : generatedContainer[field],

@@ -20,7 +20,9 @@ export const useIssueText = () => {
   const t = useT();
   return useCallback(
     (issue: OncallShiftIssue) => {
-      const parts = [t(ONCALL_ISSUE_TYPE_META[issue.type]?.textId ?? '')];
+      // 后端新增、前端未收录的异常类型：回退显示原始类型码，而不是对空键取文案白屏
+      const meta = ONCALL_ISSUE_TYPE_META[issue.type];
+      const parts = [meta ? t(meta.textId) : String(issue.type)];
       const subject = [issue.scheduleName, issue.userName]
         .filter(Boolean)
         .join(' · ');

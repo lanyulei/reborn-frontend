@@ -44,6 +44,7 @@ export const WebhookModal: React.FC<{
     };
     if (source.webhookEnabled || rotated) {
       modal.confirm({
+        okButtonProps: { danger: true },
         title: t('pages.cmdb.sync.webhook.rotate'),
         content: t('pages.cmdb.sync.webhook.rotate.confirm'),
         onOk: run,

@@ -648,4 +648,8 @@ export default {
   'pages.k8s.audit.action.helm_upgrade': 'Upgrade app',
   'pages.k8s.audit.action.helm_rollback': 'Roll back app',
   'pages.k8s.audit.action.helm_uninstall': 'Uninstall app',
+  'pages.k8s.quota.delete.title': 'Remove quota / limit range?',
+  'pages.k8s.quota.delete.content':
+    'The {kinds} of this namespace will be deleted and pods will no longer be constrained by it.',
+  'pages.k8s.detail.pods.noSelector': 'No selector: no pods are selected',
 };

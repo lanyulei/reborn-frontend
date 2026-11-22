@@ -380,4 +380,7 @@ export default {
     'Handed over {n} tasks; {failed} workflows could not be handed over and more may not have been reached yet. Resolve the failed ones in the monitor, then run it again',
   'pages.workflow.handover.partial':
     '{n} tasks handed over; some remain, please run it again',
+
+  'pages.workflow.problem.edge': '{name}: {error}',
+  'pages.workflow.separator': ', ',
 };

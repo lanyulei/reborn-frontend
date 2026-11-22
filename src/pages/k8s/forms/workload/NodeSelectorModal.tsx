@@ -2,6 +2,8 @@ import { ClusterOutlined } from '@ant-design/icons';
 import { Checkbox, Empty, Modal, Spin } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useState } from 'react';
+import type { Translate } from '@/utils/i18n';
+import { useT } from '@/utils/i18n';
 import { GVRS, listRows } from '../shared/kube';
 import { useWizardScope } from './context';
 
@@ -17,31 +19,41 @@ type NodeOption = {
   statusType: NodeStatusType;
 };
 
-const getNodeRoleLabel = (role: string) => {
+const getNodeRoleLabel = (role: string, t: Translate) => {
   const normalizedRole = role.trim().toLowerCase();
 
   if (normalizedRole === 'control-plane' || normalizedRole === 'master') {
-    return '控制平面节点';
+    return t('pages.k8s.forms.workload.node.role.controlPlane');
   }
   if (normalizedRole === 'worker') {
-    return '工作节点';
+    return t('pages.k8s.forms.workload.node.role.worker');
   }
   return role;
 };
 
 /** 列表行的状态（ok / pending / abnormal / unknown）→ 展示文案与颜色 */
 const getNodeStatus = (
-  state?: string,
+  state: string | undefined,
+  t: Translate,
 ): Pick<NodeOption, 'statusLabel' | 'statusType'> => {
   switch (state) {
     case 'ok':
-      return { statusLabel: '运行中', statusType: 'success' };
+      return {
+        statusLabel: t('pages.k8s.metrics.series.running'),
+        statusType: 'success',
+      };
     case 'pending':
-      return { statusLabel: '已禁止调度', statusType: 'warning' };
+      return {
+        statusLabel: t('pages.k8s.forms.workload.node.status.unschedulable'),
+        statusType: 'warning',
+      };
     case 'abnormal':
-      return { statusLabel: '异常', statusType: 'error' };
+      return {
+        statusLabel: t('pages.k8s.state.abnormal'),
+        statusType: 'error',
+      };
     case 'unknown':
-      return { statusLabel: '未知', statusType: 'error' };
+      return { statusLabel: t('pages.k8s.state.unknown'), statusType: 'error' };
     default:
       return { statusLabel: '-', statusType: 'default' };
   }
@@ -200,6 +212,7 @@ const NodeSelectorModal = ({
   onOk,
 }: NodeSelectorModalProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { clusterId } = useWizardScope();
   const [nodes, setNodes] = useState<NodeOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -238,7 +251,7 @@ const NodeSelectorModal = ({
           roles: Array.isArray(row.cells?.roles)
             ? row.cells.roles.map(String)
             : [],
-          ...getNodeStatus(row.state),
+          ...getNodeStatus(row.state, t),
         })),
       );
       setLoading(false);
@@ -247,7 +260,7 @@ const NodeSelectorModal = ({
     return () => {
       ignore = true;
     };
-  }, [clusterId, open, selectedKey]);
+  }, [clusterId, open, selectedKey, t]);
 
   const toggleNode = (nodeName: string, checked: boolean) => {
     setDraftSelectedNodeNames((current) =>
@@ -261,7 +274,7 @@ const NodeSelectorModal = ({
     const nodeName = node.name;
     const disabled = node.statusType !== 'success';
     const checked = draftSelectedNodeNames.includes(nodeName);
-    const roles = node.roles.map(getNodeRoleLabel);
+    const roles = node.roles.map((role) => getNodeRoleLabel(role, t));
     const checkboxId = `node-selector-${node.uid.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
     return (
@@ -294,13 +307,15 @@ const NodeSelectorModal = ({
             />
             {node.statusLabel}
           </span>
-          <span className={styles.fieldLabel}>状态</span>
+          <span className={styles.fieldLabel}>{t('common.column.status')}</span>
         </span>
         <span className={styles.field}>
           <span className={styles.roleValue}>
-            {roles.length > 0 ? roles.join('、') : '-'}
+            {roles.length > 0
+              ? roles.join(t('pages.k8s.forms.workload.listSeparator'))
+              : '-'}
           </span>
-          <span className={styles.fieldLabel}>角色</span>
+          <span className={styles.fieldLabel}>{t('pages.k8s.kind.Role')}</span>
         </span>
       </label>
     );
@@ -309,15 +324,17 @@ const NodeSelectorModal = ({
   return (
     <Modal
       destroyOnHidden
-      cancelText="取消"
-      okText="确定"
+      cancelText={t('common.action.cancel')}
+      okText={t('common.action.confirm')}
       open={open}
-      title="指定节点"
+      title={t('pages.k8s.forms.workload.node.assign')}
       width={600}
       onCancel={onCancel}
       onOk={() => onOk(draftSelectedNodeNames)}
     >
-      <div className={styles.description}>将容器副本分配给特定节点。</div>
+      <div className={styles.description}>
+        {t('pages.k8s.forms.workload.node.assign.description')}
+      </div>
       <div className={styles.list}>
         {loading ? (
           <div className={styles.loading}>

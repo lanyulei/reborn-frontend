@@ -1,6 +1,7 @@
 /** 任务的运行记录：状态、消息、开始与结束时间（取自任务自身的状态）。 */
 import { Table } from 'antd';
 import type { K8sObject } from '@/services/k8s/typings';
+import { useT } from '@/utils/i18n';
 import { formatTime } from '../../components/cells';
 import { getJobStatus } from './jobCronJobHelpers';
 import StatusText from './StatusText';
@@ -42,40 +43,43 @@ const buildRecords = (object?: K8sObject): JobRunRecord[] => {
   ];
 };
 
-const JobRunRecords = ({ object }: { object?: K8sObject }) => (
-  <Table<JobRunRecord>
-    rowKey="id"
-    size="middle"
-    pagination={false}
-    dataSource={buildRecords(object)}
-    columns={[
-      { title: '序号', dataIndex: 'index', width: 110 },
-      {
-        title: '状态',
-        dataIndex: 'status',
-        width: 160,
-        render: (_, record) => <StatusText status={record.status} />,
-      },
-      {
-        title: '消息',
-        dataIndex: 'message',
-        ellipsis: true,
-        render: (_, record) => record.message || '-',
-      },
-      {
-        title: '开始时间',
-        dataIndex: 'start_time',
-        width: 210,
-        render: (_, record) => formatTime(record.start_time) || '-',
-      },
-      {
-        title: '结束时间',
-        dataIndex: 'completion_time',
-        width: 210,
-        render: (_, record) => formatTime(record.completion_time) || '-',
-      },
-    ]}
-  />
-);
+const JobRunRecords = ({ object }: { object?: K8sObject }) => {
+  const t = useT();
+  return (
+    <Table<JobRunRecord>
+      rowKey="id"
+      size="middle"
+      pagination={false}
+      dataSource={buildRecords(object)}
+      columns={[
+        { title: t('pages.k8s.detail.index'), dataIndex: 'index', width: 110 },
+        {
+          title: t('common.column.status'),
+          dataIndex: 'status',
+          width: 160,
+          render: (_, record) => <StatusText status={record.status} />,
+        },
+        {
+          title: t('pages.k8s.detail.event.message'),
+          dataIndex: 'message',
+          ellipsis: true,
+          render: (_, record) => record.message || '-',
+        },
+        {
+          title: t('pages.k8s.session.startTime'),
+          dataIndex: 'start_time',
+          width: 210,
+          render: (_, record) => formatTime(record.start_time) || '-',
+        },
+        {
+          title: t('pages.k8s.session.endTime'),
+          dataIndex: 'completion_time',
+          width: 210,
+          render: (_, record) => formatTime(record.completion_time) || '-',
+        },
+      ]}
+    />
+  );
+};
 
 export default JobRunRecords;

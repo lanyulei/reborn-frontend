@@ -17,6 +17,8 @@ yarn-error.log
 /coverage
 .idea
 yarn.lock
+# npm only (package-lock.json)
+pnpm-lock.yaml
 *bak
 .vscode
 

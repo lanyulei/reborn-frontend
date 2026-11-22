@@ -1,5 +1,6 @@
 import { KeyOutlined, ToolOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
+import type { Translate } from '@/utils/i18n';
 import type { WorkloadConfigResourceType } from '../types';
 import useStyles from './styles';
 
@@ -13,8 +14,11 @@ type ResourceOptionContentProps = ResourcePlaceholderProps & {
   metrics?: { label: string; value?: string }[];
 };
 
-export const getConfigResourceLabel = (type?: WorkloadConfigResourceType) =>
-  type === 'secret' ? '保密字典' : '配置字典';
+export const getConfigResourceLabel = (
+  type: WorkloadConfigResourceType | undefined,
+  t: Translate,
+) =>
+  t(type === 'secret' ? 'pages.k8s.kind.Secret' : 'pages.k8s.kind.ConfigMap');
 
 export const getResourceIcon = (type?: WorkloadConfigResourceType) =>
   type === 'secret' ? <KeyOutlined /> : <ToolOutlined />;
@@ -27,9 +31,12 @@ export type PvcOption = {
   storageClassName?: string;
 };
 
-export const getPvcMetrics = (item: PvcOption) => [
-  { label: '容量', value: item.capacity || '-' },
-  { label: '访问模式', value: item.accessModes?.join(', ') || '-' },
+export const getPvcMetrics = (item: PvcOption, t: Translate) => [
+  { label: t('pages.k8s.forms.common.capacity'), value: item.capacity || '-' },
+  {
+    label: t('pages.k8s.forms.common.accessMode'),
+    value: item.accessModes?.join(', ') || '-',
+  },
 ];
 
 export const ResourceOptionContent = ({

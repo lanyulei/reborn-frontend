@@ -8,6 +8,7 @@ import {
   getErrorMetadata,
   getErrorReason,
   getErrorStatus,
+  serializeRepeatedParams,
 } from '@/services/system/domainRequest';
 import { authRequest, getErrorMessage } from '@/services/system/request';
 import { message } from '@/utils/feedback';
@@ -60,32 +61,35 @@ export const getK8sErrorMessage = (error: unknown): string => {
   if (REASON_TEXT_ID[reason]) return t(REASON_TEXT_ID[reason]);
   const detail = getErrorMessage(error);
   return REASON_PREFIX_ID[reason]
-    ? `${t(REASON_PREFIX_ID[reason])}：${detail}`
+    ? t('app.request.withDetail', { text: t(REASON_PREFIX_ID[reason]), detail })
     : detail;
 };
 
-/** 查询参数 → 查询串：undefined / null / 空串 / false 跳过（与后端零值等价） */
-const serializeParams = (params: Record<string, unknown>): string => {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params ?? {})) {
-    if (
-      value !== undefined &&
-      value !== null &&
-      value !== '' &&
-      value !== false
-    ) {
-      search.append(key, String(value));
-    }
-  }
-  return search.toString();
-};
-
-export type K8sRequestOptions = DomainRequestOptions;
+export interface K8sRequestOptions extends DomainRequestOptions {
+  /** 中止信号：取消在途请求，也终止「缓存建立中」的等待重试（中止后不再弹错误提示） */
+  signal?: AbortSignal;
+}
 
 /** 缓存建立中的重试间隔（毫秒）；用尽后把错误交给调用方 */
 const SYNC_RETRY_MS = [1000, 2000, 3000, 5000, 5000, 8000];
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** 可中止的等待：signal 触发时立即以其 reason（AbortError）拒绝 */
+const sleep = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 
 export async function k8sRequest<T>(
   url: string,
@@ -102,10 +106,12 @@ export async function k8sRequest<T>(
       return await authRequest<T>(url, {
         ...rest,
         headers: { ...rest.headers, ...emergencyHeaders(url) },
-        paramsSerializer: serializeParams,
+        paramsSerializer: serializeRepeatedParams,
         silent: true,
       });
     } catch (error) {
+      // 调用方已中止（切换页面 / 关闭弹窗）：不重试、不提示
+      if (rest.signal?.aborted) throw error;
       // 该集群的变更需审批：写操作已转为变更单（不是失败）。页面上的审批提示条负责展示去向，
       // 这里照常抛出，让调用方停在原处（集群没有被改动）。
       if (getErrorReason(error) === CHANGE_SUBMITTED) {
@@ -117,7 +123,7 @@ export async function k8sRequest<T>(
         retriable &&
         attempt < SYNC_RETRY_MS.length
       ) {
-        await sleep(SYNC_RETRY_MS[attempt]);
+        await sleep(SYNC_RETRY_MS[attempt], rest.signal);
         continue;
       }
       // 401 的刷新 / 跳转登录由 authRequest 处理，这里不再提示

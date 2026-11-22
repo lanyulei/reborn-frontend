@@ -436,4 +436,17 @@ export default {
   'component.icon.tag': '标签',
   'component.icon.home': '首页',
   'component.icon.question': '咨询',
+  'component.chat.citation': '知识库 #{n}',
+  'component.chat.agent.noIncident':
+    '@Agent 只能在故障详情页使用：打开一条故障后再召唤运维 Agent。',
+  'component.chat.agent.queued':
+    '已召唤运维 Agent 分析当前故障。分析在后台进行，结论会写入故障时间线，过程见故障详情的「AI 分析」页签。',
+  'component.chat.agent.existing':
+    '当前故障已有排队或进行中的 Agent 任务，不再重复召唤；进度见故障详情的「AI 分析」页签。',
+  'component.chat.agent.failed': '召唤运维 Agent 失败：{reason}',
+
+  // 流程设计器：起止节点名称（随图保存）与列表分隔符
+  'component.flow.node.start': '发起',
+  'component.flow.node.end': '结束',
+  'component.flow.separator': '、',
 };

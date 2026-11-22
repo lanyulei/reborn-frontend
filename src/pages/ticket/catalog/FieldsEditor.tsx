@@ -390,7 +390,9 @@ export const FieldsEditor: React.FC<{
   const usageText = (code?: string) => {
     const nodes = code ? usage.get(code) : undefined;
     return nodes?.length
-      ? t('pages.ticket.field.usage', { nodes: nodes.join('、') })
+      ? t('pages.ticket.field.usage', {
+          nodes: nodes.join(t('pages.ticket.separator')),
+        })
       : undefined;
   };
 
@@ -400,7 +402,9 @@ export const FieldsEditor: React.FC<{
       .filter((f) => f.showWhen?.field === code)
       .map((f) => f.name);
     return names.length
-      ? t('pages.ticket.field.delete.dependents', { names: names.join('、') })
+      ? t('pages.ticket.field.delete.dependents', {
+          names: names.join(t('pages.ticket.separator')),
+        })
       : undefined;
   };
 
@@ -581,7 +585,7 @@ export const FieldsEditor: React.FC<{
                         field: control?.name ?? when.field,
                         values: when.values
                           .map((v) => valueLabel(control, v, t))
-                          .join('、'),
+                          .join(t('pages.ticket.separator')),
                       })}
                     >
                       <Tag style={{ marginInlineStart: 8 }}>
@@ -695,7 +699,7 @@ export const FieldsEditor: React.FC<{
           showIcon
           style={{ marginTop: 12 }}
           title={t('pages.ticket.field.group.split', {
-            names: splitGroups.join('、'),
+            names: splitGroups.join(t('pages.ticket.separator')),
           })}
           action={
             <Button size="small" onClick={regroup}>

@@ -140,7 +140,7 @@ export const Simulate: React.FC<{
     try {
       setResult(
         await simulateDefinition(definitionId, {
-          graph: toGraph(flow),
+          graph: toGraph(flow, t),
           variables: parsed,
           initiator,
         }),

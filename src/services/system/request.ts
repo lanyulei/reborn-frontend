@@ -23,14 +23,23 @@ interface AuthRequestOptions extends RequestOptions {
    * 401 的刷新 / 跳转登录逻辑不受影响。
    */
   silent?: boolean;
+  /**
+   * 刷新令牌确已失效时是否整页跳转登录页（默认 true）。
+   * 启动期 getInitialState 拉 /me 自己 history.replace 到登录页，传 false 避免双重跳转。
+   */
+  redirectOnInvalid?: boolean;
 }
 
 /**
  * 提取后端 Kratos Status{code,reason,message} 错误信息。
  * umi request 基于 axios：非 2xx 错误体挂在 error.response.data
- * （error.data 不存在，error.message 是 axios 通用文案，仅作网络错误兜底）。
+ * （error.data 不存在）。HTTP 错误体没有 message 时用本地化兜底文案；
+ * error.message 是 axios 通用英文文案，只在网络错误等没有响应时才用。
  */
-export function getErrorMessage(error: unknown, fallback = t('app.request.retry')): string {
+export function getErrorMessage(
+  error: unknown,
+  fallback = t('app.request.retry'),
+): string {
   const err = error as
     | {
         response?: { data?: { message?: string } };
@@ -38,9 +47,9 @@ export function getErrorMessage(error: unknown, fallback = t('app.request.retry'
         message?: string;
       }
     | undefined;
-  return (
-    err?.response?.data?.message || err?.data?.message || err?.message || fallback
-  );
+  const body = err?.response?.data?.message || err?.data?.message;
+  if (body) return body;
+  return err?.response ? fallback : err?.message || fallback;
 }
 
 /**
@@ -51,6 +60,17 @@ type RefreshResult = 'ok' | 'invalid' | 'error';
 
 /** 刷新令牌单飞：并发 401 只触发一次刷新 */
 let refreshPromise: Promise<RefreshResult> | null = null;
+
+/** 刷新被 4xx 拒绝后，等另一标签页的新令牌写入 localStorage 落定再复查 */
+const ROTATION_SETTLE_MS = 400;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** 另一标签页已先一步轮换了令牌：本地存储里已不是我们用过的那把 */
+const rotatedElsewhere = (used: string): boolean => {
+  const current = getRefreshToken();
+  return current !== null && current !== used;
+};
 
 async function doRefresh(): Promise<RefreshResult> {
   const refreshToken = getRefreshToken();
@@ -68,20 +88,33 @@ async function doRefresh(): Promise<RefreshResult> {
     setTokens(result.accessToken, result.refreshToken, result.expiresIn);
     return 'ok';
   } catch (error) {
-    // 另一个标签页已先一步轮换了令牌：本地存储里已是新令牌，直接沿用
-    const current = getRefreshToken();
-    if (current && current !== refreshToken) return 'ok';
     const status = (error as { response?: { status?: number } })?.response
       ?.status;
-    // 仅 4xx（令牌无效 / 已吊销）视为需要重新登录；网络错误与 5xx 保留令牌
-    return status !== undefined && status >= 400 && status < 500
-      ? 'invalid'
-      : 'error';
+    // 网络错误与 5xx 保留令牌
+    if (status === undefined || status < 400 || status >= 500) return 'error';
+    // 4xx：令牌无效 / 已吊销——也可能是另一标签页刚用同一把刷新令牌换发成功（旧令牌随即作废）。
+    // 稍等它把新令牌写进 localStorage，存储里已换成新令牌则直接沿用，否则才视为需要重新登录。
+    if (rotatedElsewhere(refreshToken)) return 'ok';
+    await sleep(ROTATION_SETTLE_MS);
+    return rotatedElsewhere(refreshToken) ? 'ok' : 'invalid';
   }
 }
 
+/**
+ * 跨标签页互斥：支持 Web Locks 时同源各标签页排队刷新，拿到锁后先复查令牌——
+ * 排队期间别的标签页已换发过就直接沿用，不再拿旧令牌去撞接口。不支持时退化为单标签页单飞。
+ */
+function refreshWithLock(): Promise<RefreshResult> {
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+  if (!locks) return doRefresh();
+  const before = getRefreshToken();
+  return locks.request('token-refresh', () =>
+    before !== null && rotatedElsewhere(before) ? 'ok' : doRefresh(),
+  ) as Promise<RefreshResult>;
+}
+
 function refreshOnce(): Promise<RefreshResult> {
-  refreshPromise ??= doRefresh().finally(() => {
+  refreshPromise ??= refreshWithLock().finally(() => {
     refreshPromise = null;
   });
   return refreshPromise;
@@ -118,7 +151,10 @@ export async function authRequest<T>(
   url: string,
   options: AuthRequestOptions = {},
 ): Promise<T> {
-  const { retried, silent, ...rest } = options;
+  const { retried, silent, redirectOnInvalid = true, ...rest } = options;
+  // 记下本次请求带的 access token：请求在途期间别处（其他请求的刷新 / 其他标签页）
+  // 可能已换发新令牌，这时的 401 只需用新令牌重试，不必再刷新一次
+  const usedToken = getAccessToken();
   try {
     return await request<T>(url, { ...rest, skipErrorHandler: true });
   } catch (error: unknown) {
@@ -126,15 +162,19 @@ export async function authRequest<T>(
       ?.status;
     if (status === 401) {
       if (retried) {
-        redirectToLogin();
+        if (redirectOnInvalid) redirectToLogin();
         throw error;
+      }
+      const currentToken = getAccessToken();
+      if (currentToken !== null && currentToken !== usedToken) {
+        return authRequest<T>(url, { ...options, retried: true });
       }
       const refreshed = await refreshOnce();
       if (refreshed === 'ok') {
         return authRequest<T>(url, { ...options, retried: true });
       }
       if (refreshed === 'invalid') {
-        redirectToLogin();
+        if (redirectOnInvalid) redirectToLogin();
         throw error;
       }
       // 刷新遇到暂时性故障：不登出，按普通失败提示

@@ -561,13 +561,15 @@ export const SimulateModal: React.FC<SimulateModalProps> = ({
   const rules = useFormRules();
   const [form] = Form.useForm<SimulateFormValues>();
 
-  // 后端只接受规则数据源范围内的数据源：指定数据源时就是规则选的那几个；全部数据源时任选一个已启用的
+  // 后端只接受规则数据源范围内的数据源：指定数据源时就是规则选的那几个；全部数据源时任选一个。
+  // 已停用的数据源查询必然失败，两种范围都排除
   const candidates = useMemo(
     () =>
-      datasources.items.filter((item) =>
-        spec.datasourceScope === 2
-          ? item.enabled === true
-          : (spec.datasourceIds ?? []).includes(item.id),
+      datasources.items.filter(
+        (item) =>
+          item.enabled === true &&
+          (spec.datasourceScope === 2 ||
+            (spec.datasourceIds ?? []).includes(item.id)),
       ),
     [datasources.items, spec.datasourceScope, spec.datasourceIds],
   );

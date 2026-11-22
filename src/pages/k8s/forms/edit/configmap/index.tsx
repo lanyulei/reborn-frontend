@@ -6,6 +6,7 @@ import { CloseOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Drawer, Form, Spin } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import ConfigMapDataSettings from '../../configmap/ConfigMapDataSettings';
 import { getConfigMapBinaryKeys } from '../../configmap/helpers';
 import type { EditFormProps } from '../../shared/edit';
@@ -59,8 +60,6 @@ const useStyles = createStyles(({ token }) => ({
   },
 }));
 
-const TITLE = '编辑设置';
-
 const ConfigMapSettingsEditDrawer = ({
   clusterId,
   target,
@@ -68,6 +67,8 @@ const ConfigMapSettingsEditDrawer = ({
   onDone,
 }: EditFormProps) => {
   const { styles } = useStyles();
+  const t = useT();
+  const title = t('pages.k8s.forms.common.editSettings');
   const { message } = App.useApp();
   const [form] = Form.useForm<ConfigMapEditFormValues>();
   const { object, resourceVersion, loading, error, reload } = useEditObject(
@@ -101,7 +102,7 @@ const ConfigMapSettingsEditDrawer = ({
     }
 
     const values: ConfigMapEditFormValues = form.getFieldsValue(true);
-    const formError = getConfigMapEditError(object, values);
+    const formError = getConfigMapEditError(object, values, t);
 
     if (formError) {
       message.warning(formError);
@@ -119,13 +120,13 @@ const ConfigMapSettingsEditDrawer = ({
         destroyOnHidden
         footer={
           <div className={styles.footer}>
-            <Button onClick={onClose}>取消</Button>
+            <Button onClick={onClose}>{t('common.action.cancel')}</Button>
             <Button
               disabled={!object || loading}
               type="primary"
               onClick={handleSubmit}
             >
-              保存
+              {t('common.action.save')}
             </Button>
           </div>
         }
@@ -133,7 +134,7 @@ const ConfigMapSettingsEditDrawer = ({
         mask={{ closable: false }}
         open
         size="78vw"
-        title={TITLE}
+        title={title}
         onClose={onClose}
       >
         <Spin spinning={loading}>
@@ -142,7 +143,7 @@ const ConfigMapSettingsEditDrawer = ({
               <Alert
                 action={
                   <Button size="small" onClick={reload}>
-                    重试
+                    {t('pages.k8s.table.retry')}
                   </Button>
                 }
                 className={styles.notice}
@@ -157,7 +158,7 @@ const ConfigMapSettingsEditDrawer = ({
                   <Alert
                     className={styles.notice}
                     showIcon
-                    title="该配置字典已设为不可变（immutable），数据无法修改，仅可编辑标签与注解。"
+                    title={t('pages.k8s.forms.edit.configmap.immutable')}
                     type="warning"
                   />
                 ) : (
@@ -169,7 +170,12 @@ const ConfigMapSettingsEditDrawer = ({
                   <Alert
                     className={styles.notice}
                     showIcon
-                    title={`二进制数据（${binaryKeys.join('、')}）不在此处编辑，保存时原样保留。`}
+                    title={t(
+                      'pages.k8s.forms.edit.configmap.binaryKeysNotice',
+                      {
+                        keys: binaryKeys.join(', '),
+                      },
+                    )}
                     type="info"
                   />
                 )}
@@ -184,7 +190,7 @@ const ConfigMapSettingsEditDrawer = ({
           clusterId={clusterId}
           resourceVersion={resourceVersion}
           target={target}
-          title={TITLE}
+          title={title}
           yaml={pending}
           onBack={() => setPending(undefined)}
           onClose={onClose}

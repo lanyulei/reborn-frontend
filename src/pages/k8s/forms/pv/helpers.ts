@@ -1,3 +1,4 @@
+import type { Translate } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import {
   createId,
@@ -287,7 +288,7 @@ const getPersistentVolumeSourceValidationError = (
   ) {
     return {
       field: 'nodeAffinityValues',
-      message: '请填写节点亲和性匹配值',
+      messageId: 'pages.k8s.forms.pv.nodeAffinity.values.required',
     };
   }
 
@@ -297,7 +298,7 @@ const getPersistentVolumeSourceValidationError = (
   ) {
     return {
       field: 'nodeAffinityValues',
-      message: 'Gt/Lt 操作符只能填写一个节点亲和性匹配值',
+      messageId: 'pages.k8s.forms.pv.nodeAffinity.values.single',
     };
   }
 
@@ -307,7 +308,7 @@ const getPersistentVolumeSourceValidationError = (
   ) {
     return {
       field: 'nodeAffinityValues',
-      message: 'Gt/Lt 操作符的匹配值必须是数字',
+      messageId: 'pages.k8s.forms.pv.nodeAffinity.values.numeric',
     };
   }
 
@@ -323,14 +324,14 @@ const getPersistentVolumeAdvancedValidationError = (
   if (claimName && !claimNamespace) {
     return {
       field: 'claimNamespace',
-      message: '预绑定声明需要填写命名空间',
+      messageId: 'pages.k8s.forms.pv.claimRef.namespace.required',
     };
   }
 
   if (claimNamespace && !claimName) {
     return {
       field: 'claimName',
-      message: '预绑定声明需要填写声明名称',
+      messageId: 'pages.k8s.forms.pv.claimRef.name.required',
     };
   }
 
@@ -340,18 +341,21 @@ const getPersistentVolumeAdvancedValidationError = (
 /** YAML 模式提交前的检查；通过返回 undefined，否则返回提示语 */
 const validatePersistentVolumeManifest = (
   resource: Record<string, unknown>,
+  t: Translate,
 ): string | undefined => {
   const metadata = getRecordValue(resource.metadata);
   const name = typeof metadata?.name === 'string' ? metadata.name.trim() : '';
 
   if (!name) {
-    return 'YAML 必须包含 metadata.name';
+    return t('pages.k8s.forms.common.yaml.nameRequired');
   }
   if (resource.kind !== PV_KIND) {
-    return `YAML kind 必须为 ${PV_KIND}`;
+    return t('pages.k8s.forms.common.yaml.kindMismatch', { kind: PV_KIND });
   }
   if (resource.apiVersion !== PV_API_VERSION) {
-    return `YAML apiVersion 必须为 ${PV_API_VERSION}`;
+    return t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+      apiVersion: PV_API_VERSION,
+    });
   }
   return undefined;
 };

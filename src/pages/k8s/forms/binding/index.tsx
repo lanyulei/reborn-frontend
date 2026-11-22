@@ -9,6 +9,7 @@ import {
 import { App, AutoComplete, Button, Col, Form, Input, Row, Select } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useMemo, useState } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import CollapsibleField from '../shared/CollapsibleField';
 import KeyValueEditor from '../shared/KeyValueEditor';
 import {
@@ -170,17 +171,12 @@ const ROLE_KIND_OPTIONS: {
   { label: 'ClusterRole', value: 'ClusterRole' },
 ];
 
-const STEPS = [
-  { title: '基本信息', icon: <AppstoreOutlined /> },
-  { title: '引用角色', icon: <SafetyCertificateOutlined /> },
-  { title: '授权主体', icon: <TeamOutlined /> },
-  { title: '高级设置', icon: <SlidersOutlined /> },
-];
+const STEP_COUNT = 4;
 
-const SUBJECT_NAME_PLACEHOLDER: Record<BindingSubjectKind, string> = {
-  ServiceAccount: '请选择或输入 ServiceAccount',
-  User: '用户名，例如 reborn:<用户ID>',
-  Group: '组名，例如 reborn:role:<角色ID>',
+const SUBJECT_NAME_PLACEHOLDER_ID: Record<BindingSubjectKind, string> = {
+  ServiceAccount: 'pages.k8s.forms.binding.subject.placeholder.serviceAccount',
+  User: 'pages.k8s.forms.binding.subject.placeholder.user',
+  Group: 'pages.k8s.forms.binding.subject.placeholder.group',
 };
 
 const toOptions = (names: string[]): SelectOption[] =>
@@ -195,27 +191,28 @@ const getStepStatusText = (
   current: number,
   index: number,
   values: CreateBindingFormValues,
+  t: Translate,
 ) => {
   if (current === index) {
-    return '当前';
+    return t('pages.k8s.forms.common.current');
   }
   if (
     index === 0 &&
     values.name &&
     (values.type === 'ClusterRoleBinding' || values.namespace)
   ) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 1 && values.roleKind && values.roleName) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 2 && hasSubjectsContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 3 && hasAdvancedContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
-  return '未设置';
+  return t('pages.k8s.forms.common.unset');
 };
 
 const buildYaml = (values: CreateBindingFormValues) =>
@@ -230,6 +227,7 @@ const CreateBindingDrawer = ({
 }: CreateBindingDrawerProps) => {
   const { styles } = useStyles();
   const { message } = App.useApp();
+  const t = useT();
   const [form] = Form.useForm<CreateBindingFormValues>();
   const [initialValues] = useState(() =>
     getInitialCreateBindingValues(kind || 'RoleBinding', defaultNamespace),
@@ -260,6 +258,21 @@ const CreateBindingDrawer = ({
     bindingType === 'ClusterRoleBinding'
       ? 'ClusterRole'
       : values.roleKind || 'Role';
+  const steps = useMemo(
+    () => [
+      { title: t('pages.k8s.form.section.basic'), icon: <AppstoreOutlined /> },
+      {
+        title: t('pages.k8s.forms.binding.roleRef'),
+        icon: <SafetyCertificateOutlined />,
+      },
+      { title: t('pages.k8s.forms.binding.subjects'), icon: <TeamOutlined /> },
+      {
+        title: t('pages.k8s.forms.common.advanced'),
+        icon: <SlidersOutlined />,
+      },
+    ],
+    [t],
+  );
   const namespaceOptions = useMemo(() => toOptions(namespaces), [namespaces]);
   const roleOptions = useMemo(() => toOptions(roleNames), [roleNames]);
   // 需要加载 ServiceAccount 候选项的命名空间（去重排序后拼成稳定的依赖键）
@@ -354,7 +367,7 @@ const CreateBindingDrawer = ({
     const formValues: CreateBindingFormValues = form.getFieldsValue(true);
 
     if (current === 2) {
-      return warn(getSubjectsError(formValues));
+      return warn(getSubjectsError(formValues, t));
     }
 
     return true;
@@ -367,7 +380,7 @@ const CreateBindingDrawer = ({
       return;
     }
 
-    setCurrent((step) => Math.min(step + 1, STEPS.length - 1));
+    setCurrent((step) => Math.min(step + 1, STEP_COUNT - 1));
   };
 
   const handleSubmit = async () => {
@@ -376,11 +389,11 @@ const CreateBindingDrawer = ({
       try {
         resource = parseObject(yamlValue);
       } catch {
-        message.error('YAML 格式不正确，内容必须是有效的资源对象');
+        message.error(t('pages.k8s.forms.common.yaml.invalidObject'));
         return;
       }
 
-      const error = getBindingManifestError(resource, kind);
+      const error = getBindingManifestError(resource, t, kind);
       if (error) {
         message.error(error);
         return;
@@ -402,7 +415,7 @@ const CreateBindingDrawer = ({
     await form.validateFields();
     const formValues: CreateBindingFormValues = form.getFieldsValue(true);
 
-    if (!warn(getSubjectsError(formValues))) {
+    if (!warn(getSubjectsError(formValues, t))) {
       return;
     }
 
@@ -419,30 +432,38 @@ const CreateBindingDrawer = ({
     <Row gutter={16}>
       <Col span={12}>
         <Form.Item
-          tooltip="名称只能包含小写字母、数字、连字符（-）和点（.）"
-          label="名称"
+          tooltip={t('pages.k8s.forms.binding.name.tooltip')}
+          label={t('pages.k8s.forms.common.name')}
           name="name"
           rules={[
-            { required: true, message: '请输入名称' },
-            { max: 253, message: '名称最长 253 个字符' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.name.required'),
+            },
+            {
+              max: 253,
+              message: t('pages.k8s.forms.common.name.maxLength253'),
+            },
             {
               pattern: BINDING_NAME_PATTERN,
-              message:
-                '名称只能包含小写字母、数字、连字符（-）和点（.），且不能以连字符或点开头结尾',
+              message: t('pages.k8s.forms.binding.name.pattern'),
             },
           ]}
         >
-          <Input autoFocus placeholder="请输入名称" />
+          <Input
+            autoFocus
+            placeholder={t('pages.k8s.forms.common.name.required')}
+          />
         </Form.Item>
       </Col>
       <Col span={12}>
         <Form.Item
-          label="命名空间"
+          label={t('pages.k8s.forms.common.namespace')}
           name="namespace"
           rules={[
             {
               required: bindingType === 'RoleBinding',
-              message: '请选择命名空间',
+              message: t('pages.k8s.forms.common.namespace.required'),
             },
           ]}
         >
@@ -451,8 +472,8 @@ const CreateBindingDrawer = ({
             options={namespaceOptions}
             placeholder={
               bindingType === 'ClusterRoleBinding'
-                ? 'ClusterRoleBinding 不需要命名空间'
-                : '请选择命名空间'
+                ? t('pages.k8s.forms.binding.namespace.notNeeded')
+                : t('pages.k8s.forms.common.namespace.required')
             }
             showSearch={{ filterOption: filterByValue }}
             onChange={(namespace?: string) => {
@@ -466,9 +487,14 @@ const CreateBindingDrawer = ({
       </Col>
       <Col span={24}>
         <Form.Item
-          label="类型"
+          label={t('pages.k8s.forms.common.type')}
           name="type"
-          rules={[{ required: true, message: '请选择类型' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.type.required'),
+            },
+          ]}
         >
           <Select
             disabled={Boolean(kind)}
@@ -492,13 +518,18 @@ const CreateBindingDrawer = ({
     <Row gutter={16}>
       <Col span={12}>
         <Form.Item
-          label="引用角色类型"
+          label={t('pages.k8s.forms.binding.roleKind')}
           name="roleKind"
-          rules={[{ required: true, message: '请选择引用角色类型' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.binding.roleKind.required'),
+            },
+          ]}
           extra={
             bindingType === 'ClusterRoleBinding'
-              ? 'ClusterRoleBinding 只能绑定 ClusterRole'
-              : 'RoleBinding 可绑定同命名空间 Role 或全集群 ClusterRole'
+              ? t('pages.k8s.forms.binding.roleKind.clusterOnly')
+              : t('pages.k8s.forms.binding.roleKind.hint')
           }
         >
           <Select
@@ -516,25 +547,29 @@ const CreateBindingDrawer = ({
       </Col>
       <Col span={12}>
         <Form.Item
-          extra="创建后引用的角色不可修改；可以引用尚未创建的角色。"
-          label="引用角色"
+          extra={t('pages.k8s.forms.binding.roleName.extra')}
+          label={t('pages.k8s.forms.binding.roleRef')}
           name="roleName"
           rules={[
-            { required: true, whitespace: true, message: '请选择引用角色' },
+            {
+              required: true,
+              whitespace: true,
+              message: t('pages.k8s.forms.binding.roleName.required'),
+            },
           ]}
         >
           <AutoComplete
             allowClear
             notFoundContent={
               roleKind === 'Role' && !bindingNamespace
-                ? '请先选择命名空间'
-                : '暂无可选角色'
+                ? t('pages.k8s.forms.binding.namespaceFirst')
+                : t('pages.k8s.forms.binding.roleName.empty')
             }
             options={roleOptions}
             placeholder={
               roleKind === 'Role'
-                ? '请选择同命名空间 Role'
-                : '请选择 ClusterRole'
+                ? t('pages.k8s.forms.binding.roleName.placeholder.role')
+                : t('pages.k8s.forms.binding.roleName.placeholder.clusterRole')
             }
             showSearch={{ filterOption: filterByValue }}
           />
@@ -559,8 +594,15 @@ const CreateBindingDrawer = ({
             name={[fieldName, 'name']}
             noStyle
             rules={[
-              { required: true, whitespace: true, message: '请填写主体名称' },
-              { max: 253, message: '主体名称最长 253 个字符' },
+              {
+                required: true,
+                whitespace: true,
+                message: t('pages.k8s.forms.binding.subject.name.required'),
+              },
+              {
+                max: 253,
+                message: t('pages.k8s.forms.binding.subject.name.maxLength'),
+              },
             ]}
           >
             {subjectKind === 'ServiceAccount' ? (
@@ -568,19 +610,21 @@ const CreateBindingDrawer = ({
                 allowClear
                 className={styles.subjectNameField}
                 notFoundContent={
-                  namespace ? '暂无可选主体' : '请先选择命名空间'
+                  namespace
+                    ? t('pages.k8s.forms.binding.subject.empty')
+                    : t('pages.k8s.forms.binding.namespaceFirst')
                 }
                 options={toOptions(
                   serviceAccountNames[namespace?.trim() || ''] || [],
                 )}
-                placeholder={SUBJECT_NAME_PLACEHOLDER.ServiceAccount}
+                placeholder={t(SUBJECT_NAME_PLACEHOLDER_ID.ServiceAccount)}
                 showSearch={{ filterOption: filterByValue }}
               />
             ) : (
               <Input
                 allowClear
                 className={styles.subjectNameField}
-                placeholder={SUBJECT_NAME_PLACEHOLDER[subjectKind]}
+                placeholder={t(SUBJECT_NAME_PLACEHOLDER_ID[subjectKind])}
               />
             )}
           </Form.Item>
@@ -600,7 +644,7 @@ const CreateBindingDrawer = ({
             rules={[
               {
                 required: subjectKind === 'ServiceAccount',
-                message: '请选择命名空间',
+                message: t('pages.k8s.forms.common.namespace.required'),
               },
             ]}
           >
@@ -610,8 +654,8 @@ const CreateBindingDrawer = ({
               options={namespaceOptions}
               placeholder={
                 subjectKind === 'ServiceAccount'
-                  ? '请选择命名空间'
-                  : 'User/Group 不需要命名空间'
+                  ? t('pages.k8s.forms.common.namespace.required')
+                  : t('pages.k8s.forms.binding.subject.namespace.notNeeded')
               }
               showSearch={{ filterOption: filterByValue }}
               onChange={() =>
@@ -626,12 +670,15 @@ const CreateBindingDrawer = ({
 
   const renderSubjectSettings = () => (
     <>
-      <div className={styles.sectionTitle}>授权主体</div>
+      <div className={styles.sectionTitle}>
+        {t('pages.k8s.forms.binding.subjects')}
+      </div>
       <div className={styles.subjectHint}>
-        User 与 Group 的名称直接填写。本平台访问集群时会模拟为用户{' '}
-        <code>reborn:&lt;用户ID&gt;</code>、角色组{' '}
-        <code>reborn:role:&lt;角色ID&gt;</code>
-        ，给平台用户或角色授权时请按此格式填写。
+        {t('pages.k8s.forms.binding.subject.hint.intro')}{' '}
+        <code>{t('pages.k8s.forms.binding.subject.hint.userPattern')}</code>
+        {t('pages.k8s.forms.binding.subject.hint.roleGroup')}{' '}
+        <code>{t('pages.k8s.forms.binding.subject.hint.rolePattern')}</code>
+        {t('pages.k8s.forms.binding.subject.hint.outro')}
       </div>
       <Form.List name="subjects">
         {(fields, { add, remove }) => (
@@ -642,12 +689,19 @@ const CreateBindingDrawer = ({
                   <Form.Item
                     name={[field.name, 'kind']}
                     noStyle
-                    rules={[{ required: true, message: '请选择类型' }]}
+                    rules={[
+                      {
+                        required: true,
+                        message: t('pages.k8s.forms.common.type.required'),
+                      },
+                    ]}
                   >
                     <Select
                       className={styles.subjectTypeField}
                       options={SUBJECT_KIND_OPTIONS}
-                      placeholder="主体类型"
+                      placeholder={t(
+                        'pages.k8s.forms.binding.subject.kind.placeholder',
+                      )}
                       onChange={(subjectKind: BindingSubjectKind) => {
                         form.setFieldValue(
                           ['subjects', field.name, 'name'],
@@ -665,7 +719,7 @@ const CreateBindingDrawer = ({
                   {renderSubjectNamespaceField(field.name)}
                   {renderSubjectNameField(field.name)}
                   <Button
-                    aria-label="删除授权主体"
+                    aria-label={t('pages.k8s.forms.binding.subject.delete')}
                     className={styles.subjectDeleteButton}
                     icon={<DeleteOutlined />}
                     type="text"
@@ -690,7 +744,7 @@ const CreateBindingDrawer = ({
                 }
               >
                 <PlusOutlined />
-                添加授权主体
+                {t('pages.k8s.forms.binding.subject.add')}
               </Button>
             </div>
           </>
@@ -702,42 +756,54 @@ const CreateBindingDrawer = ({
   const renderAdvancedSettings = () => (
     <div className={styles.advancedStack}>
       <div>
-        <div className={styles.advancedSectionTitle}>元数据</div>
+        <div className={styles.advancedSectionTitle}>
+          {t('pages.k8s.forms.common.metadata')}
+        </div>
         <div className={styles.advancedOption}>
           <CollapsibleField
-            description="为绑定资源添加标签和注解，便于筛选、识别和自动化管理"
-            title="添加元数据"
+            description={t('pages.k8s.forms.binding.metadata.description')}
+            title={t('pages.k8s.forms.common.addMetadata')}
           >
             <div className={styles.advancedMetadataBody}>
               <div>
-                <div className={styles.advancedFieldLabel}>标签</div>
+                <div className={styles.advancedFieldLabel}>
+                  {t('pages.k8s.forms.common.labels')}
+                </div>
                 <Form.Item name="labels">
                   <KeyValueEditor
                     addIcon={false}
-                    addText="添加"
-                    deleteAriaLabel="删除标签"
-                    keyPlaceholder="标签键"
+                    addText={t('pages.k8s.form.add')}
+                    deleteAriaLabel={t('pages.k8s.forms.common.deleteLabel')}
+                    keyPlaceholder={t('pages.k8s.forms.common.labelKey')}
                     minRows={1}
-                    valuePlaceholder="标签值"
+                    valuePlaceholder={t('pages.k8s.forms.common.labelValue')}
                     onAddBlocked={() =>
-                      message.warning('请先填写已有标签的键。')
+                      message.warning(t('pages.k8s.forms.common.labelKeyFirst'))
                     }
                     onCreateItem={createMetadataItem}
                   />
                 </Form.Item>
               </div>
               <div>
-                <div className={styles.advancedFieldLabel}>注解</div>
+                <div className={styles.advancedFieldLabel}>
+                  {t('pages.k8s.forms.common.annotations')}
+                </div>
                 <Form.Item name="annotations">
                   <KeyValueEditor
                     addIcon={false}
-                    addText="添加"
-                    deleteAriaLabel="删除注解"
-                    keyPlaceholder="注解键"
+                    addText={t('pages.k8s.form.add')}
+                    deleteAriaLabel={t(
+                      'pages.k8s.forms.common.deleteAnnotation',
+                    )}
+                    keyPlaceholder={t('pages.k8s.forms.binding.annotationKey')}
                     minRows={1}
-                    valuePlaceholder="注解值"
+                    valuePlaceholder={t(
+                      'pages.k8s.forms.binding.annotationValue',
+                    )}
                     onAddBlocked={() =>
-                      message.warning('请先填写已有注解的键。')
+                      message.warning(
+                        t('pages.k8s.forms.common.annotationKeyFirst'),
+                      )
                     }
                     onCreateItem={createMetadataItem}
                   />
@@ -762,11 +828,11 @@ const CreateBindingDrawer = ({
       <ResourceCreateWizardDrawer
         current={current}
         getStepDescription={(_, index) =>
-          getStepStatusText(current, index, values)
+          getStepStatusText(current, index, values, t)
         }
         open
-        steps={STEPS}
-        title={`创建 ${bindingType}`}
+        steps={steps}
+        title={t('pages.k8s.forms.binding.title', { kind: bindingType })}
         yamlMode={yamlMode}
         yamlValue={yamlValue}
         onCancel={onClose}
@@ -808,7 +874,7 @@ const CreateBindingDrawer = ({
           clusterId={clusterId}
           yaml={submission.yaml}
           namespace={submission.namespace}
-          title={`创建 ${bindingType}`}
+          title={t('pages.k8s.forms.binding.title', { kind: bindingType })}
           onBack={() => setSubmission(undefined)}
           onClose={onClose}
           onDone={onDone}

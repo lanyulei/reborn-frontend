@@ -32,6 +32,36 @@ export default function access(
   return {
     canAdmin: isAdmin,
     canAssistant: has('assistant'),
+    canKnowledge: has('knowledge') || has('knowledge.admin'),
+    canKnowledgeAdmin: has('knowledge.admin'),
+    canAgentTask: has('agent.task'),
+    canAgentProfile: has('agent.profile'),
+    canAgentStats: has('agent.stats'),
+    canAgent: has('agent.task') || has('agent.profile') || has('agent.stats'),
+    canIncidentList: has('incident.list'),
+    canIncidentReview: has('incident.review'),
+    canIncidentStats: has('incident.stats'),
+    canIncidentRule: has('incident.rule'),
+    canIncidentPlaybook: has('incident.playbook'),
+    canIncidentBusiness: has('incident.business'),
+    canIncidentSource: has('incident.source'),
+    canIncidentSetting: has('incident.setting'),
+    // 故障配置分组入口：组内任一页面可见即可进入（页签再按各页权限过滤）
+    canIncidentConfig:
+      has('incident.rule') ||
+      has('incident.playbook') ||
+      has('incident.business') ||
+      has('incident.source') ||
+      has('incident.setting'),
+    canIncident:
+      has('incident.list') ||
+      has('incident.review') ||
+      has('incident.stats') ||
+      has('incident.rule') ||
+      has('incident.playbook') ||
+      has('incident.business') ||
+      has('incident.source') ||
+      has('incident.setting'),
     canCmdbModel: has('cmdb.model'),
     canCmdbCI: has('cmdb.ci'),
     canCmdbSync: has('cmdb.sync'),

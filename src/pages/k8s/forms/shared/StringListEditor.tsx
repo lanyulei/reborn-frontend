@@ -3,6 +3,7 @@ import { Button, Input } from 'antd';
 import { createStyles } from 'antd-style';
 import type { CSSProperties } from 'react';
 import { useEffect } from 'react';
+import { useT } from '@/utils/i18n';
 
 const useStyles = createStyles(
   ({ token }, props: { footerJustify: CSSProperties['justifyContent'] }) => ({
@@ -75,17 +76,22 @@ type StringListEditorProps = {
 
 const StringListEditor = ({
   addIcon = true,
-  addText = '添加',
-  deleteAriaLabel = '删除',
+  addText: addTextProp,
+  deleteAriaLabel: deleteAriaLabelProp,
   footerJustify = 'flex-end',
   minRows,
-  placeholder = '请输入',
+  placeholder: placeholderProp,
   surface = false,
   value = [],
   onAddBlocked,
   onChange,
   onCreateItem,
 }: StringListEditorProps) => {
+  const t = useT();
+  const addText = addTextProp ?? t('pages.k8s.form.add');
+  const deleteAriaLabel = deleteAriaLabelProp ?? t('common.action.delete');
+  const placeholder =
+    placeholderProp ?? t('pages.k8s.forms.shared.input.placeholder');
   const { styles } = useStyles({ footerJustify });
   const addDisabled = value.some((item) => !item.value.trim());
 

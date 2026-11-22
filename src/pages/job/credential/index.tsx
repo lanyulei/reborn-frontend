@@ -153,10 +153,21 @@ const CredentialDrawer: React.FC<{
         }
       }}
       request={async () => {
-        if (!row) {
-          return { name: '', type: 1, username: '', becomeMethod: 'none' };
+        const initial: CredentialFormValues = {
+          name: '',
+          type: 1,
+          username: '',
+          becomeMethod: 'none',
+        };
+        if (!row) return initial;
+        let credential: JobCredential;
+        try {
+          ({ credential } = await getJobCredential(row.id));
+        } catch {
+          // 错误提示已由请求层给出：关闭抽屉，避免留下一张空白但可保存的表单
+          onClose();
+          return initial;
         }
-        const { credential } = await getJobCredential(row.id);
         setSaved(credential);
         const { spec } = credential;
         // 密文恒不回填

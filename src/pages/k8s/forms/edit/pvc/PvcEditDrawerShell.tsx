@@ -3,6 +3,7 @@ import { CloseOutlined } from '@ant-design/icons';
 import { Alert, Button, Drawer, Spin } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
+import { useT } from '@/utils/i18n';
 
 const useStyles = createStyles(({ token }) => ({
   drawer: {
@@ -65,13 +66,14 @@ const PvcEditDrawerShell = ({
   error,
   loading = false,
   submitDisabled = false,
-  submitText = '保存',
+  submitText,
   title,
   onCancel,
   onReload,
   onSubmit,
 }: PvcEditDrawerShellProps) => {
   const { styles } = useStyles();
+  const t = useT();
 
   return (
     <Drawer
@@ -80,13 +82,13 @@ const PvcEditDrawerShell = ({
       destroyOnHidden
       footer={
         <div className={styles.footer}>
-          <Button onClick={onCancel}>取消</Button>
+          <Button onClick={onCancel}>{t('common.action.cancel')}</Button>
           <Button
             disabled={loading || submitDisabled}
             type="primary"
             onClick={onSubmit}
           >
-            {submitText}
+            {submitText ?? t('common.action.save')}
           </Button>
         </div>
       }
@@ -102,7 +104,7 @@ const PvcEditDrawerShell = ({
           <Alert
             action={
               <Button size="small" onClick={onReload}>
-                重试
+                {t('pages.k8s.table.retry')}
               </Button>
             }
             className={styles.notice}

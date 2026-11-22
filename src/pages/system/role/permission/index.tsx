@@ -3,7 +3,9 @@ import { PageContainer, ProCard } from '@ant-design/pro-components';
 import { Link, useAccess, useIntl, useParams } from '@umijs/max';
 import type { TabsProps } from 'antd';
 import {
+  Alert,
   App,
+  Button,
   Checkbox,
   Tabs,
   Tag,
@@ -60,8 +62,19 @@ const RolePermission: React.FC = () => {
   const [loading, setLoading] = useState(true);
   // 仅当授权成功加载后才允许保存：全量覆盖语义下，加载中 / 失败时保存会清空权限
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  // 失败后「重试」递增触发重新加载
+  const [reloadTick, setReloadTick] = useState(0);
   const [menuChecked, setMenuChecked] = useState<string[]>([]);
   const [elemChecked, setElemChecked] = useState<string[]>([]);
+  /**
+   * 后端已授予但前端目录未收录的菜单 / 标签码（如新版本后端先上线）：
+   * 页面不可编辑，保存时原样并回载荷，避免全量覆盖把它们静默撤销。
+   */
+  const [extraGrants, setExtraGrants] = useState<{
+    menus: string[];
+    elements: string[];
+  }>({ menus: [], elements: [] });
   /** 接口勾选（= 保存的 apis 全量；含结构自动勾选与手动勾选） */
   const [apiChecked, setApiChecked] = useState<string[]>([]);
   /**
@@ -79,6 +92,7 @@ const RolePermission: React.FC = () => {
     const load = async () => {
       setLoading(true);
       setLoaded(false);
+      setLoadError(false);
       try {
         const [{ role: detail }, grants, catRes] = await Promise.all([
           getRole(roleId),
@@ -94,6 +108,14 @@ const RolePermission: React.FC = () => {
         );
         setMenuChecked(menuCodes);
         setElemChecked(elemCodes);
+        setExtraGrants({
+          menus: grants.menus.filter(
+            (code) => !MENU_PERMISSION_CODES.has(code),
+          ),
+          elements: grants.elements.filter(
+            (code) => !ELEMENT_PERMISSION_CODES.has(code),
+          ),
+        });
         setCatalog(catRes.menus);
         // 剔除后端目录已下线的陈旧操作码（全量覆盖语义下保存即清理）
         const validCodes = new Set<string>();
@@ -113,12 +135,15 @@ const RolePermission: React.FC = () => {
         const firstMenu = menuCodes[0] as MenuPermissionCode | undefined;
         if (firstMenu) setSelectedMenu(firstMenu);
         setLoaded(true);
+      } catch {
+        // 错误提示已由请求层给出；这里切换到失败态并提供重试
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [roleId]);
+  }, [roleId, reloadTick]);
 
   // 左侧菜单树：父级分组 › 菜单两级，标题复用侧边栏 menu.* 词条随语言切换；
   // 只读态禁用勾选框但保留节点点选（仍可切换右侧详情浏览）
@@ -335,10 +360,12 @@ const RolePermission: React.FC = () => {
     for (const elem of ELEMENT_PERMISSIONS) {
       if (elements.includes(elem.code)) menus.add(elem.parentCode);
     }
+    // 前端目录未收录的既有授权原样保留
+    for (const code of extraGrants.menus) menus.add(code);
     const apis = [...new Set(apiChecked)].sort();
     await setRolePermissions(roleId, {
       menus: [...menus].sort(),
-      elements: [...elements].sort(),
+      elements: [...new Set([...elements, ...extraGrants.elements])].sort(),
       apis,
     });
     message.success(t('pages.system.permission.saved'));
@@ -492,6 +519,32 @@ const RolePermission: React.FC = () => {
       {readOnly && (
         <Typography.Paragraph type="secondary">
           {t('pages.system.permission.readonly')}
+        </Typography.Paragraph>
+      )}
+      {loadError && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title={t('pages.system.permission.loadFailed')}
+          action={
+            <Button
+              size="small"
+              onClick={() => setReloadTick((tick) => tick + 1)}
+            >
+              {t('pages.system.permission.retry')}
+            </Button>
+          }
+        />
+      )}
+      {(extraGrants.menus.length > 0 || extraGrants.elements.length > 0) && (
+        <Typography.Paragraph type="secondary">
+          {t('pages.system.permission.extra')}
+          {[...extraGrants.menus, ...extraGrants.elements].map((code) => (
+            <Tag key={code} variant="filled" style={{ marginLeft: 4 }}>
+              {code}
+            </Tag>
+          ))}
         </Typography.Paragraph>
       )}
       <div style={{ display: 'flex', gap: 16 }}>

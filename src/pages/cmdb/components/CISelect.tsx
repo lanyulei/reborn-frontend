@@ -5,6 +5,7 @@ import { Select, type SelectProps } from 'antd';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { listCIs } from '@/services/cmdb/ci';
+import { useT } from '@/utils/i18n';
 
 export interface CIOption {
   label: string;
@@ -22,6 +23,7 @@ export const CISelect: React.FC<{
   style?: React.CSSProperties;
   size?: SelectProps['size'];
 }> = ({ value, onChange, modelCode, excludeId, placeholder, style, size }) => {
+  const t = useT();
   const [options, setOptions] = useState<CIOption[]>([]);
   const [loading, setLoading] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -41,7 +43,10 @@ export const CISelect: React.FC<{
           result.items
             .filter((item) => item.id !== excludeId)
             .map((item) => ({
-              label: `${item.name}（${item.modelName ?? item.modelCode}）`,
+              label: t('pages.cmdb.ci.option.label', {
+                name: item.name,
+                model: item.modelName ?? item.modelCode,
+              }),
               value: item.id,
             })),
         );

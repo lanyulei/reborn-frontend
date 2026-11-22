@@ -223,4 +223,5 @@ export default {
   'pages.ticket.stats.byStatus': '状态分布',
   'pages.ticket.stats.byPriority': '优先级分布',
   'pages.ticket.stats.byTemplate': '服务 Top 10',
+  'pages.ticket.separator': '、',
 };

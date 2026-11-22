@@ -7,6 +7,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
+import { type Translate, useT } from '@/utils/i18n';
 
 type ContainerSummaryItem = {
   cpuLimit?: number;
@@ -220,7 +221,7 @@ const formatNumber = (value: number) =>
 
 const formatMemory = (value: number) => `${formatNumber(value)} MiB`;
 
-const formatCpuRange = (request?: number, limit?: number) => {
+const formatCpuRange = (t: Translate, request?: number, limit?: number) => {
   if (!isValidNumber(request) && !isValidNumber(limit)) {
     return undefined;
   }
@@ -231,10 +232,10 @@ const formatCpuRange = (request?: number, limit?: number) => {
 
   return isValidNumber(limit)
     ? `<= ${formatNumber(limit)}`
-    : `${formatNumber(request || 0)} - 无上限`;
+    : `${formatNumber(request || 0)} - ${t('pages.k8s.forms.workload.container.noLimit')}`;
 };
 
-const formatMemoryRange = (request?: number, limit?: number) => {
+const formatMemoryRange = (t: Translate, request?: number, limit?: number) => {
   if (!isValidNumber(request) && !isValidNumber(limit)) {
     return undefined;
   }
@@ -245,11 +246,11 @@ const formatMemoryRange = (request?: number, limit?: number) => {
 
   return isValidNumber(limit)
     ? `<= ${formatMemory(limit)}`
-    : `${formatMemory(request || 0)} - 无上限`;
+    : `${formatMemory(request || 0)} - ${t('pages.k8s.forms.workload.container.noLimit')}`;
 };
 
 const ContainerSummaryList = ({
-  addDescription = '自定义容器的设置以创建容器',
+  addDescription,
   items,
   onAdd,
   onDelete,
@@ -257,21 +258,25 @@ const ContainerSummaryList = ({
   showAdd = true,
 }: ContainerSummaryListProps) => {
   const { styles } = useStyles();
+  const t = useT();
 
   return (
     <div className={styles.list}>
       {items.map((item, index) => {
-        const cpuText = formatCpuRange(item.cpuRequest, item.cpuLimit);
+        const cpuText = formatCpuRange(t, item.cpuRequest, item.cpuLimit);
         const memoryText = formatMemoryRange(
+          t,
           item.memoryRequest,
           item.memoryLimit,
         );
 
         return (
           <div className={styles.row} key={item.key}>
-            <Tooltip title="编辑容器配置">
+            <Tooltip title={t('pages.k8s.forms.workload.container.edit')}>
               <button
-                aria-label={`编辑 ${item.name || '容器'} 配置`}
+                aria-label={t('pages.k8s.forms.workload.container.edit.aria', {
+                  name: item.name || t('pages.k8s.forms.common.container'),
+                })}
                 className={styles.item}
                 type="button"
                 onClick={() => onEdit(item, index)}
@@ -279,9 +284,15 @@ const ContainerSummaryList = ({
                 <div className={styles.main}>
                   <DockerOutlined className={styles.icon} />
                   <div className={styles.content}>
-                    <div className={styles.name}>{item.name || '新容器'}</div>
+                    <div className={styles.name}>
+                      {item.name || t('pages.k8s.forms.workload.container.new')}
+                    </div>
                     <div className={styles.image}>
-                      镜像： {item.image || '未填写'}
+                      {t('pages.k8s.forms.workload.container.image.line', {
+                        image:
+                          item.image ||
+                          t('pages.k8s.forms.workload.container.image.unset'),
+                      })}
                     </div>
                   </div>
                 </div>
@@ -305,7 +316,7 @@ const ContainerSummaryList = ({
                       <ExclamationCircleOutlined
                         className={styles.metricIcon}
                       />
-                      无资源上限
+                      {t('pages.k8s.forms.workload.container.noResourceLimit')}
                     </span>
                   ) : null}
                 </div>
@@ -313,10 +324,19 @@ const ContainerSummaryList = ({
             </Tooltip>
             {onDelete && (
               <Tooltip
-                title={items.length <= 1 ? '至少保留一个容器' : '删除容器'}
+                title={
+                  items.length <= 1
+                    ? t('pages.k8s.forms.workload.container.keepOne')
+                    : t('pages.k8s.forms.workload.container.delete')
+                }
               >
                 <Button
-                  aria-label={`删除 ${item.name || '容器'}`}
+                  aria-label={t(
+                    'pages.k8s.forms.workload.container.delete.aria',
+                    {
+                      name: item.name || t('pages.k8s.forms.common.container'),
+                    },
+                  )}
                   className={styles.deleteButton}
                   disabled={items.length <= 1}
                   icon={<DeleteOutlined />}
@@ -333,8 +353,13 @@ const ContainerSummaryList = ({
           <span className={styles.addContent}>
             <DockerOutlined className={styles.addIcon} />
             <span className={styles.addText}>
-              <span className={styles.addTitle}>添加容器</span>
-              <span className={styles.addDescription}>{addDescription}</span>
+              <span className={styles.addTitle}>
+                {t('pages.k8s.forms.workload.container.add')}
+              </span>
+              <span className={styles.addDescription}>
+                {addDescription ??
+                  t('pages.k8s.forms.workload.container.add.description')}
+              </span>
             </span>
           </span>
         </button>

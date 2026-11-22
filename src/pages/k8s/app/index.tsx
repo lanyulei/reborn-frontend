@@ -780,9 +780,13 @@ const Releases: React.FC = () => {
   const [installing, setInstalling] = useState(false);
   const [detail, setDetail] = useState<{ namespace: string; name: string }>();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /** 请求序号：只采纳最后一次请求的结果，轮询也只由最后一次请求续期 */
+  const seq = useRef(0);
 
   const load = useCallback(
     async (quiet = false) => {
+      const id = ++seq.current;
+      clearTimeout(timer.current);
       if (!quiet) setLoading(true);
       try {
         const res = await listHelmReleases(
@@ -793,12 +797,12 @@ const Releases: React.FC = () => {
           },
           { silent: true },
         );
+        if (id !== seq.current) return;
         const items = res.items ?? [];
         setRows(items);
         setPartial(res.partialNamespaces ?? undefined);
         setError(undefined);
         // 有进行中的操作：稍后自动刷新
-        clearTimeout(timer.current);
         if (
           items.some(
             (r) =>
@@ -808,9 +812,10 @@ const Releases: React.FC = () => {
           timer.current = setTimeout(() => void load(true), 4000);
         }
       } catch (err) {
+        if (id !== seq.current) return;
         setError(getK8sErrorMessage(err));
       } finally {
-        setLoading(false);
+        if (id === seq.current) setLoading(false);
       }
     },
     [scope.clusterId, scope.namespace, keyword],
@@ -818,7 +823,11 @@ const Releases: React.FC = () => {
 
   useEffect(() => {
     void load();
-    return () => clearTimeout(timer.current);
+    return () => {
+      // 卸载 / 条件变化：作废在途请求，并停掉它可能续期的轮询
+      seq.current += 1;
+      clearTimeout(timer.current);
+    };
   }, [load]);
 
   const uninstall = (row: HelmRelease) =>

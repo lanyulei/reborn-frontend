@@ -143,6 +143,10 @@ export default {
   'pages.account.security.changePassword.title': '修改密碼',
   'pages.account.security.changePassword.submit': '確認修改',
   'pages.account.security.changePassword.success': '密碼已修改',
+  'pages.account.security.changePassword.oldPassword': '目前密碼',
+  'pages.account.security.changePassword.oldPassword.placeholder':
+    '請輸入目前密碼',
+  'pages.account.security.changePassword.oldInvalid': '目前密碼不正確',
   'pages.account.menu.base': '基本設定',
   'pages.account.menu.security': '安全設定',
 
@@ -170,6 +174,10 @@ export default {
   'pages.system.permission.saved': '權限已儲存',
   'pages.system.permission.readonly':
     '目前角色為內建角色，僅超級管理員可修改授權，以下內容僅可查看。',
+  'pages.system.permission.loadFailed': '權限載入失敗',
+  'pages.system.permission.retry': '重試',
+  'pages.system.permission.extra':
+    '其他權限（目前前端未收錄，儲存時原樣保留）：',
 
   // 系統設定
   'pages.system.config.readonly':
@@ -245,6 +253,8 @@ export default {
   'app.request.retry': '請求失敗，請重試',
   'app.profile.loadFailed': '登入資訊載入失敗，請稍後重試',
   'app.profile.retry': '重新載入',
-  'app.request.noResponse': 'None response! Please retry.',
-  'app.request.error': 'Request error, please retry.',
+  'app.request.noResponse': '伺服器無回應，請重試',
+  'app.request.error': '請求出錯，請重試',
+  // 域錯誤碼文案 + 後端具體原因的拼接（domainRequest / k8s request）
+  'app.request.withDetail': '{text}：{detail}',
 };

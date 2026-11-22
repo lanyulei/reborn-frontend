@@ -436,4 +436,17 @@ export default {
   'component.icon.tag': '標籤',
   'component.icon.home': '首頁',
   'component.icon.question': '諮詢',
+  'component.chat.citation': '知識庫 #{n}',
+  'component.chat.agent.noIncident':
+    '@Agent 只能在故障詳情頁使用：開啟一條故障後再召喚運維 Agent。',
+  'component.chat.agent.queued':
+    '已召喚運維 Agent 分析目前故障。分析在背景進行，結論會寫入故障時間線，過程見故障詳情的「AI 分析」頁籤。',
+  'component.chat.agent.existing':
+    '目前故障已有排隊或進行中的 Agent 任務，不再重複召喚；進度見故障詳情的「AI 分析」頁籤。',
+  'component.chat.agent.failed': '召喚運維 Agent 失敗：{reason}',
+
+  // 流程設計器：起止節點名稱（隨圖儲存）與清單分隔符
+  'component.flow.node.start': '發起',
+  'component.flow.node.end': '結束',
+  'component.flow.separator': '、',
 };

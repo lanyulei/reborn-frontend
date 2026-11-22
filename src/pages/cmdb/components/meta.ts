@@ -137,11 +137,6 @@ export const CMDB_SCHEMA_ACTION_META: EnumMeta<CmdbSchemaAction> = {
   update: { textId: 'enum.cmdb.action.update', status: 'Warning' },
   delete: { textId: 'enum.cmdb.action.delete', status: 'Error' },
 };
-export const CMDB_SCHEMA_ACTION_ORDER: readonly CmdbSchemaAction[] = [
-  'create',
-  'update',
-  'delete',
-];
 
 /** 任意类型通配 */
 export const CMDB_ANY_MODEL = '*';

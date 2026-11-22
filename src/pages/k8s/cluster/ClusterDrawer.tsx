@@ -19,6 +19,7 @@ import {
   Col,
   Flex,
   Form,
+  type FormRule,
   Input,
   Modal,
   Select,
@@ -74,10 +75,11 @@ const ENV_REGEX = /^[a-z0-9_-]{0,32}$/;
 
 const credentialOf = (values: FormValues): ClusterCredential | undefined => {
   if (values.authType === 'cert') {
-    return values.clientCert?.trim() || values.clientKey?.trim()
+    // 证书与私钥必须成对给出（表单校验已保证），只填一个不算凭据
+    return values.clientCert?.trim() && values.clientKey?.trim()
       ? {
-          clientCert: values.clientCert?.trim(),
-          clientKey: values.clientKey?.trim(),
+          clientCert: values.clientCert.trim(),
+          clientKey: values.clientKey.trim(),
         }
       : undefined;
   }
@@ -245,6 +247,15 @@ export const ClusterDrawer: React.FC<{
   const t = useT();
   const { message } = App.useApp();
   const rules = useFormRules();
+  /** 客户端证书与私钥成对：另一项填了，这一项就不能为空（保留凭据时两项都可留空） */
+  const pairedWith =
+    (other: 'clientCert' | 'clientKey', label: string): FormRule =>
+    ({ getFieldValue }) => ({
+      validator: (_rule, value: string | undefined) =>
+        !value?.trim() && String(getFieldValue(other) ?? '').trim()
+          ? Promise.reject(new Error(rules.required(label).message))
+          : Promise.resolve(),
+    });
   const submitter = useSubmitter();
   const [form] = Form.useForm<FormValues>();
   const [pasting, setPasting] = useState(false);
@@ -506,22 +517,32 @@ export const ClusterDrawer: React.FC<{
                     label={t('pages.k8s.cluster.clientCert')}
                     colProps={FULL}
                     fieldProps={{ rows: 3, style: { fontFamily: 'monospace' } }}
-                    rules={
-                      row?.hasCredential
+                    dependencies={['clientKey']}
+                    rules={[
+                      ...(row?.hasCredential
                         ? []
-                        : [rules.required(t('pages.k8s.cluster.clientCert'))]
-                    }
+                        : [rules.required(t('pages.k8s.cluster.clientCert'))]),
+                      pairedWith(
+                        'clientKey',
+                        t('pages.k8s.cluster.clientCert'),
+                      ),
+                    ]}
                   />
                   <ProFormTextArea
                     name="clientKey"
                     label={t('pages.k8s.cluster.clientKey')}
                     colProps={FULL}
                     fieldProps={{ rows: 3, style: { fontFamily: 'monospace' } }}
-                    rules={
-                      row?.hasCredential
+                    dependencies={['clientCert']}
+                    rules={[
+                      ...(row?.hasCredential
                         ? []
-                        : [rules.required(t('pages.k8s.cluster.clientKey'))]
-                    }
+                        : [rules.required(t('pages.k8s.cluster.clientKey'))]),
+                      pairedWith(
+                        'clientCert',
+                        t('pages.k8s.cluster.clientKey'),
+                      ),
+                    ]}
                   />
                 </>
               ) : (

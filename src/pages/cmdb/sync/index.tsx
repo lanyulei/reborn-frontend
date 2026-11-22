@@ -60,6 +60,7 @@ import {
   useValueEnum,
 } from '@/utils/i18n';
 import { toTableResult } from '@/utils/table';
+import { usePageVisible } from '@/utils/usePageVisible';
 import { CISelect } from '../components/CISelect';
 import { WebhookModal } from './WebhookModal';
 
@@ -606,6 +607,11 @@ const SyncSourcePage: React.FC = () => {
   const [conflictsRow, setConflictsRow] = useState<SyncSource | null>(null);
   const [webhookRow, setWebhookRow] = useState<SyncSource | null>(null);
   const reload = () => actionRef.current?.reload();
+  // 有正在执行的同步时轮询列表，直到都结束；后台标签页不轮询，恢复可见时刷新一次
+  const [running, setRunning] = useState(false);
+  const pageVisible = usePageVisible(() => {
+    if (running) reload();
+  });
   const hasAnyAction =
     has('cmdb.sync.edit') ||
     has('cmdb.sync.delete') ||
@@ -816,6 +822,7 @@ const SyncSourcePage: React.FC = () => {
             </CreateButton>
           )
         }
+        polling={running && pageVisible ? 5_000 : undefined}
         request={async (params) => {
           const result = await listSources({
             page: params.current,
@@ -823,6 +830,11 @@ const SyncSourcePage: React.FC = () => {
             keyword: params.keyword || undefined,
             provider: params.provider as CmdbProvider | undefined,
           });
+          setRunning(
+            result.items.some(
+              (r) => r.activeTask || r.lastStatus === 'running',
+            ),
+          );
           return toTableResult(result);
         }}
       />

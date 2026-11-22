@@ -141,6 +141,10 @@ export default {
   'pages.account.security.changePassword.title': '修改密码',
   'pages.account.security.changePassword.submit': '确认修改',
   'pages.account.security.changePassword.success': '密码已修改',
+  'pages.account.security.changePassword.oldPassword': '当前密码',
+  'pages.account.security.changePassword.oldPassword.placeholder':
+    '请输入当前密码',
+  'pages.account.security.changePassword.oldInvalid': '当前密码不正确',
   'pages.account.menu.base': '基本设置',
   'pages.account.menu.security': '安全设置',
 
@@ -168,6 +172,10 @@ export default {
   'pages.system.permission.saved': '权限已保存',
   'pages.system.permission.readonly':
     '当前角色为内置角色，仅超级管理员可修改授权，以下内容仅可查看。',
+  'pages.system.permission.loadFailed': '权限加载失败',
+  'pages.system.permission.retry': '重试',
+  'pages.system.permission.extra':
+    '其他权限（当前前端未收录，保存时原样保留）：',
 
   // 系统配置
   'pages.system.config.readonly':
@@ -243,6 +251,8 @@ export default {
   'app.request.retry': '请求失败，请重试',
   'app.profile.loadFailed': '登录信息加载失败，请稍后重试',
   'app.profile.retry': '重新加载',
-  'app.request.noResponse': 'None response! Please retry.',
-  'app.request.error': 'Request error, please retry.',
+  'app.request.noResponse': '服务器无响应，请重试',
+  'app.request.error': '请求出错，请重试',
+  // 域错误码文案 + 后端具体原因的拼接（domainRequest / k8s request）
+  'app.request.withDetail': '{text}：{detail}',
 };

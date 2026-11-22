@@ -1,5 +1,7 @@
 import { App, AutoComplete, Col, Form, Row, Select } from 'antd';
 import { createStyles } from 'antd-style';
+import { useMemo } from 'react';
+import { useT } from '@/utils/i18n';
 import KeyValueEditor from '../shared/KeyValueEditor';
 import StringListEditor from '../shared/StringListEditor';
 import { createKeyValueItem, createStringItem } from './helpers';
@@ -30,19 +32,9 @@ const useStyles = createStyles(({ token }) => ({
   },
 }));
 
-const booleanOptions = [
-  { label: '是', value: 'true' },
-  { label: '否', value: 'false' },
-];
-
 const reclaimPolicyOptions = [
   { label: 'Delete', value: 'Delete' },
   { label: 'Retain', value: 'Retain' },
-];
-
-const volumeBindingModeOptions = [
-  { label: '立即绑定', value: 'Immediate' },
-  { label: '延迟绑定', value: 'WaitForFirstConsumer' },
 ];
 
 type StorageClassSettingsProps = {
@@ -52,7 +44,30 @@ type StorageClassSettingsProps = {
 
 const StorageClassSettings = ({ provisioners }: StorageClassSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
+  const booleanOptions = useMemo(
+    () => [
+      { label: t('pages.k8s.forms.common.yes'), value: 'true' },
+      { label: t('pages.k8s.forms.common.no'), value: 'false' },
+    ],
+    [t],
+  );
+  const volumeBindingModeOptions = useMemo(
+    () => [
+      {
+        label: t('pages.k8s.forms.storageclass.bindingMode.immediate'),
+        value: 'Immediate',
+      },
+      {
+        label: t(
+          'pages.k8s.forms.storageclass.bindingMode.waitForFirstConsumer',
+        ),
+        value: 'WaitForFirstConsumer',
+      },
+    ],
+    [t],
+  );
 
   return (
     <div className={styles.settings}>
@@ -60,11 +75,17 @@ const StorageClassSettings = ({ provisioners }: StorageClassSettingsProps) => {
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
-              extra="填写 CSI 驱动或卷插件的名称，例如 ebs.csi.aws.com。"
-              label="供应者"
+              extra={t('pages.k8s.forms.storageclass.provisioner.extra')}
+              label={t('pages.k8s.forms.storageclass.provisioner')}
               name="provisioner"
               rules={[
-                { required: true, whitespace: true, message: '请输入供应者' },
+                {
+                  required: true,
+                  whitespace: true,
+                  message: t(
+                    'pages.k8s.forms.storageclass.provisioner.required',
+                  ),
+                },
               ]}
             >
               <AutoComplete
@@ -73,7 +94,9 @@ const StorageClassSettings = ({ provisioners }: StorageClassSettingsProps) => {
                   label: item,
                   value: item,
                 }))}
-                placeholder="请输入供应者"
+                placeholder={t(
+                  'pages.k8s.forms.storageclass.provisioner.required',
+                )}
                 showSearch={{
                   filterOption: (input, option) =>
                     String(option?.value ?? '')
@@ -85,13 +108,22 @@ const StorageClassSettings = ({ provisioners }: StorageClassSettingsProps) => {
           </Col>
           <Col span={12}>
             <Form.Item
-              label="回收机制"
+              label={t('pages.k8s.forms.storageclass.reclaimPolicy')}
               name="reclaimPolicy"
-              rules={[{ required: true, message: '请选择回收机制' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t(
+                    'pages.k8s.forms.storageclass.reclaimPolicy.required',
+                  ),
+                },
+              ]}
             >
               <Select
                 options={reclaimPolicyOptions}
-                placeholder="请选择回收机制"
+                placeholder={t(
+                  'pages.k8s.forms.storageclass.reclaimPolicy.required',
+                )}
               />
             </Form.Item>
           </Col>
@@ -99,55 +131,84 @@ const StorageClassSettings = ({ provisioners }: StorageClassSettingsProps) => {
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
-              extra="延迟绑定会等到有容器组使用卷时才创建并绑定持久卷。"
-              label="卷绑定模式"
+              extra={t('pages.k8s.forms.storageclass.bindingMode.extra')}
+              label={t('pages.k8s.forms.storageclass.bindingMode')}
               name="volumeBindingMode"
-              rules={[{ required: true, message: '请选择卷绑定模式' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t(
+                    'pages.k8s.forms.storageclass.bindingMode.required',
+                  ),
+                },
+              ]}
             >
               <Select
                 options={volumeBindingModeOptions}
-                placeholder="请选择卷绑定模式"
+                placeholder={t(
+                  'pages.k8s.forms.storageclass.bindingMode.required',
+                )}
               />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
-              extra="选择存储类是否允许创建后扩展卷容量。"
-              label="卷扩展"
+              extra={t('pages.k8s.forms.storageclass.expansion.extra')}
+              label={t('pages.k8s.forms.storageclass.expansion')}
               name="allowVolumeExpansion"
-              rules={[{ required: true, message: '请选择是否允许卷扩展' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.storageclass.expansion.required'),
+                },
+              ]}
             >
-              <Select options={booleanOptions} placeholder="请选择" />
+              <Select
+                options={booleanOptions}
+                placeholder={t('pages.k8s.forms.common.select')}
+              />
             </Form.Item>
           </Col>
         </Row>
       </div>
       <Form.Item
         className={styles.parameterField}
-        extra="按供应者（CSI 驱动）的要求填写，参数会原样传给供应者。"
-        label="参数"
+        extra={t('pages.k8s.forms.storageclass.parameters.extra')}
+        label={t('pages.k8s.forms.storageclass.parameters')}
         name="parameters"
       >
         <KeyValueEditor
-          addText="添加"
-          deleteAriaLabel="删除参数"
+          addText={t('pages.k8s.form.add')}
+          deleteAriaLabel={t('pages.k8s.forms.storageclass.parameters.delete')}
           minRows={1}
-          onAddBlocked={() => message.warning('请先填写已有参数的键。')}
+          onAddBlocked={() =>
+            message.warning(
+              t('pages.k8s.forms.storageclass.parameters.keyFirst'),
+            )
+          }
           onCreateItem={createKeyValueItem}
         />
       </Form.Item>
       <Form.Item
         className={styles.parameterField}
-        extra="由该存储类动态创建的持久卷会带上这些挂载选项，例如 noatime 或 nfsvers=4.1。"
-        label="挂载选项"
+        extra={t('pages.k8s.forms.storageclass.mountOptions.extra')}
+        label={t('pages.k8s.forms.storageclass.mountOptions')}
         name="mountOptions"
       >
         <StringListEditor
-          addText="添加"
-          deleteAriaLabel="删除挂载选项"
+          addText={t('pages.k8s.form.add')}
+          deleteAriaLabel={t(
+            'pages.k8s.forms.storageclass.mountOptions.delete',
+          )}
           minRows={1}
-          placeholder="请输入挂载选项"
-          onAddBlocked={() => message.warning('请先填写已有挂载选项。')}
+          placeholder={t(
+            'pages.k8s.forms.storageclass.mountOptions.placeholder',
+          )}
+          onAddBlocked={() =>
+            message.warning(
+              t('pages.k8s.forms.storageclass.mountOptions.first'),
+            )
+          }
           onCreateItem={createStringItem}
         />
       </Form.Item>

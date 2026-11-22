@@ -4,6 +4,7 @@
  */
 import { Form, Input } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import { NAME_PATTERN } from '../../pvc/helpers';
 import type { EditFormProps } from '../../shared/edit';
 import { useEditObject } from '../../shared/edit';
@@ -24,8 +25,6 @@ type CloneFormValues = {
   size?: number;
 };
 
-const TITLE = '克隆持久卷声明';
-
 const PersistentVolumeClaimCloneDrawer = ({
   clusterId,
   target,
@@ -33,6 +32,8 @@ const PersistentVolumeClaimCloneDrawer = ({
   onDone,
 }: EditFormProps) => {
   const { styles } = usePvcFormStyles();
+  const t = useT();
+  const title = t('pages.k8s.forms.edit.pvc.clone.title');
   const [form] = Form.useForm<CloneFormValues>();
   const { object, loading, error, reload } = useEditObject(clusterId, target);
   // 待提交的清单：有值时在抽屉之上打开清单弹窗（预检 → 提交）
@@ -81,8 +82,8 @@ const PersistentVolumeClaimCloneDrawer = ({
         error={error}
         loading={loading}
         submitDisabled={!object}
-        submitText="创建"
-        title={TITLE}
+        submitText={t('common.action.submitCreate')}
+        title={title}
         onCancel={onClose}
         onReload={reload}
         onSubmit={handleSubmit}
@@ -95,32 +96,49 @@ const PersistentVolumeClaimCloneDrawer = ({
             requiredMark
           >
             <Form.Item
-              label="名称"
+              label={t('pages.k8s.forms.common.name')}
               name="name"
               rules={[
-                { required: true, whitespace: true, message: '请输入名称' },
-                { max: 253, message: '名称最长 253 个字符' },
+                {
+                  required: true,
+                  whitespace: true,
+                  message: t('pages.k8s.forms.common.name.required'),
+                },
+                {
+                  max: 253,
+                  message: t('pages.k8s.forms.common.name.maxLength253'),
+                },
                 {
                   pattern: NAME_PATTERN,
-                  message: '名称只能包含小写字母、数字和中划线',
+                  message: t('pages.k8s.forms.edit.pvc.clone.name.pattern'),
                 },
                 {
                   validator: (_, value?: string) =>
                     value && value.trim() === sourceName
                       ? Promise.reject(
-                          new Error('名称不能与当前持久卷声明相同'),
+                          new Error(
+                            t(
+                              'pages.k8s.forms.edit.pvc.clone.name.sameAsSource',
+                            ),
+                          ),
                         )
                       : Promise.resolve(),
                 },
               ]}
             >
-              <Input className={styles.field} placeholder="请输入名称" />
+              <Input
+                className={styles.field}
+                placeholder={t('pages.k8s.forms.common.name.required')}
+              />
             </Form.Item>
             <Form.Item
-              label="容量"
+              label={t('pages.k8s.forms.common.capacity')}
               name="size"
               rules={[
-                { required: true, message: '请输入容量' },
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.common.capacity.required'),
+                },
                 {
                   validator: (_, value?: number | null) => {
                     if (value === undefined || value === null) {
@@ -130,6 +148,7 @@ const PersistentVolumeClaimCloneDrawer = ({
                     const sizeError = getPvcSizeError(
                       object,
                       formatPvcQuantity(value, current.unit),
+                      t,
                     );
 
                     return sizeError
@@ -147,8 +166,9 @@ const PersistentVolumeClaimCloneDrawer = ({
               />
             </Form.Item>
             <div className={styles.helpText}>
-              克隆会基于当前 PVC（容量 {currentRequest || '-'}
-              ）创建新的持久卷声明，访问模式、卷模式和存储类保持一致。
+              {t('pages.k8s.forms.edit.pvc.clone.help', {
+                capacity: currentRequest || '-',
+              })}
             </div>
           </Form>
         )}
@@ -157,7 +177,7 @@ const PersistentVolumeClaimCloneDrawer = ({
         <SubmitManifest
           clusterId={clusterId}
           namespace={target.namespace}
-          title={TITLE}
+          title={title}
           yaml={pending}
           onBack={() => setPending(undefined)}
           onClose={onClose}

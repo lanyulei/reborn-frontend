@@ -62,11 +62,18 @@ const MuteList: React.FC = () => {
   const timeText = (record: MonitorMute) => {
     const { spec } = record;
     if (spec.timeType === 2) {
-      const windows = (spec.periodic?.windows ?? []).map(windowText);
+      // 时间窗允许重复配置，文字相同：重复项的键带出现次数去重
+      const seen = new Map<string, number>();
+      const windows = (spec.periodic?.windows ?? []).map((window) => {
+        const text = windowText(window);
+        const count = (seen.get(text) ?? 0) + 1;
+        seen.set(text, count);
+        return { key: count > 1 ? `${text}#${count}` : text, text };
+      });
       return (
         <div>
-          {windows.map((text) => (
-            <div key={text}>{text}</div>
+          {windows.map((item) => (
+            <div key={item.key}>{item.text}</div>
           ))}
           <div className={styles.hint}>
             {spec.periodic?.timezone || 'UTC'}

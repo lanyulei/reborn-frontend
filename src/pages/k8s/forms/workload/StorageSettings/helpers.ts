@@ -14,18 +14,28 @@ const ABSOLUTE_PATH_PATTERN = /^\/.+/;
 const STORAGE_QUANTITY_PATTERN =
   /^(0|[1-9]\d*)(m|Ki|Mi|Gi|Ti|Pi|Ei|K|M|G|T|P|E)?$/;
 
-const volumeTypeOptions: { label: string; value: WorkloadVolumeType }[] = [
-  { label: '持久卷', value: 'persistentVolumeClaim' },
-  { label: '临时卷', value: 'emptyDir' },
-  { label: 'HostPath 卷', value: 'hostPath' },
+/** 选项文案以 i18n 键表达（labelId），调用方用 t(labelId) 翻译 */
+const volumeTypeOptions: { labelId: string; value: WorkloadVolumeType }[] = [
+  {
+    labelId: 'pages.k8s.kind.PersistentVolume',
+    value: 'persistentVolumeClaim',
+  },
+  {
+    labelId: 'pages.k8s.forms.workload.storage.type.emptyDir',
+    value: 'emptyDir',
+  },
+  {
+    labelId: 'pages.k8s.forms.workload.storage.type.hostPath',
+    value: 'hostPath',
+  },
 ];
 
 const configResourceTypeOptions: {
-  label: string;
+  labelId: string;
   value: WorkloadConfigResourceType;
 }[] = [
-  { label: '配置字典', value: 'configMap' },
-  { label: '保密字典', value: 'secret' },
+  { labelId: 'pages.k8s.kind.ConfigMap', value: 'configMap' },
+  { labelId: 'pages.k8s.kind.Secret', value: 'secret' },
 ];
 
 const createStorageItemId = () =>
@@ -129,16 +139,27 @@ const activateEmptyMounts = (
   }));
 };
 
-const getMountModeOptions = (storageCategory?: WorkloadStorageCategory) =>
+const getMountModeOptions = (
+  storageCategory?: WorkloadStorageCategory,
+): { labelId: string; value: WorkloadMountMode }[] =>
   storageCategory === 'config'
     ? [
-        { label: '只读', value: 'readOnly' },
-        { label: '不挂载', value: 'none' },
+        { labelId: 'pages.k8s.form.readOnly', value: 'readOnly' },
+        {
+          labelId: 'pages.k8s.forms.workload.storage.mountMode.none',
+          value: 'none',
+        },
       ]
     : [
-        { label: '读写', value: 'readWrite' },
-        { label: '只读', value: 'readOnly' },
-        { label: '不挂载', value: 'none' },
+        {
+          labelId: 'pages.k8s.forms.workload.storage.mountMode.readWrite',
+          value: 'readWrite',
+        },
+        { labelId: 'pages.k8s.form.readOnly', value: 'readOnly' },
+        {
+          labelId: 'pages.k8s.forms.workload.storage.mountMode.none',
+          value: 'none',
+        },
       ];
 
 /** 还没被其它行占用的键（当前行已选的键保留） */

@@ -3,6 +3,8 @@
  * 表单值 ↔ 对象原文。写回时只动表单建模且用户改过的字段，其余原样保留
  * （defaultBackend、没有路径的规则、resource 后端、多条 TLS、已有注解……）。
  */
+
+import type { Translate } from '@/utils/i18n';
 import {
   buildIngressFormValuesFromManifest,
   buildIngressMetadata,
@@ -285,6 +287,7 @@ export const buildAnnotationRows = (object: PlainObject): KeyValueRow[] => {
 /** 注解行的校验：返回第一条错误信息，合法时为 undefined */
 export const getAnnotationRowsError = (
   rows: KeyValueRow[],
+  t: Translate,
 ): string | undefined => {
   const keys = new Set<string>();
 
@@ -294,10 +297,10 @@ export const getAnnotationRowsError = (
       continue;
     }
     if (!keyName) {
-      return '注解 Key 不能为空';
+      return t('pages.k8s.forms.edit.ingress.annotations.keyRequired');
     }
     if (keys.has(keyName)) {
-      return '注解 Key 不能重复';
+      return t('pages.k8s.forms.edit.ingress.annotations.keyDuplicate');
     }
     keys.add(keyName);
   }

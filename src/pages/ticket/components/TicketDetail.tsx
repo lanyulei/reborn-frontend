@@ -37,7 +37,7 @@ import type {
   TicketDetail as TicketDetailData,
   TicketFormField,
 } from '@/services/ticket/typings';
-import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
+import { formatTime } from '@/utils/format';
 import { useT } from '@/utils/i18n';
 import { AttachmentList, useUploadingFields } from './Attachments';
 import {
@@ -65,8 +65,6 @@ const sameValue = (field: TicketFormField, a: unknown, b: unknown) => {
   }
   return JSON.stringify(a) === JSON.stringify(b);
 };
-const TIME_FORMAT = DATE_TIME_SECONDS_FORMAT;
-
 export const TicketDetail: React.FC<{
   ticketId: string;
   /** 返回上一页 */
@@ -214,8 +212,8 @@ export const TicketDetail: React.FC<{
     );
   }
 
-  const formatTime = (time?: string) =>
-    time ? dayjs(time).format(TIME_FORMAT) : t('common.empty');
+  /** 时间展示：空值显示「—」 */
+  const timeText = (time?: string) => formatTime(time) || t('common.empty');
 
   const meta = [
     {
@@ -236,14 +234,14 @@ export const TicketDetail: React.FC<{
     {
       key: 'createTime',
       label: t('pages.ticket.column.createTime'),
-      children: formatTime(ticket.createTime),
+      children: timeText(ticket.createTime),
     },
     {
       key: 'responseDue',
       label: t('pages.ticket.sla.response'),
       children: ticket.responseDue ? (
         <Flex gap={8} align="center" wrap>
-          {dayjs(ticket.responseDue).format(TIME_FORMAT)}
+          {formatTime(ticket.responseDue)}
           {sla && <SlaTag {...sla.response} />}
         </Flex>
       ) : (
@@ -255,7 +253,7 @@ export const TicketDetail: React.FC<{
       label: t('pages.ticket.sla.resolve'),
       children: ticket.resolveDue ? (
         <Flex gap={8} align="center" wrap>
-          {dayjs(ticket.resolveDue).format(TIME_FORMAT)}
+          {formatTime(ticket.resolveDue)}
           {sla && <SlaTag {...sla.resolve} />}
         </Flex>
       ) : (
@@ -267,7 +265,7 @@ export const TicketDetail: React.FC<{
           {
             key: 'endTime',
             label: t('pages.ticket.column.endTime'),
-            children: formatTime(ticket.endTime),
+            children: timeText(ticket.endTime),
           },
         ]
       : []),
@@ -339,7 +337,9 @@ export const TicketDetail: React.FC<{
               showIcon
               style={{ marginBottom: 12 }}
               title={t('pages.ticket.form.missing', {
-                fields: missing.map((f) => f.name).join('、'),
+                fields: missing
+                  .map((f) => f.name)
+                  .join(t('pages.ticket.separator')),
               })}
             />
           )}

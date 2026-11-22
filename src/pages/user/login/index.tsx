@@ -3,13 +3,14 @@ import { LoginForm, ProFormText } from '@ant-design/pro-components';
 import {
   FormattedMessage,
   Helmet,
+  history,
   SelectLang,
   useIntl,
   useModel,
 } from '@umijs/max';
 import { Alert, App } from 'antd';
 import { createStyles } from 'antd-style';
-import React, { startTransition, useState } from 'react';
+import React, { useState } from 'react';
 import { Footer } from '@/components';
 import { login } from '@/services/system/auth';
 import { getErrorMessage } from '@/services/system/request';
@@ -116,19 +117,27 @@ const Login: React.FC = () => {
         defaultMessage: '登录成功！',
       });
       message.success(defaultLoginSuccessMessage);
-      const profile = await initialState?.fetchUserInfo?.();
-      if (profile?.user) {
-        startTransition(() => {
-          setInitialState((s) => ({
-            ...s,
-            currentUser: profile.user,
-            roles: profile.roles,
-          }));
-        });
-      }
       const urlParams = new URL(window.location.href).searchParams;
       const redirectUrl = getSafeRedirectUrl(urlParams.get('redirect'));
-      window.location.href = redirectUrl;
+      const profile = await initialState?.fetchUserInfo?.();
+      if (!profile?.user) {
+        // 登录态拉取遇到暂时性故障：整页重载，由 getInitialState 给出重试页
+        window.location.href = redirectUrl;
+        return;
+      }
+      // 已拿到完整登录态：直接写入 initialState 后站内跳转，不再整页重载重复拉 /me
+      // （与 getInitialState 的字段一一对应；同一事件内的状态更新与路由切换合并为一次渲染）
+      setInitialState((s) => ({
+        ...s,
+        currentUser: profile.user,
+        roles: profile.roles,
+        menus: profile.menus ?? [],
+        elements: profile.elements ?? [],
+        bizScope: profile.bizScope ?? [],
+        bizUnrestricted: profile.bizUnrestricted,
+        profileError: false,
+      }));
+      history.replace(redirectUrl);
     } catch (error) {
       setErrorMessage(
         getErrorMessage(

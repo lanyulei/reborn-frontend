@@ -9,6 +9,7 @@ import {
   rollbackWorkload,
 } from '@/services/k8s/resource';
 import type { ResourceRef, Revision } from '@/services/k8s/typings';
+import { useT } from '@/utils/i18n';
 import { ApprovalNotice } from './approval';
 
 export const RollbackModal: React.FC<{
@@ -17,6 +18,7 @@ export const RollbackModal: React.FC<{
   onClose: () => void;
   onDone?: () => void;
 }> = ({ clusterId, target: targetProp, onClose, onDone }) => {
+  const t = useT();
   const { message } = App.useApp();
   // 弹窗按目标对象挂载：目标在生命周期内不变
   const target = useRef(targetProp).current;
@@ -49,7 +51,7 @@ export const RollbackModal: React.FC<{
     setSaving(true);
     try {
       await rollbackWorkload(clusterId, target, values.revision);
-      message.success('工作负载已回退');
+      message.success(t('pages.k8s.detail.rollback.done'));
       onDone?.();
       onClose();
     } catch (err) {
@@ -65,7 +67,7 @@ export const RollbackModal: React.FC<{
       open
       title={
         <>
-          <RollbackOutlined /> 回退
+          <RollbackOutlined /> {t('pages.k8s.action.rollback')}
         </>
       }
       destroyOnHidden
@@ -78,19 +80,24 @@ export const RollbackModal: React.FC<{
       <ApprovalNotice />
       <Spin spinning={loading}>
         <Form form={form} layout="vertical">
-          <Form.Item label="资源名称">
+          <Form.Item label={t('pages.k8s.detail.resourceName')}>
             <Input disabled value={target.name} />
           </Form.Item>
-          <Form.Item label="当前修改记录">
+          <Form.Item label={t('pages.k8s.detail.rollback.current')}>
             <Input disabled value={current ? `#${current}` : '-'} />
           </Form.Item>
           <Form.Item
-            label="目标修改记录"
+            label={t('pages.k8s.detail.rollback.target')}
             name="revision"
-            rules={[{ required: true, message: '请选择目标修改记录' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.detail.rollback.selectTarget'),
+              },
+            ]}
           >
             <Select<number>
-              placeholder="请选择目标修改记录"
+              placeholder={t('pages.k8s.detail.rollback.selectTarget')}
               showSearch={{ optionFilterProp: 'label' }}
               options={revisions
                 .filter((item) => !item.current)

@@ -9,15 +9,17 @@ import { useEffect, useState } from 'react';
 import SectionTitle from '@/components/SectionTitle';
 import { getObject } from '@/services/k8s/resource';
 import type { GVR, K8sObject } from '@/services/k8s/typings';
+import { useT } from '@/utils/i18n';
 import {
   analyzeRbacBindingRisk,
   analyzeRbacRoleRisk,
   analyzeRbacRuleRisk,
+  formatRbacRiskReason,
   type RbacPolicyRule,
   type RbacRisk,
   type RbacRiskLevel,
   type RbacSubject,
-  RISK_LEVEL_TEXT,
+  RISK_LEVEL_TEXT_ID,
 } from '../forms/role/risk';
 import { TextList } from './cells';
 import { GVRS, sameGVR } from './meta';
@@ -29,19 +31,27 @@ const RISK_COLOR: Record<RbacRiskLevel, string> = {
   None: 'default',
 };
 
-const RiskTag: React.FC<{ risk: RbacRisk }> = ({ risk }) => (
-  <Tooltip
-    title={
-      risk.reasons.length > 0
-        ? risk.reasons.map((reason) => <div key={reason}>{reason}</div>)
-        : undefined
-    }
-  >
-    <Tag color={RISK_COLOR[risk.level]} style={{ marginInlineEnd: 0 }}>
-      {RISK_LEVEL_TEXT[risk.level]}
-    </Tag>
-  </Tooltip>
-);
+const RiskTag: React.FC<{ risk: RbacRisk }> = ({ risk }) => {
+  const t = useT();
+  return (
+    <Tooltip
+      title={
+        risk.reasons.length > 0
+          ? risk.reasons.map((reason) => {
+              const text = formatRbacRiskReason(reason, t);
+              return (
+                <div key={`${reason.id}:${reason.name ?? ''}`}>{text}</div>
+              );
+            })
+          : undefined
+      }
+    >
+      <Tag color={RISK_COLOR[risk.level]} style={{ marginInlineEnd: 0 }}>
+        {t(RISK_LEVEL_TEXT_ID[risk.level])}
+      </Tag>
+    </Tooltip>
+  );
+};
 
 const list = (value: unknown): string[] =>
   Array.isArray(value) ? value.map((item) => String(item)) : [];
@@ -49,50 +59,53 @@ const list = (value: unknown): string[] =>
 const Rules: React.FC<{ rules: RbacPolicyRule[]; title: React.ReactNode }> = ({
   rules,
   title,
-}) => (
-  <>
-    <SectionTitle>{title}</SectionTitle>
-    <Table<RbacPolicyRule & { key: number }>
-      size="small"
-      pagination={false}
-      dataSource={rules.map((rule, key) => ({ ...rule, key }))}
-      columns={[
-        {
-          title: 'API 组',
-          width: 180,
-          render: (_, rule) => (
-            <TextList
-              value={list(rule.apiGroups).map((group) => group || 'core')}
-            />
-          ),
-        },
-        {
-          title: '资源 / 非资源 URL',
-          render: (_, rule) => (
-            <TextList
-              value={[...list(rule.resources), ...list(rule.nonResourceURLs)]}
-              max={4}
-            />
-          ),
-        },
-        {
-          title: '资源名称',
-          width: 160,
-          render: (_, rule) => <TextList value={list(rule.resourceNames)} />,
-        },
-        {
-          title: '操作',
-          render: (_, rule) => <TextList value={list(rule.verbs)} max={8} />,
-        },
-        {
-          title: '风险',
-          width: 90,
-          render: (_, rule) => <RiskTag risk={analyzeRbacRuleRisk(rule)} />,
-        },
-      ]}
-    />
-  </>
-);
+}) => {
+  const t = useT();
+  return (
+    <>
+      <SectionTitle>{title}</SectionTitle>
+      <Table<RbacPolicyRule & { key: number }>
+        size="small"
+        pagination={false}
+        dataSource={rules.map((rule, key) => ({ ...rule, key }))}
+        columns={[
+          {
+            title: t('pages.k8s.detail.rbac.apiGroups'),
+            width: 180,
+            render: (_, rule) => (
+              <TextList
+                value={list(rule.apiGroups).map((group) => group || 'core')}
+              />
+            ),
+          },
+          {
+            title: t('pages.k8s.detail.rbac.resources'),
+            render: (_, rule) => (
+              <TextList
+                value={[...list(rule.resources), ...list(rule.nonResourceURLs)]}
+                max={4}
+              />
+            ),
+          },
+          {
+            title: t('pages.k8s.detail.resourceName'),
+            width: 160,
+            render: (_, rule) => <TextList value={list(rule.resourceNames)} />,
+          },
+          {
+            title: t('pages.k8s.detail.rbac.verbs'),
+            render: (_, rule) => <TextList value={list(rule.verbs)} max={8} />,
+          },
+          {
+            title: t('pages.k8s.detail.rbac.risk'),
+            width: 90,
+            render: (_, rule) => <RiskTag risk={analyzeRbacRuleRisk(rule)} />,
+          },
+        ]}
+      />
+    </>
+  );
+};
 
 export const isRbacGVR = (gvr: GVR): boolean =>
   [GVRS.role, GVRS.clusterRole, GVRS.roleBinding, GVRS.clusterRoleBinding].some(
@@ -104,6 +117,7 @@ export const RbacSection: React.FC<{
   gvr: GVR;
   object: K8sObject;
 }> = ({ clusterId, gvr, object }) => {
+  const t = useT();
   const binding =
     sameGVR(gvr, GVRS.roleBinding) || sameGVR(gvr, GVRS.clusterRoleBinding);
   const roleRef = (object.roleRef ?? {}) as { kind?: string; name?: string };
@@ -148,7 +162,8 @@ export const RbacSection: React.FC<{
         rules={rules}
         title={
           <>
-            权限规则 <RiskTag risk={analyzeRbacRoleRisk({ rules })} />
+            {t('pages.k8s.detail.rbac.rules')}{' '}
+            <RiskTag risk={analyzeRbacRoleRisk({ rules })} />
           </>
         }
       />
@@ -161,7 +176,7 @@ export const RbacSection: React.FC<{
   return (
     <>
       <SectionTitle>
-        角色引用{' '}
+        {t('pages.k8s.detail.rbac.roleRef')}{' '}
         <RiskTag
           risk={analyzeRbacBindingRisk({ roleRef, subjects }, refRules)}
         />
@@ -170,16 +185,16 @@ export const RbacSection: React.FC<{
         <Tag>{roleRef.kind}</Tag>
         {roleRef.name}
       </div>
-      <SectionTitle>授权主体</SectionTitle>
+      <SectionTitle>{t('pages.k8s.detail.rbac.subjects')}</SectionTitle>
       <Table<RbacSubject & { key: number }>
         size="small"
         pagination={false}
         dataSource={subjects.map((subject, key) => ({ ...subject, key }))}
         columns={[
-          { title: '类型', dataIndex: 'kind', width: 160 },
-          { title: '名称', dataIndex: 'name' },
+          { title: t('pages.k8s.event.type'), dataIndex: 'kind', width: 160 },
+          { title: t('pages.k8s.column.name'), dataIndex: 'name' },
           {
-            title: '命名空间',
+            title: t('pages.k8s.column.namespace'),
             dataIndex: 'namespace',
             width: 220,
             render: (value) => value || '-',
@@ -187,7 +202,7 @@ export const RbacSection: React.FC<{
         ]}
       />
       {refRules && refRules.length > 0 && (
-        <Rules rules={refRules} title="所引用角色的权限规则" />
+        <Rules rules={refRules} title={t('pages.k8s.detail.rbac.refRules')} />
       )}
     </>
   );

@@ -4,7 +4,8 @@ import {
   SlidersOutlined,
 } from '@ant-design/icons';
 import { App, Col, Form, Input, Row, Select } from 'antd';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import { parseObject, toYaml } from '../shared/kube';
 import type { ResourceCreateWizardStep } from '../shared/ResourceCreateWizardDrawer';
 import ResourceCreateWizardDrawer from '../shared/ResourceCreateWizardDrawer';
@@ -23,23 +24,6 @@ import {
 import IngressClassAdvancedSettings from './IngressClassAdvancedSettings';
 import IngressClassParameterSettings from './IngressClassParameterSettings';
 import type { CreateIngressClassFormValues } from './types';
-
-const TITLE = '创建 Ingress 类';
-
-const STEPS: ResourceCreateWizardStep[] = [
-  {
-    title: '基本信息',
-    icon: <AppstoreOutlined />,
-  },
-  {
-    title: '参数引用',
-    icon: <LinkOutlined />,
-  },
-  {
-    title: '高级设置',
-    icon: <SlidersOutlined />,
-  },
-];
 
 const buildYaml = (values: CreateIngressClassFormValues) =>
   toYaml(buildCreateIngressClassManifest(values));
@@ -64,26 +48,22 @@ const getStepStatusText = (
   current: number,
   index: number,
   values: CreateIngressClassFormValues,
+  t: Translate,
 ) => {
   if (current === index) {
-    return '当前';
+    return t('pages.k8s.forms.common.current');
   }
   if (index === 0 && hasBasicInfoContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 1 && hasParameterContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 2 && hasMetadataContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
-  return '未设置';
+  return t('pages.k8s.forms.common.unset');
 };
-
-const defaultClassOptions = [
-  { label: '是', value: 'true' },
-  { label: '否', value: 'false' },
-];
 
 /** Ingress 类是集群级资源：忽略作用域里的命名空间 */
 const CreateIngressClassForm = ({
@@ -91,8 +71,31 @@ const CreateIngressClassForm = ({
   onClose,
   onDone,
 }: CreateFormProps) => {
+  const t = useT();
   const { message } = App.useApp();
   const [form] = Form.useForm<CreateIngressClassFormValues>();
+  const title = t('pages.k8s.forms.ingressclass.title');
+  const steps = useMemo<ResourceCreateWizardStep[]>(
+    () => [
+      {
+        title: t('pages.k8s.form.section.basic'),
+        icon: <AppstoreOutlined />,
+      },
+      {
+        title: t('pages.k8s.forms.ingressclass.parameters'),
+        icon: <LinkOutlined />,
+      },
+      {
+        title: t('pages.k8s.forms.common.advanced'),
+        icon: <SlidersOutlined />,
+      },
+    ],
+    [t],
+  );
+  const defaultClassOptions = [
+    { label: t('pages.k8s.forms.common.yes'), value: 'true' },
+    { label: t('pages.k8s.forms.common.no'), value: 'false' },
+  ];
   const [initialValues] = useState(getInitialCreateIngressClassValues);
   const [current, setCurrent] = useState(0);
   const [yamlMode, setYamlMode] = useState(false);
@@ -116,7 +119,11 @@ const CreateIngressClassForm = ({
       // 表单项就地显示校验错误
       return false;
     }
-    const warning = validateIngressClassStep(form.getFieldsValue(true), step);
+    const warning = validateIngressClassStep(
+      form.getFieldsValue(true),
+      step,
+      t,
+    );
 
     if (warning) {
       message.warning(warning);
@@ -130,7 +137,7 @@ const CreateIngressClassForm = ({
     if (!(await validateCurrentStep(current))) {
       return;
     }
-    setCurrent((step) => Math.min(step + 1, STEPS.length - 1));
+    setCurrent((step) => Math.min(step + 1, steps.length - 1));
   };
 
   const handleSubmit = async () => {
@@ -139,11 +146,11 @@ const CreateIngressClassForm = ({
       try {
         resource = parseObject(yamlValue);
       } catch {
-        message.error('YAML 格式不正确或不是有效的资源对象，请检查后重试');
+        message.error(t('pages.k8s.forms.common.yaml.invalid'));
         return;
       }
 
-      const validationError = getIngressClassYamlValidationError(resource);
+      const validationError = getIngressClassYamlValidationError(resource, t);
       if (validationError) {
         message.error(validationError);
         return;
@@ -158,7 +165,7 @@ const CreateIngressClassForm = ({
     }
     // 只挂载了当前步骤的表单项：取全量值，而不是 validateFields 的返回值
     const formValues: CreateIngressClassFormValues = form.getFieldsValue(true);
-    const warning = validateIngressClassFormValues(formValues);
+    const warning = validateIngressClassFormValues(formValues, t);
     if (warning) {
       message.warning(warning);
       return;
@@ -171,43 +178,65 @@ const CreateIngressClassForm = ({
     <Row gutter={16}>
       <Col span={12}>
         <Form.Item
-          extra="名称只能包含小写字母、数字和连字符（-），必须以小写字母或数字开头和结尾，最长 63 个字符"
-          label="名称"
+          extra={t('pages.k8s.forms.common.name.dnsLabel')}
+          label={t('pages.k8s.forms.common.name')}
           name="name"
           rules={[
-            { required: true, message: '请输入名称' },
-            { max: 63, message: '名称最长 63 个字符' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.name.required'),
+            },
+            { max: 63, message: t('pages.k8s.forms.common.name.maxLength') },
             {
               pattern: NAME_PATTERN,
-              message:
-                '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+              message: t('pages.k8s.forms.common.name.pattern'),
             },
           ]}
         >
-          <Input autoFocus placeholder="请输入名称" />
+          <Input
+            autoFocus
+            placeholder={t('pages.k8s.forms.common.name.required')}
+          />
         </Form.Item>
       </Col>
       <Col span={12}>
         <Form.Item
-          extra="通常为域名路径格式，例如 k8s.io/ingress-nginx。"
-          label="控制器"
+          extra={t('pages.k8s.forms.ingressclass.controller.extra')}
+          label={t('pages.k8s.forms.ingressclass.controller')}
           name="controller"
           rules={[
-            { required: true, whitespace: true, message: '请输入控制器' },
-            { max: 250, message: '控制器最长 250 个字符' },
+            {
+              required: true,
+              whitespace: true,
+              message: t('pages.k8s.forms.ingressclass.controller.required'),
+            },
+            {
+              max: 250,
+              message: t('pages.k8s.forms.ingressclass.controller.maxLength'),
+            },
           ]}
         >
-          <Input placeholder="请输入控制器" />
+          <Input
+            placeholder={t('pages.k8s.forms.ingressclass.controller.required')}
+          />
         </Form.Item>
       </Col>
       <Col span={12}>
         <Form.Item
-          extra="设置后会输出 ingressclass.kubernetes.io/is-default-class 注解。"
-          label="默认 Ingress 类"
+          extra={t('pages.k8s.forms.ingressclass.isDefault.extra')}
+          label={t('pages.k8s.forms.ingressclass.isDefault')}
           name="isDefaultClass"
-          rules={[{ required: true, message: '请选择是否作为默认类' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.ingressclass.isDefault.required'),
+            },
+          ]}
         >
-          <Select options={defaultClassOptions} placeholder="请选择" />
+          <Select
+            options={defaultClassOptions}
+            placeholder={t('pages.k8s.forms.common.select')}
+          />
         </Form.Item>
       </Col>
     </Row>
@@ -224,11 +253,11 @@ const CreateIngressClassForm = ({
       <ResourceCreateWizardDrawer
         current={current}
         getStepDescription={(_, index) =>
-          getStepStatusText(current, index, values)
+          getStepStatusText(current, index, values, t)
         }
         open
-        steps={STEPS}
-        title={TITLE}
+        steps={steps}
+        title={title}
         yamlMode={yamlMode}
         yamlValue={yamlValue}
         onCancel={onClose}
@@ -269,7 +298,7 @@ const CreateIngressClassForm = ({
         <SubmitManifest
           clusterId={clusterId}
           yaml={manifestYaml}
-          title={TITLE}
+          title={title}
           onBack={() => setManifestYaml(undefined)}
           onClose={onClose}
           onDone={onDone}

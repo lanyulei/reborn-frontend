@@ -356,4 +356,7 @@ export default {
     '已交接 {n} 項待辦；有 {failed} 個流程未能交接，且可能還有尚未處理到的流程。請先在流程監控中處理未能交接的流程，再執行一次',
   'pages.workflow.handover.partial':
     '已交接 {n} 項待辦，仍有剩餘，請再執行一次',
+
+  'pages.workflow.problem.edge': '{name}：{error}',
+  'pages.workflow.separator': '、',
 };

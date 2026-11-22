@@ -62,7 +62,8 @@ type CreatePersistentVolumeFormValues = {
 
 type PersistentVolumeValidationError = {
   field: keyof CreatePersistentVolumeFormValues;
-  message: string;
+  /** 提示语的 i18n 键，由调用方翻译 */
+  messageId: string;
 };
 
 export type {

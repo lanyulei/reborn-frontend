@@ -47,7 +47,9 @@ export const ruleComplete = (rule: AssigneeRule): boolean => {
 export const ruleText = (rule: AssigneeRule, t: Translate): string => {
   if (!ruleComplete(rule)) return '';
   const names = (ids?: string[]) =>
-    (ids ?? []).map((id) => rule.labels?.[id] ?? id).join('、');
+    (ids ?? [])
+      .map((id) => rule.labels?.[id] ?? id)
+      .join(t('component.flow.separator'));
   switch (rule.kind) {
     case 'user':
       return names(rule.userIds);
@@ -129,7 +131,7 @@ export const stepSummary = (node: StepNode, t: Translate): string => {
   }
   const parts = node.assignee.rules.map((r) => ruleText(r, t)).filter(Boolean);
   if (parts.length === 0) return '';
-  const who = parts.join('、');
+  const who = parts.join(t('component.flow.separator'));
   if (node.kind === 'cc') return who;
   const mode = t(`component.flow.mode.${node.assignee.mode ?? 'any'}`);
   return durationValid(node.timeout)

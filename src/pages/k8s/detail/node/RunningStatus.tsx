@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import { Empty, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import SubTitle from '../shared/SubTitle';
 
 export type NodeRunningView = {
@@ -148,26 +149,26 @@ type RunningStatusProps = {
 const healthStatusItems = [
   {
     type: 'MemoryPressure',
-    title: '内存压力',
-    description: '节点的剩余内存是否小于阈值。',
+    title: 'pages.k8s.detail.node.cond.memoryPressure',
+    description: 'pages.k8s.detail.node.cond.memoryPressure.desc',
     icon: <DatabaseOutlined />,
   },
   {
     type: 'DiskPressure',
-    title: '磁盘压力',
-    description: '节点的剩余磁盘空间或 Inode 数量是否小于阈值。',
+    title: 'pages.k8s.detail.node.cond.diskPressure',
+    description: 'pages.k8s.detail.node.cond.diskPressure.desc',
     icon: <HddOutlined />,
   },
   {
     type: 'PIDPressure',
-    title: '进程压力',
-    description: '允许在节点上创建的进程数量是否小于阈值。',
+    title: 'pages.k8s.detail.node.cond.pidPressure',
+    description: 'pages.k8s.detail.node.cond.pidPressure.desc',
     icon: <DashboardOutlined />,
   },
   {
     type: 'Ready',
-    title: '就绪',
-    description: '节点是否可以接收容器组。',
+    title: 'pages.k8s.metrics.series.ready',
+    description: 'pages.k8s.detail.node.cond.ready.desc',
     icon: <PartitionOutlined />,
   },
 ];
@@ -185,6 +186,7 @@ const isConditionHealthy = (type: string, status?: string) => {
 const getTaintValue = (value?: string) => value || '-';
 
 const RunningStatus = ({ node }: RunningStatusProps) => {
+  const t = useT();
   const { styles } = useStyles();
 
   if (!node) {
@@ -194,7 +196,7 @@ const RunningStatus = ({ node }: RunningStatusProps) => {
   return (
     <div className={styles.runningStatus}>
       <div>
-        <SubTitle>健康状态</SubTitle>
+        <SubTitle>{t('pages.k8s.detail.node.health')}</SubTitle>
         <div className={styles.healthGrid}>
           {healthStatusItems.map((item) => {
             const condition = getNodeCondition(node, item.type);
@@ -221,9 +223,11 @@ const RunningStatus = ({ node }: RunningStatusProps) => {
                   )}
                 </div>
                 <div className={styles.healthContent}>
-                  <div className={styles.healthTitle}>{item.title}</div>
-                  <Tooltip title={item.description} placement="topLeft">
-                    <div className={styles.healthDesc}>{item.description}</div>
+                  <div className={styles.healthTitle}>{t(item.title)}</div>
+                  <Tooltip title={t(item.description)} placement="topLeft">
+                    <div className={styles.healthDesc}>
+                      {t(item.description)}
+                    </div>
                   </Tooltip>
                 </div>
               </div>
@@ -232,7 +236,7 @@ const RunningStatus = ({ node }: RunningStatusProps) => {
         </div>
       </div>
       <div>
-        <SubTitle>污点</SubTitle>
+        <SubTitle>{t('pages.k8s.detail.node.taints')}</SubTitle>
         {node.taints && node.taints.length > 0 ? (
           <div className={styles.taintList}>
             {node.taints.map((taint, index) => {
@@ -245,19 +249,25 @@ const RunningStatus = ({ node }: RunningStatusProps) => {
                   key={`${taint.key || index}-${taint.effect || ''}`}
                 >
                   <div className={styles.taintField}>
-                    <span className={styles.taintLabel}>键:</span>
+                    <span className={styles.taintLabel}>
+                      {t('pages.k8s.detail.keyLabel')}
+                    </span>
                     <Tooltip title={taintKey} placement="topLeft">
                       <span className={styles.taintValue}>{taintKey}</span>
                     </Tooltip>
                   </div>
                   <div className={styles.taintField}>
-                    <span className={styles.taintLabel}>值:</span>
+                    <span className={styles.taintLabel}>
+                      {t('pages.k8s.detail.valueLabel')}
+                    </span>
                     <Tooltip title={taintValue} placement="topLeft">
                       <span className={styles.taintValue}>{taintValue}</span>
                     </Tooltip>
                   </div>
                   <div className={styles.taintField}>
-                    <span className={styles.taintLabel}>策略:</span>
+                    <span className={styles.taintLabel}>
+                      {t('pages.k8s.detail.node.taintEffect')}
+                    </span>
                     <span className={styles.taintValue}>
                       {getTaintValue(taint.effect)}
                     </span>

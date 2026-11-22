@@ -3,6 +3,7 @@ import { CloseOutlined } from '@ant-design/icons';
 import { Alert, Button, Drawer, Form, Spin, Switch } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import type { EditFormProps } from '../../shared/edit';
 import { EditSubmit, useEditObject } from '../../shared/edit';
 import { toYaml } from '../../shared/kube';
@@ -77,8 +78,6 @@ type VolumeOperationFormValues = {
   allowVolumeExpansion?: boolean;
 };
 
-const TITLE = '设置卷操作';
-
 const StorageClassVolumeOperationDrawer = ({
   clusterId,
   target,
@@ -86,6 +85,8 @@ const StorageClassVolumeOperationDrawer = ({
   onDone,
 }: EditFormProps) => {
   const { styles } = useStyles();
+  const t = useT();
+  const title = t('pages.k8s.forms.edit.storageclass.volumeOps.title');
   const [form] = Form.useForm<VolumeOperationFormValues>();
   const { object, resourceVersion, loading, error, reload } = useEditObject(
     clusterId,
@@ -127,13 +128,13 @@ const StorageClassVolumeOperationDrawer = ({
         destroyOnHidden
         footer={
           <div className={styles.footer}>
-            <Button onClick={onClose}>取消</Button>
+            <Button onClick={onClose}>{t('common.action.cancel')}</Button>
             <Button
               disabled={!object || loading}
               type="primary"
               onClick={handleOk}
             >
-              保存
+              {t('common.action.save')}
             </Button>
           </div>
         }
@@ -141,7 +142,7 @@ const StorageClassVolumeOperationDrawer = ({
         mask={{ closable: false }}
         open
         size={520}
-        title={TITLE}
+        title={title}
         onClose={onClose}
       >
         <Spin spinning={loading}>
@@ -149,7 +150,7 @@ const StorageClassVolumeOperationDrawer = ({
             <Alert
               action={
                 <Button size="small" onClick={reload}>
-                  重试
+                  {t('pages.k8s.table.retry')}
                 </Button>
               }
               className={styles.notice}
@@ -166,17 +167,25 @@ const StorageClassVolumeOperationDrawer = ({
             >
               <div className={styles.operationList}>
                 <div className={styles.operationItem}>
-                  <span className={styles.operationLabel}>允许卷扩容</span>
+                  <span className={styles.operationLabel}>
+                    {t(
+                      'pages.k8s.forms.edit.storageclass.volumeOps.allowExpansion',
+                    )}
+                  </span>
                   <Form.Item
                     name="allowVolumeExpansion"
                     valuePropName="checked"
                   >
-                    <Switch aria-label="允许卷扩容" />
+                    <Switch
+                      aria-label={t(
+                        'pages.k8s.forms.edit.storageclass.volumeOps.allowExpansion',
+                      )}
+                    />
                   </Form.Item>
                 </div>
               </div>
               <div className={styles.helpText}>
-                开启后，使用该存储类的持久卷声明可以扩容（还需存储插件支持）；关闭只影响之后的扩容请求。
+                {t('pages.k8s.forms.edit.storageclass.volumeOps.help')}
               </div>
             </Form>
           )}
@@ -187,7 +196,7 @@ const StorageClassVolumeOperationDrawer = ({
           clusterId={clusterId}
           resourceVersion={resourceVersion}
           target={target}
-          title={TITLE}
+          title={title}
           yaml={pending}
           onBack={() => setPending(undefined)}
           onClose={onClose}

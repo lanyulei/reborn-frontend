@@ -43,6 +43,7 @@ import {
   useState,
 } from 'react';
 import { IconBadge } from '@/components/IconPicker';
+import { useCiIncidentsTab } from '@/pages/incident/components/CiIncidentsTab';
 import { HostLocationSection } from '@/pages/k8s/components/HostLocation';
 import { useCiAlertsTab } from '@/pages/monitor/components/CiAlertsTab';
 import {
@@ -191,7 +192,10 @@ const RelationPanel: React.FC<{
     return result.items
       .filter((item) => item.id !== ci.id)
       .map((item) => ({
-        label: `${item.name}（${item.modelName ?? item.modelCode}）`,
+        label: t('pages.cmdb.ci.option.label', {
+          name: item.name,
+          model: item.modelName ?? item.modelCode,
+        }),
         value: item.id,
       }));
   };
@@ -278,10 +282,12 @@ const RelationPanel: React.FC<{
         headerTitle={
           <Space>
             <Typography.Text type="secondary">
-              {t('pages.cmdb.detail.relation.targetModel')}：
-              {anyTarget
-                ? t('pages.cmdb.relationType.form.anyModel')
-                : (targetModel?.name ?? summary.targetModel)}
+              {t('pages.cmdb.labelValue', {
+                label: t('pages.cmdb.detail.relation.targetModel'),
+                value: anyTarget
+                  ? t('pages.cmdb.relationType.form.anyModel')
+                  : (targetModel?.name ?? summary.targetModel),
+              })}
             </Typography.Text>
           </Space>
         }
@@ -620,6 +626,8 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
   const [editOpen, setEditOpen] = useState(false);
   // 「告警」页签由监控告警域提供：没有告警事件菜单的用户为空数组（不显示、不请求）
   const alertTabs = useCiAlertsTab(ci);
+  // 「故障」页签由故障域提供：没有故障列表菜单的用户为空数组（不显示、不请求）
+  const incidentTabs = useCiIncidentsTab(ci);
 
   const load = useCallback(async () => {
     const seq = ++loadSeq.current;
@@ -701,7 +709,10 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
         });
         const names = result.items.map((r) => r.ci.name);
         const more = Number(s.count) - names.length;
-        return `${s.name}：${names.join('、')}${more > 0 ? t('pages.cmdb.detail.transition.cascade.more', { n: more }) : ''}`;
+        return t('pages.cmdb.labelValue', {
+          label: s.name,
+          value: `${names.join(t('pages.cmdb.diff.summary.sep'))}${more > 0 ? t('pages.cmdb.detail.transition.cascade.more', { n: more }) : ''}`,
+        });
       }),
     );
     return (
@@ -720,7 +731,15 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
 
   const onTransition = async (status: CmdbCIStatus) => {
     if (!ci) return;
-    const preview = status === 'retired' ? await cascadePreview() : null;
+    let preview: React.ReactNode = null;
+    if (status === 'retired') {
+      try {
+        preview = await cascadePreview();
+      } catch {
+        // 级联预览失败不阻塞操作，但要让用户知道影响范围未能展示
+        message.warning(t('pages.cmdb.detail.transition.cascade.failed'));
+      }
+    }
     modal.confirm({
       title: t('pages.cmdb.detail.transition'),
       content: (
@@ -855,12 +874,18 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
             <span>{model.name}</span>
             {ci.env && (
               <span>
-                {t('pages.cmdb.ci.column.env')}：{ci.env}
+                {t('pages.cmdb.labelValue', {
+                  label: t('pages.cmdb.ci.column.env'),
+                  value: ci.env,
+                })}
               </span>
             )}
             {ci.owner && (
               <span>
-                {t('pages.cmdb.ci.column.owner')}：{ci.ownerName || ci.owner}
+                {t('pages.cmdb.labelValue', {
+                  label: t('pages.cmdb.ci.column.owner'),
+                  value: ci.ownerName || ci.owner,
+                })}
               </span>
             )}
             {ci.tags?.length ? (
@@ -873,7 +898,10 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
               </span>
             ) : null}
             <span>
-              {t('common.column.updateTime')}：{fmtTime(ci.updateTime)}
+              {t('pages.cmdb.labelValue', {
+                label: t('common.column.updateTime'),
+                value: fmtTime(ci.updateTime),
+              })}
             </span>
           </div>
         </div>
@@ -1059,6 +1087,7 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
             ),
           },
           ...alertTabs,
+          ...incidentTabs,
         ]}
       />
       <CIForm

@@ -229,6 +229,8 @@ const CIListPage: React.FC = () => {
         withRelations: withRelations || undefined,
       });
       saveBlob(blob, `cmdb-${activeModel.code}.${format}`);
+    } catch {
+      // authRequest 已按后端 message 提示
     } finally {
       setExporting(false);
     }

@@ -2,6 +2,7 @@ import type { FormInstance } from 'antd';
 import { App, Form } from 'antd';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import { toYaml } from '../shared/kube';
 import { SubmitManifest } from '../shared/SubmitManifest';
 import type { CreateFormProps } from '../types';
@@ -51,6 +52,7 @@ const useCreateWizard = <Values extends CreateWorkloadFormValues>({
   onDone,
 }: UseCreateWizardOptions<Values>) => {
   const { message } = App.useApp();
+  const t = useT();
   // 共用逻辑只读写工作负载的公共字段：按公共字段类型使用同一个表单实例
   const baseForm = form as unknown as FormInstance<CreateWorkloadFormValues>;
   const [current, setCurrent] = useState(0);
@@ -75,7 +77,7 @@ const useCreateWizard = <Values extends CreateWorkloadFormValues>({
 
   const validateCurrentStep = async () => {
     if (current === containerStep) {
-      const warning = checkContainers(getAllValues());
+      const warning = checkContainers(getAllValues(), t);
       if (warning) {
         message.warning(warning);
         return false;
@@ -119,7 +121,7 @@ const useCreateWizard = <Values extends CreateWorkloadFormValues>({
 
   const handleSubmit = async () => {
     if (yamlMode) {
-      const result = inspectYamlSubmission(yamlValue, kind, apiVersion);
+      const result = inspectYamlSubmission(yamlValue, kind, apiVersion, t);
       if (result.error !== undefined) {
         message.error(result.error);
         return;
@@ -127,7 +129,7 @@ const useCreateWizard = <Values extends CreateWorkloadFormValues>({
 
       const targetNamespace = result.namespace || getAllValues().namespace;
       if (!targetNamespace) {
-        message.error('YAML 必须包含 metadata.name 和 metadata.namespace');
+        message.error(t('pages.k8s.forms.common.yaml.nameNamespaceRequired'));
         return;
       }
       setSubmission({ yaml: yamlValue, namespace: targetNamespace });
@@ -139,7 +141,7 @@ const useCreateWizard = <Values extends CreateWorkloadFormValues>({
     }
 
     const allValues = getAllValues();
-    const warning = checkWorkloadValues(allValues);
+    const warning = checkWorkloadValues(allValues, t);
     if (warning) {
       message.warning(warning);
       return;

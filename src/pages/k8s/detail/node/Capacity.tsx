@@ -12,6 +12,7 @@ import { createStyles } from 'antd-style';
 import { type ReactNode, useEffect, useState } from 'react';
 import { listResources } from '@/services/k8s/resource';
 import type { K8sObject } from '@/services/k8s/typings';
+import { type Translate, useT } from '@/utils/i18n';
 import { GVRS } from '../../components/meta';
 import SubTitle from '../shared/SubTitle';
 
@@ -147,12 +148,14 @@ const formatBytes = (value?: string): string => {
 };
 
 /** CPU 数量的易读写法：4 核 / 500m → 0.5 核 */
-const formatCpu = (value?: string): string => {
+const formatCpu = (t: Translate, value?: string): string => {
   if (!value) return '-';
   const cores = value.endsWith('m')
     ? Number(value.slice(0, -1)) / 1000
     : Number(value);
-  return Number.isFinite(cores) ? `${Number(cores.toFixed(2))} 核` : value;
+  return Number.isFinite(cores)
+    ? t('pages.k8s.detail.node.cores', { value: Number(cores.toFixed(2)) })
+    : value;
 };
 
 type CapacityProps = {
@@ -162,6 +165,7 @@ type CapacityProps = {
 };
 
 const Capacity = ({ clusterId, name, object }: CapacityProps) => {
+  const t = useT();
   const { styles, theme: token } = useStyles();
   const [pods, setPods] = useState<number>();
 
@@ -208,27 +212,33 @@ const Capacity = ({ clusterId, name, object }: CapacityProps) => {
     {
       key: 'cpu',
       icon: <DashboardOutlined />,
-      value: formatCpu(allocatable.cpu),
-      label: `可分配 CPU · 总量 ${formatCpu(capacity.cpu)}`,
+      value: formatCpu(t, allocatable.cpu),
+      label: t('pages.k8s.detail.node.allocatableCpu', {
+        total: formatCpu(t, capacity.cpu),
+      }),
     },
     {
       key: 'memory',
       icon: <DatabaseOutlined />,
       value: formatBytes(allocatable.memory),
-      label: `可分配内存 · 总量 ${formatBytes(capacity.memory)}`,
+      label: t('pages.k8s.detail.node.allocatableMemory', {
+        total: formatBytes(capacity.memory),
+      }),
     },
     {
       key: 'storage',
       icon: <HddOutlined />,
       value: formatBytes(allocatable['ephemeral-storage']),
-      label: `可分配临时存储 · 总量 ${formatBytes(capacity['ephemeral-storage'])}`,
+      label: t('pages.k8s.detail.node.allocatableStorage', {
+        total: formatBytes(capacity['ephemeral-storage']),
+      }),
     },
   ];
 
   return (
     <div className={styles.wrap}>
       <div>
-        <SubTitle>可分配资源</SubTitle>
+        <SubTitle>{t('pages.k8s.detail.node.allocatable')}</SubTitle>
         <div className={styles.grid}>
           {cards.map((card) => (
             <div className={styles.card} key={card.key}>
@@ -242,23 +252,25 @@ const Capacity = ({ clusterId, name, object }: CapacityProps) => {
         </div>
       </div>
       <div>
-        <SubTitle>容器组</SubTitle>
+        <SubTitle>{t('pages.k8s.kind.Pod')}</SubTitle>
         <div className={styles.usageRow}>
           <div className={styles.icon}>
             <ClusterOutlined />
           </div>
           <div className={styles.content}>
             <div className={styles.value}>{pods ?? '-'}</div>
-            <div className={styles.label}>已调度</div>
+            <div className={styles.label}>
+              {t('pages.k8s.detail.node.scheduled')}
+            </div>
           </div>
           <div className={styles.content}>
             <div className={styles.value}>{allocatable.pods || '-'}</div>
-            <div className={styles.label}>容量</div>
+            <div className={styles.label}>{t('pages.k8s.detail.capacity')}</div>
           </div>
           <div className={styles.usage}>
             <div className={styles.usageHeader}>
-              <span>用量</span>
-              <span>已使用：{percent}%</span>
+              <span>{t('pages.k8s.detail.usage')}</span>
+              <span>{t('pages.k8s.detail.usedPercent', { percent })}</span>
             </div>
             <div className={styles.bar}>
               <div

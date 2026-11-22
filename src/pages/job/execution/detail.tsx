@@ -553,6 +553,8 @@ const ExecutionDetailView: React.FC<{ id: string }> = ({ id }) => {
 
       <Tabs
         style={{ marginTop: 8 }}
+        // 隐藏的页签卸载：日志 / 主机页签各自的轮询随之停止
+        destroyOnHidden
         items={[
           {
             key: 'log',

@@ -11,6 +11,7 @@ import {
   Tooltip,
 } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 
 const useStyles = createStyles(({ token }) => ({
   securityContext: {
@@ -110,10 +111,10 @@ const useStyles = createStyles(({ token }) => ({
 
 const PodSecurityContextFields = () => {
   const { styles } = useStyles();
+  const t = useT();
   const form = Form.useFormInstance();
   const enabled = Form.useWatch('enablePodSecurityContext', form);
-  const securityContextTip =
-    '如果容器组安全上下文和容器安全上下文中都设置了用户、用户组和 SELinux 上下文，容器安全上下文中的设置将覆盖容器组安全上下文中的设置。';
+  const securityContextTip = t('pages.k8s.forms.workload.podSecurity.tip');
   return (
     <div className={styles.securityContext}>
       <div className={styles.securityHeader}>
@@ -122,31 +123,37 @@ const PodSecurityContextFields = () => {
           name="enablePodSecurityContext"
           valuePropName="checked"
         >
-          <Checkbox aria-label="启用容器组安全上下文" />
+          <Checkbox
+            aria-label={t('pages.k8s.forms.workload.podSecurity.enable')}
+          />
         </Form.Item>
         <span>
           <div className={styles.securityTitle}>
-            <span>容器组安全上下文</span>
+            <span>{t('pages.k8s.forms.workload.podSecurity.title')}</span>
             <Tooltip title={securityContextTip}>
               <QuestionCircleOutlined className={styles.securityHelpIcon} />
             </Tooltip>
           </div>
           <div className={styles.securityDescription}>
-            自定义容器组的权限设置。
+            {t('pages.k8s.forms.workload.podSecurity.description')}
           </div>
         </span>
       </div>
 
       {enabled && (
         <>
-          <div className={styles.securityGroupTitle}>用户和用户组</div>
+          <div className={styles.securityGroupTitle}>
+            {t('pages.k8s.forms.workload.podSecurity.userAndGroup')}
+          </div>
           <div className={styles.securityGroup}>
             <div className={styles.nonRootRow}>
               <Form.Item
-                label="仅允许非 root 用户运行"
+                label={t('pages.k8s.forms.workload.podSecurity.runAsNonRoot')}
                 name="runAsNonRoot"
                 valuePropName="checked"
-                tooltip="启动容器之前检查容器是否将以 root 用户运行。如果容器将以 root 用户运行则不启动容器"
+                tooltip={t(
+                  'pages.k8s.forms.workload.podSecurity.runAsNonRoot.tip',
+                )}
               >
                 <Switch size="small" />
               </Form.Item>
@@ -154,51 +161,67 @@ const PodSecurityContextFields = () => {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
-                  label="用户"
+                  label={t('pages.k8s.forms.common.user')}
                   name="runAsUser"
-                  tooltip="执行容器进程入口点的 UID。默认为镜像元数据中指定的 UID"
+                  tooltip={t(
+                    'pages.k8s.forms.workload.podSecurity.runAsUser.tip',
+                  )}
                 >
                   <InputNumber
                     min={0}
                     precision={0}
                     style={{ width: '100%' }}
-                    placeholder="请输入用户 ID"
+                    placeholder={t(
+                      'pages.k8s.forms.workload.podSecurity.runAsUser.placeholder',
+                    )}
                   />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item
-                  label="用户组"
+                  label={t('pages.k8s.forms.workload.podSecurity.runAsGroup')}
                   name="runAsGroup"
-                  tooltip="执行容器进程入口点的 GID。默认为容器运行时的默认 GID"
+                  tooltip={t(
+                    'pages.k8s.forms.workload.podSecurity.runAsGroup.tip',
+                  )}
                 >
                   <InputNumber
                     min={0}
                     precision={0}
                     style={{ width: '100%' }}
-                    placeholder="请输入用户组 ID"
+                    placeholder={t(
+                      'pages.k8s.forms.workload.podSecurity.runAsGroup.placeholder',
+                    )}
                   />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item
-                  label="文件系统组"
+                  label={t('pages.k8s.forms.workload.podSecurity.fsGroup')}
                   name="fsGroup"
-                  tooltip="挂载卷时使用的 FSGroup。"
+                  tooltip={t(
+                    'pages.k8s.forms.workload.podSecurity.fsGroup.tip',
+                  )}
                 >
                   <InputNumber
                     min={0}
                     precision={0}
                     style={{ width: '100%' }}
-                    placeholder="请输入文件系统组 ID"
+                    placeholder={t(
+                      'pages.k8s.forms.workload.podSecurity.fsGroup.placeholder',
+                    )}
                   />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item
-                  label="附加组策略"
+                  label={t(
+                    'pages.k8s.forms.workload.podSecurity.supplementalGroupsPolicy',
+                  )}
                   name="supplementalGroupsPolicy"
-                  tooltip="Kubernetes 1.35 GA。Strict 仅附加显式声明的组，避免镜像 /etc/group 隐式组影响卷权限。"
+                  tooltip={t(
+                    'pages.k8s.forms.workload.podSecurity.supplementalGroupsPolicy.tip',
+                  )}
                 >
                   <Select
                     allowClear
@@ -206,19 +229,27 @@ const PodSecurityContextFields = () => {
                       { label: 'Merge', value: 'Merge' },
                       { label: 'Strict', value: 'Strict' },
                     ]}
-                    placeholder="默认 Merge"
+                    placeholder={t(
+                      'pages.k8s.forms.workload.podSecurity.supplementalGroupsPolicy.placeholder',
+                    )}
                   />
                 </Form.Item>
               </Col>
               <Col span={24}>
                 <Form.Item
-                  label="附加用户组"
+                  label={t(
+                    'pages.k8s.forms.workload.podSecurity.supplementalGroups',
+                  )}
                   name="supplementalGroups"
-                  tooltip="多个 GID 可使用英文逗号或换行分隔。"
+                  tooltip={t(
+                    'pages.k8s.forms.workload.podSecurity.supplementalGroups.tip',
+                  )}
                 >
                   <Input.TextArea
                     autoSize={{ minRows: 2, maxRows: 4 }}
-                    placeholder="例如 3000,4000"
+                    placeholder={t(
+                      'pages.k8s.forms.workload.podSecurity.supplementalGroups.placeholder',
+                    )}
                   />
                 </Form.Item>
               </Col>
@@ -229,7 +260,7 @@ const PodSecurityContextFields = () => {
             className={styles.securityGroupTitle}
             style={{ marginTop: `16px` }}
           >
-            SELinux 上下文
+            {t('pages.k8s.forms.workload.podSecurity.seLinux')}
           </div>
           <div
             className={[styles.securityGroup, styles.seLinuxGroup].join(' ')}
@@ -237,30 +268,54 @@ const PodSecurityContextFields = () => {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
-                  label="等级"
+                  label={t(
+                    'pages.k8s.forms.workload.podSecurity.seLinux.level',
+                  )}
                   name="seLinuxLevel"
                   style={{ marginBottom: `16px` }}
                 >
-                  <Input placeholder="请输入 SELinux 等级" />
+                  <Input
+                    placeholder={t(
+                      'pages.k8s.forms.workload.podSecurity.seLinux.level.placeholder',
+                    )}
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item
-                  label="角色"
+                  label={t('pages.k8s.kind.Role')}
                   name="seLinuxRole"
                   style={{ marginBottom: `16px` }}
                 >
-                  <Input placeholder="请输入 SELinux 角色" />
+                  <Input
+                    placeholder={t(
+                      'pages.k8s.forms.workload.podSecurity.seLinux.role.placeholder',
+                    )}
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item label="类型" name="seLinuxType">
-                  <Input placeholder="请输入 SELinux 类型" />
+                <Form.Item
+                  label={t('pages.k8s.forms.common.type')}
+                  name="seLinuxType"
+                >
+                  <Input
+                    placeholder={t(
+                      'pages.k8s.forms.workload.podSecurity.seLinux.type.placeholder',
+                    )}
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item label="用户" name="seLinuxUser">
-                  <Input placeholder="请输入 SELinux 用户" />
+                <Form.Item
+                  label={t('pages.k8s.forms.common.user')}
+                  name="seLinuxUser"
+                >
+                  <Input
+                    placeholder={t(
+                      'pages.k8s.forms.workload.podSecurity.seLinux.user.placeholder',
+                    )}
+                  />
                 </Form.Item>
               </Col>
             </Row>

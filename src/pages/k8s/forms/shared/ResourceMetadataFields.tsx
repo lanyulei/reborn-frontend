@@ -3,6 +3,8 @@ import type { FormItemProps } from 'antd';
 import { App, Form } from 'antd';
 import { createStyles } from 'antd-style';
 import { useState } from 'react';
+import type { Translate } from '@/utils/i18n';
+import { useT } from '@/utils/i18n';
 import { validLabelKey } from '../../components/workloadForm';
 import type { KeyValueEditorItem } from './KeyValueEditor';
 import KeyValueEditor from './KeyValueEditor';
@@ -76,9 +78,8 @@ const useStyles = createStyles(({ token }) => ({
   },
 }));
 
-/** 标签 / 注解的键：[前缀/]名称 */
-export const METADATA_KEY_HINT =
-  '键不合法：[前缀/]名称，名称至多 63 个字符，由字母、数字、-、_、. 组成且以字母或数字开头结尾';
+/** 标签 / 注解的键：[前缀/]名称（i18n 键，渲染时经 t 翻译） */
+export const METADATA_KEY_HINT = 'pages.k8s.form.key.rule';
 
 const createMetadataItem = (keyName = '', value = ''): KeyValueEditorItem => ({
   id: createId(),
@@ -104,21 +105,22 @@ type ResourceMetadataFieldsProps = {
 const getFieldConfig = (
   type: 'annotations' | 'labels',
   names: Pick<ResourceMetadataFieldsProps, 'annotationsName' | 'labelsName'>,
+  t: Translate,
 ): MetadataFieldConfig => {
   if (type === 'labels') {
     return {
-      addBlockedMessage: '请先填写已有标签的键。',
-      deleteAriaLabel: '删除标签',
+      addBlockedMessage: t('pages.k8s.forms.common.labelKeyFirst'),
+      deleteAriaLabel: t('pages.k8s.forms.common.deleteLabel'),
       itemName: names.labelsName ?? 'labels',
-      title: '标签',
+      title: t('pages.k8s.forms.common.labels'),
     };
   }
 
   return {
-    addBlockedMessage: '请先填写已有注解的键。',
-    deleteAriaLabel: '删除注解',
+    addBlockedMessage: t('pages.k8s.forms.common.annotationKeyFirst'),
+    deleteAriaLabel: t('pages.k8s.forms.common.deleteAnnotation'),
     itemName: names.annotationsName ?? 'annotations',
-    title: '注解',
+    title: t('pages.k8s.forms.common.annotations'),
   };
 };
 
@@ -128,6 +130,7 @@ const ResourceMetadataFields = ({
   order = ['labels', 'annotations'],
   collapsible = false,
 }: ResourceMetadataFieldsProps) => {
+  const t = useT();
   const { styles, cx } = useStyles();
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
@@ -135,10 +138,14 @@ const ResourceMetadataFields = ({
   const fields = (
     <div className={styles.stack}>
       {order.map((type) => {
-        const field = getFieldConfig(type, {
-          annotationsName,
-          labelsName,
-        });
+        const field = getFieldConfig(
+          type,
+          {
+            annotationsName,
+            labelsName,
+          },
+          t,
+        );
 
         return (
           <div className={styles.field} key={type}>
@@ -146,13 +153,13 @@ const ResourceMetadataFields = ({
             <Form.Item name={field.itemName}>
               <KeyValueEditor
                 addIcon={false}
-                addText="添加"
+                addText={t('pages.k8s.form.add')}
                 deleteAriaLabel={field.deleteAriaLabel}
                 minRows={1}
                 onAddBlocked={() => message.warning(field.addBlockedMessage)}
                 onCreateItem={() => createMetadataItem()}
                 validateKey={validLabelKey}
-                invalidKeyHint={METADATA_KEY_HINT}
+                invalidKeyHint={t(METADATA_KEY_HINT)}
               />
             </Form.Item>
           </div>
@@ -177,9 +184,11 @@ const ResourceMetadataFields = ({
           {open ? <UpOutlined /> : <DownOutlined />}
         </span>
         <span>
-          <div className={styles.optionTitle}>添加元数据</div>
+          <div className={styles.optionTitle}>
+            {t('pages.k8s.forms.common.addMetadata')}
+          </div>
           <div className={styles.optionDescription}>
-            为资源添加标签与注解（可选）
+            {t('pages.k8s.forms.shared.metadata.description')}
           </div>
         </span>
       </button>

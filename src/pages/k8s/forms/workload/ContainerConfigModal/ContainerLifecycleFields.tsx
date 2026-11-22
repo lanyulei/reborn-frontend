@@ -2,7 +2,8 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Col, Form, InputNumber, Row } from 'antd';
 import type { NamePath } from 'antd/es/form/interface';
 import { createStyles } from 'antd-style';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useT } from '@/utils/i18n';
 import SegmentedTabs from '../../shared/SegmentedTabs';
 import ArgListEditor, { validateArgListRequired } from '../ArgListEditor';
 import type {
@@ -15,28 +16,21 @@ import ContainerHttpTargetFields from './ContainerHttpTargetFields';
 
 const ACTION_OPTIONS: {
   name: ContainerLifecycleActionName;
-  title: string;
-  description: string;
+  titleId: string;
+  descriptionId: string;
 }[] = [
   {
     name: 'postStart',
-    title: '启动后动作',
-    description: '设置容器启动后需要执行的动作。',
+    titleId: 'pages.k8s.forms.workload.container.lifecycle.postStart',
+    descriptionId:
+      'pages.k8s.forms.workload.container.lifecycle.postStart.description',
   },
   {
     name: 'preStop',
-    title: '终止前动作',
-    description: '设置容器终止前需要执行的动作。',
+    titleId: 'pages.k8s.forms.workload.container.lifecycle.preStop',
+    descriptionId:
+      'pages.k8s.forms.workload.container.lifecycle.preStop.description',
   },
-];
-
-const HANDLER_OPTIONS: {
-  label: string;
-  value: ContainerHandlerType;
-}[] = [
-  { label: 'HTTP 请求', value: 'httpGet' },
-  { label: '命令', value: 'exec' },
-  { label: 'TCP 端口', value: 'tcpSocket' },
 ];
 
 const useStyles = createStyles(({ token }) => ({
@@ -167,7 +161,24 @@ const withHandlerDefaults = (
 
 const ContainerLifecycleFields = () => {
   const { styles } = useStyles();
+  const t = useT();
   const form = Form.useFormInstance();
+  const handlerOptions = useMemo<
+    { label: string; value: ContainerHandlerType }[]
+  >(
+    () => [
+      {
+        label: t('pages.k8s.forms.workload.container.handler.httpGet'),
+        value: 'httpGet',
+      },
+      { label: t('pages.k8s.forms.common.command'), value: 'exec' },
+      {
+        label: t('pages.k8s.forms.workload.container.handler.tcpSocket'),
+        value: 'tcpSocket',
+      },
+    ],
+    [t],
+  );
   const didSeedDefaultActionRef = useRef(false);
   const lifecycleActions =
     (Form.useWatch('lifecycleActions', {
@@ -220,7 +231,7 @@ const ContainerLifecycleFields = () => {
     handlerType: ContainerHandlerType,
   ) => (
     <SegmentedTabs
-      items={HANDLER_OPTIONS}
+      items={handlerOptions}
       value={handlerType}
       onChange={(value) => selectHandler(actionName, value)}
     />
@@ -243,15 +254,20 @@ const ContainerLifecycleFields = () => {
   const renderCommandFields = (actionName: ContainerLifecycleActionName) => (
     <>
       <Form.Item
-        label="命令"
+        label={t('pages.k8s.forms.common.command')}
         name={getActionFieldName(actionName, 'command')}
         required
-        rules={[{ validator: validateArgListRequired }]}
+        rules={[{ validator: validateArgListRequired(t) }]}
       >
-        <ArgListEditor addText="添加参数" placeholder="例如 /bin/sh" />
+        <ArgListEditor
+          addText={t('pages.k8s.forms.workload.container.args.add')}
+          placeholder={t(
+            'pages.k8s.forms.workload.container.command.placeholder',
+          )}
+        />
       </Form.Item>
       <div className={styles.fieldHelp}>
-        每项填写命令的一个参数，例如 /bin/sh、-c、要执行的脚本。
+        {t('pages.k8s.forms.workload.container.lifecycle.command.help')}
       </div>
     </>
   );
@@ -260,22 +276,25 @@ const ContainerLifecycleFields = () => {
     <Row gutter={16}>
       <Col span={12}>
         <Form.Item
-          label="端口"
+          label={t('pages.k8s.form.port')}
           name={getActionFieldName(actionName, 'port')}
           rules={[
-            { required: true, message: '请输入端口' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.port.required'),
+            },
             {
               type: 'number',
               min: 1,
               max: 65535,
-              message: '端口范围为 1-65535',
+              message: t('pages.k8s.forms.common.port.range'),
             },
           ]}
         >
           <InputNumber
             min={1}
             max={65535}
-            placeholder="请输入端口"
+            placeholder={t('pages.k8s.forms.common.port.required')}
             precision={0}
             style={{ width: '100%' }}
           />
@@ -295,7 +314,9 @@ const ContainerLifecycleFields = () => {
         <div className={styles.editorHeader}>
           {renderHandlerTabs(actionName, handlerType)}
           <Button
-            aria-label="移除动作"
+            aria-label={t(
+              'pages.k8s.forms.workload.container.lifecycle.remove',
+            )}
             className={styles.removeButton}
             icon={<DeleteOutlined />}
             type="text"
@@ -319,7 +340,7 @@ const ContainerLifecycleFields = () => {
 
         return (
           <div key={action.name}>
-            <div className={styles.actionTitle}>{action.title}</div>
+            <div className={styles.actionTitle}>{t(action.titleId)}</div>
             {enabled && actionValue ? (
               renderActionEditor(action.name, actionValue)
             ) : (
@@ -329,10 +350,12 @@ const ContainerLifecycleFields = () => {
                 onClick={() => addAction(action.name)}
               >
                 <PlusOutlined />
-                添加动作
+                {t('pages.k8s.forms.workload.container.lifecycle.add')}
               </button>
             )}
-            <div className={styles.actionDescription}>{action.description}</div>
+            <div className={styles.actionDescription}>
+              {t(action.descriptionId)}
+            </div>
           </div>
         );
       })}

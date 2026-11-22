@@ -4,6 +4,7 @@
  * 写出规则：用户输入的文本进 stringData；解码后不是合法 UTF-8 的值保持 base64 原文留在 data，
  * 表单里只读展示，绝不解码改写。
  */
+import type { Translate } from '@/utils/i18n';
 import { validLabelKey } from '../../components/workloadForm';
 import {
   createId,
@@ -27,7 +28,8 @@ export const SECRET_KIND = 'Secret';
 
 export const SECRET_KEY_PATTERN = /^[A-Za-z0-9._-]+$/;
 export const DOCKER_CONFIG_JSON_KEY = '.dockerconfigjson';
-export const BINARY_VALUE_TEXT = '二进制数据';
+/** 二进制值的展示文案 id（在渲染处用 t 翻译） */
+export const BINARY_VALUE_TEXT_ID = 'pages.k8s.forms.secret.binaryValue';
 
 type Manifest = Record<string, unknown>;
 
@@ -51,21 +53,22 @@ export const createSecretMetadataItem = (
   value,
 });
 
-export const secretTypeOptions: { label: string; value: SecretType }[] = [
+/** 类型选项：labelId 在渲染处用 t 翻译 */
+export const secretTypeOptions: { labelId: string; value: SecretType }[] = [
   {
-    label: '默认',
+    labelId: 'pages.k8s.forms.secret.type.opaque',
     value: 'Opaque',
   },
   {
-    label: 'TLS 信息',
+    labelId: 'pages.k8s.forms.secret.type.tls',
     value: 'kubernetes.io/tls',
   },
   {
-    label: '镜像服务信息',
+    labelId: 'pages.k8s.forms.secret.type.dockerconfigjson',
     value: 'kubernetes.io/dockerconfigjson',
   },
   {
-    label: '用户名和密码',
+    labelId: 'pages.k8s.forms.secret.type.basicAuth',
     value: 'kubernetes.io/basic-auth',
   },
 ];
@@ -487,16 +490,19 @@ export const buildCreateSecretManifest = (
   };
 };
 
-export const validateSecretDataItems = (items?: SecretDataItem[]) => {
+export const validateSecretDataItems = (
+  items: SecretDataItem[] | undefined,
+  t: Translate,
+) => {
   const normalizedKeys = (items || [])
     .map((item) => normalizeText(item.keyName))
     .filter(Boolean);
 
   if (normalizedKeys.length === 0) {
-    return '请添加至少一条数据';
+    return t('pages.k8s.forms.secret.data.atLeastOne');
   }
   if (new Set(normalizedKeys).size !== normalizedKeys.length) {
-    return '数据键不能重复';
+    return t('pages.k8s.forms.common.dataKeyDuplicate');
   }
 
   return undefined;
@@ -505,6 +511,7 @@ export const validateSecretDataItems = (items?: SecretDataItem[]) => {
 export const validateSecretMetadataItems = (
   items: SecretMetadataItem[] | undefined,
   title: string,
+  t: Translate,
 ) => {
   const keys = new Set<string>();
 
@@ -512,13 +519,16 @@ export const validateSecretMetadataItems = (
     const keyName = normalizeText(item.keyName);
 
     if (!keyName && normalizeText(item.value)) {
-      return `请填写${title}的键`;
+      return t('pages.k8s.forms.secret.metadata.keyRequired', { title });
     }
     if (keyName && !validLabelKey(keyName)) {
-      return `${title}的键「${keyName}」不合法`;
+      return t('pages.k8s.forms.secret.metadata.keyInvalid', {
+        title,
+        keyName,
+      });
     }
     if (keys.has(keyName)) {
-      return `${title}的键不能重复`;
+      return t('pages.k8s.forms.secret.metadata.keyDuplicate', { title });
     }
     if (keyName) {
       keys.add(keyName);
@@ -532,61 +542,72 @@ export const validateSecretMetadataItems = (
  * 整份表单值的校验（返回第一条错误）。向导每次只挂载当前步骤，form.validateFields 只覆盖
  * 已挂载的表单项，提交前用它对全量值（form.getFieldsValue(true)）再检查一遍。
  */
-export const getSecretFormError = (values: CreateSecretFormValues) => {
+export const getSecretFormError = (
+  values: CreateSecretFormValues,
+  t: Translate,
+) => {
   const name = normalizeText(values.name);
 
   if (!name) {
-    return '请输入名称';
+    return t('pages.k8s.forms.common.name.required');
   }
   if (name.length > 63) {
-    return '名称最长 63 个字符';
+    return t('pages.k8s.forms.common.name.maxLength');
   }
   if (!NAME_PATTERN.test(name)) {
-    return '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾';
+    return t('pages.k8s.forms.common.name.pattern');
   }
   if (!normalizeText(values.namespace)) {
-    return '请选择命名空间';
+    return t('pages.k8s.forms.common.namespace.required');
   }
 
   const metadataError =
-    validateSecretMetadataItems(values.labels, '标签') ||
-    validateSecretMetadataItems(values.annotations, '注解');
+    validateSecretMetadataItems(
+      values.labels,
+      t('pages.k8s.forms.common.labels'),
+      t,
+    ) ||
+    validateSecretMetadataItems(
+      values.annotations,
+      t('pages.k8s.forms.common.annotations'),
+      t,
+    );
   if (metadataError) {
     return metadataError;
   }
 
   if (values.type === 'kubernetes.io/tls') {
     if (!values.tlsCertificate) {
-      return '请输入证书';
+      return t('pages.k8s.forms.secret.certificate.required');
     }
     if (!values.tlsPrivateKey) {
-      return '请输入私钥';
+      return t('pages.k8s.forms.secret.privateKey.required');
     }
     return undefined;
   }
   if (values.type === 'kubernetes.io/dockerconfigjson') {
     if (!normalizeText(values.registryAddress)) {
-      return '请输入镜像服务地址';
+      return t('pages.k8s.forms.secret.registryAddress.required');
     }
     if (!normalizeText(values.registryUsername)) {
-      return '请输入用户名';
+      return t('pages.k8s.forms.common.username.required');
     }
     if (!values.registryPassword) {
-      return '请输入密码';
+      return t('pages.k8s.forms.common.password.required');
     }
     return undefined;
   }
   if (values.type === 'kubernetes.io/basic-auth') {
     if (!values.basicAuthUsername) {
-      return '请输入用户名';
+      return t('pages.k8s.forms.common.username.required');
     }
     if (!values.basicAuthPassword) {
-      return '请输入密码';
+      return t('pages.k8s.forms.common.password.required');
     }
     return undefined;
   }
 
-  return validateSecretDataItems(values.dataItems);
+  return validateSecretDataItems(values.dataItems, t);
 };
 
 export const getSecretStepFields = (

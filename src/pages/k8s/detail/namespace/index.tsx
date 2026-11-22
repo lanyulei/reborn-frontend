@@ -6,6 +6,7 @@ import { ProDescriptions } from '@ant-design/pro-components';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listResources } from '@/services/k8s/resource';
 import type { GVR, ResourceRef } from '@/services/k8s/typings';
+import { useT } from '@/utils/i18n';
 import { formatTime } from '../../components/cells';
 import { GVRS } from '../../components/meta';
 import { fetchObject, listRows } from '../../forms/shared/kube';
@@ -66,6 +67,7 @@ const NamespaceDetail = ({
   name,
   tab: initialTab,
 }: NamespaceDetailProps) => {
+  const t = useT();
   const ref = useMemo<ResourceRef>(() => ({ ...GVRS.namespace, name }), [name]);
   const { data, loading, error } = useObject(clusterId, ref);
   const [tab, setTab] = useState(initialTab ?? 'overview');
@@ -120,7 +122,7 @@ const NamespaceDetail = ({
       loading={loading}
       error={error}
       ready={Boolean(object)}
-      emptyText="未找到命名空间"
+      emptyText={t('pages.k8s.detail.namespace.notFound')}
       activeTab={tab}
       onTabChange={setTab}
       basicInfo={
@@ -129,9 +131,13 @@ const NamespaceDetail = ({
           style={{ flex: 1, minWidth: 420 }}
           dataSource={{ name }}
           columns={[
-            { title: '名称', dataIndex: 'name', copyable: true },
             {
-              title: '状态',
+              title: t('pages.k8s.column.name'),
+              dataIndex: 'name',
+              copyable: true,
+            },
+            {
+              title: t('common.column.status'),
               key: 'status',
               render: () => (
                 <StatusDot
@@ -142,7 +148,7 @@ const NamespaceDetail = ({
             },
             { title: 'UID', key: 'uid', render: () => data?.uid || '-' },
             {
-              title: '创建时间',
+              title: t('common.column.createTime'),
               key: 'createTime',
               render: () =>
                 formatTime(object?.metadata?.creationTimestamp) || '-',
@@ -153,7 +159,7 @@ const NamespaceDetail = ({
       tabs={[
         {
           key: 'overview',
-          label: '概览',
+          label: t('pages.k8s.detail.tab.overview'),
           children: (
             <ResourceOverview
               loading={statusLoading}
@@ -163,19 +169,19 @@ const NamespaceDetail = ({
         },
         {
           key: 'pods',
-          label: '容器组',
+          label: t('pages.k8s.kind.Pod'),
           children: <PodList clusterId={clusterId} namespace={name} />,
         },
         {
           key: 'quota',
-          label: '配额',
+          label: t('pages.k8s.action.quota'),
           children: (
             <QuotaOverview loading={quotaLoading} quotaSummary={quotaSummary} />
           ),
         },
         {
           key: 'metadata',
-          label: '元数据',
+          label: t('pages.k8s.detail.tab.metadata'),
           children: (
             <Metadata
               labels={object?.metadata?.labels}
@@ -185,7 +191,7 @@ const NamespaceDetail = ({
         },
         {
           key: 'events',
-          label: '事件',
+          label: t('pages.k8s.detail.tab.events'),
           children: <EventTable clusterId={clusterId} compact target={ref} />,
         },
       ]}

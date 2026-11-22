@@ -5,6 +5,7 @@
 import { Typography } from 'antd';
 import { createStyles } from 'antd-style';
 import type React from 'react';
+import { useMemo } from 'react';
 import { useT } from '@/utils/i18n';
 
 const useStyles = createStyles(({ token }) => ({
@@ -32,6 +33,27 @@ const useStyles = createStyles(({ token }) => ({
   },
 }));
 
+/** JSON.stringify 的安全版：BigInt 转字符串、循环引用标记为 [Circular]，仍失败则退回 String() */
+const safeStringify = (value: unknown) => {
+  const seen = new WeakSet<object>();
+  try {
+    return JSON.stringify(
+      value,
+      (_key, item: unknown) => {
+        if (typeof item === 'bigint') return item.toString();
+        if (item && typeof item === 'object') {
+          if (seen.has(item)) return '[Circular]';
+          seen.add(item);
+        }
+        return item;
+      },
+      2,
+    );
+  } catch {
+    return String(value);
+  }
+};
+
 export const JsonView: React.FC<{
   value?: unknown;
   /** 超出后内部滚动，默认 240px */
@@ -41,6 +63,10 @@ export const JsonView: React.FC<{
 }> = ({ value, maxHeight = 240, emptyText }) => {
   const { styles } = useStyles();
   const t = useT();
+  const text = useMemo(
+    () => (value == null ? '' : safeStringify(value)),
+    [value],
+  );
   if (value == null) {
     return (
       <Typography.Text type="secondary">
@@ -48,7 +74,6 @@ export const JsonView: React.FC<{
       </Typography.Text>
     );
   }
-  const text = JSON.stringify(value, null, 2);
   return (
     <div className={styles.root}>
       <pre className={styles.pre} style={{ maxHeight }}>

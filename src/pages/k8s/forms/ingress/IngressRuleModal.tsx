@@ -2,6 +2,7 @@ import type { FormInstance } from 'antd';
 import { Form, Input, Modal, Select } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect } from 'react';
+import { useT } from '@/utils/i18n';
 import { HOST_PATTERN, INGRESS_PROTOCOL_OPTIONS } from './helpers';
 import RoutePathEditor from './RoutePathEditor';
 import type { IngressRouteRuleItem, IngressServiceOption } from './types';
@@ -48,6 +49,7 @@ const IngressRuleModal = ({
   onOk,
   onServiceSelect,
 }: IngressRuleModalProps) => {
+  const t = useT();
   const { styles } = useStyles();
 
   useEffect(() => {
@@ -75,38 +77,47 @@ const IngressRuleModal = ({
           <Form.Item
             className={styles.field}
             dependencies={['protocol']}
-            label="域名"
+            label={t('pages.k8s.forms.ingress.host')}
             name="host"
             rules={[
-              { max: 253, message: '域名最长 253 个字符' },
+              {
+                max: 253,
+                message: t('pages.k8s.forms.ingress.host.maxLength'),
+              },
               {
                 pattern: HOST_PATTERN,
-                message:
-                  '域名只能包含小写字母、数字、连字符（-）和点（.），可以 *. 开头',
+                message: t('pages.k8s.forms.ingress.host.pattern'),
               },
               ({ getFieldValue }) => ({
                 validator: async (_, value?: string) => {
                   if (value?.trim() || getFieldValue('protocol') !== 'HTTPS') {
                     return;
                   }
-                  throw new Error('HTTPS 路由需要填写域名');
+                  throw new Error(
+                    t('pages.k8s.forms.ingress.host.requiredForHttps'),
+                  );
                 },
               }),
             ]}
-            tooltip="留空表示匹配所有域名。"
+            tooltip={t('pages.k8s.forms.ingress.host.tooltip')}
           >
             <Input placeholder="example.com" />
           </Form.Item>
           <Form.Item
             className={styles.field}
-            label="协议"
+            label={t('pages.k8s.forms.ingress.protocol')}
             name="protocol"
-            rules={[{ required: true, message: '请选择协议' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.protocol.required'),
+              },
+            ]}
           >
             <Select options={INGRESS_PROTOCOL_OPTIONS} />
           </Form.Item>
           <div className={styles.pathLabel}>
-            路径
+            {t('pages.k8s.forms.ingress.path')}
             <span className={styles.requiredMark}>*</span>
           </div>
           <RoutePathEditor

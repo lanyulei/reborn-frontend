@@ -139,6 +139,13 @@ const settingsKindOf = (gvr: GVR): WorkloadSettingsKind | undefined =>
           : undefined;
 
 /**
+ * 列表行里数据面渲染的「已暂停」状态文案（backend/k8s/internal/data/kube/columns.go），
+ * 连同可能的英文写法一起比对。
+ * TODO: 数据面给行加 spec.paused / spec.suspend / spec.unschedulable 的布尔字段后改读字段，不再比对文案。
+ */
+const PAUSED_STATUS_TEXTS = new Set(['已暂停', 'Paused', 'Suspended']);
+
+/**
  * 列表行没有对象原文：从行的状态推出「暂停 / 禁止调度」等开关的当前值，
  * 这样行操作只给出适用的那一个（暂停 ↔ 恢复、停止调度 ↔ 恢复调度）。
  */
@@ -152,10 +159,10 @@ const objectHintOf = (
   const text = status?.text;
   if (text === undefined) return undefined;
   if (sameGVR(gvr, GVRS.deployment)) {
-    return { spec: { paused: text === '已暂停' } };
+    return { spec: { paused: PAUSED_STATUS_TEXTS.has(text) } };
   }
   if (sameGVR(gvr, GVRS.cronJob)) {
-    return { spec: { suspend: text === '已暂停' } };
+    return { spec: { suspend: PAUSED_STATUS_TEXTS.has(text) } };
   }
   if (sameGVR(gvr, GVRS.node)) {
     return { spec: { unschedulable: text.includes('SchedulingDisabled') } };

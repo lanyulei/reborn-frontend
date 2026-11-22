@@ -1,5 +1,6 @@
 import { App, Col, Form, Input, Row } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import CollapsibleField from '../shared/CollapsibleField';
 import KeyValueEditor from '../shared/KeyValueEditor';
 import StringListEditor from '../shared/StringListEditor';
@@ -36,23 +37,26 @@ const useStyles = createStyles(({ token }) => ({
 
 const PersistentVolumeAdvancedSettings = () => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
 
   return (
     <div className={styles.stack}>
       <div className={styles.option}>
         <CollapsibleField
-          description="为 PV 添加挂载选项，例如 nfsvers=4.1 或 noatime。"
-          title="挂载选项"
+          description={t('pages.k8s.forms.pv.mountOptions.desc')}
+          title={t('pages.k8s.forms.pv.mountOptions')}
         >
           <Form.Item name="mountOptions">
             <StringListEditor
-              addText="添加"
-              deleteAriaLabel="删除挂载选项"
+              addText={t('pages.k8s.form.add')}
+              deleteAriaLabel={t('pages.k8s.forms.pv.mountOptions.delete')}
               minRows={1}
-              placeholder="请输入挂载选项"
+              placeholder={t('pages.k8s.forms.pv.mountOptions.placeholder')}
               surface
-              onAddBlocked={() => message.warning('请先填写已有挂载选项。')}
+              onAddBlocked={() =>
+                message.warning(t('pages.k8s.forms.pv.mountOptions.first'))
+              }
               onCreateItem={createStringItem}
             />
           </Form.Item>
@@ -62,18 +66,32 @@ const PersistentVolumeAdvancedSettings = () => {
       <div className={styles.option}>
         <CollapsibleField
           defaultOpen={false}
-          description="预绑定到指定 PVC，通常只有确需静态绑定时才填写。"
-          title="预绑定声明"
+          description={t('pages.k8s.forms.pv.claimRef.desc')}
+          title={t('pages.k8s.forms.pv.claimRef')}
         >
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="命名空间" name="claimNamespace">
-                <Input placeholder="请输入 PVC 命名空间" />
+              <Form.Item
+                label={t('pages.k8s.forms.common.namespace')}
+                name="claimNamespace"
+              >
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.pv.claimRef.namespace.placeholder',
+                  )}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="声明名称" name="claimName">
-                <Input placeholder="请输入 PVC 名称" />
+              <Form.Item
+                label={t('pages.k8s.forms.pv.claimRef.name')}
+                name="claimName"
+              >
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.pv.claimRef.name.placeholder',
+                  )}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -81,30 +99,43 @@ const PersistentVolumeAdvancedSettings = () => {
       </div>
 
       <div className={styles.option}>
-        <CollapsibleField description="为持久卷添加标签和注解。" title="元数据">
+        <CollapsibleField
+          description={t('pages.k8s.forms.pv.metadata.desc')}
+          title={t('pages.k8s.forms.common.metadata')}
+        >
           <div className={styles.optionBody}>
             <div>
-              <div className={styles.fieldLabel}>标签</div>
+              <div className={styles.fieldLabel}>
+                {t('pages.k8s.forms.common.labels')}
+              </div>
               <Form.Item name="labels">
                 <KeyValueEditor
                   addIcon={false}
-                  addText="添加"
-                  deleteAriaLabel="删除标签"
+                  addText={t('pages.k8s.form.add')}
+                  deleteAriaLabel={t('pages.k8s.forms.common.deleteLabel')}
                   minRows={1}
-                  onAddBlocked={() => message.warning('请先填写已有标签的键。')}
+                  onAddBlocked={() =>
+                    message.warning(t('pages.k8s.forms.common.labelKeyFirst'))
+                  }
                   onCreateItem={createKeyValueItem}
                 />
               </Form.Item>
             </div>
             <div>
-              <div className={styles.fieldLabel}>注解</div>
+              <div className={styles.fieldLabel}>
+                {t('pages.k8s.forms.common.annotations')}
+              </div>
               <Form.Item name="annotations">
                 <KeyValueEditor
                   addIcon={false}
-                  addText="添加"
-                  deleteAriaLabel="删除注解"
+                  addText={t('pages.k8s.form.add')}
+                  deleteAriaLabel={t('pages.k8s.forms.common.deleteAnnotation')}
                   minRows={1}
-                  onAddBlocked={() => message.warning('请先填写已有注解的键。')}
+                  onAddBlocked={() =>
+                    message.warning(
+                      t('pages.k8s.forms.common.annotationKeyFirst'),
+                    )
+                  }
                   onCreateItem={createKeyValueItem}
                 />
               </Form.Item>

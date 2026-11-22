@@ -860,4 +860,15 @@ export default {
   'pages.job.stats.topTemplates': 'Most-run templates',
   'pages.job.stats.count': 'Runs',
   'pages.job.stats.failed': 'Failed',
+
+  // Common joiners and execution host columns
+  'pages.job.common.separator': '; ',
+  'pages.job.common.withCode': '{name} ({code})',
+  'pages.job.execution.hostCol.ok': 'ok',
+  'pages.job.execution.hostCol.changed': 'changed',
+  'pages.job.execution.hostCol.failed': 'failed',
+  'pages.job.execution.hostCol.unreachable': 'unreachable',
+  'pages.job.execution.hostCol.skipped': 'skipped',
+  'pages.job.error.scheduleInvalid': 'Invalid schedule configuration',
+  'pages.job.error.triggerInvalid': 'Invalid trigger configuration',
 };

@@ -12,13 +12,12 @@ import {
 import { Alert, Button, Form, Input, Modal, Tag, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useMemo, useState } from 'react';
-import { BINARY_VALUE_TEXT, SECRET_KEY_PATTERN } from '../../secret/helpers';
+import { useT } from '@/utils/i18n';
+import { BINARY_VALUE_TEXT_ID, SECRET_KEY_PATTERN } from '../../secret/helpers';
 import type { SecretEditItem } from './helpers';
 import { createSecretEditItem, SECRET_MASK } from './helpers';
 
 const { TextArea } = Input;
-
-const HIDDEN_VALUE_TEXT = '已隐藏';
 
 const useStyles = createStyles(({ token }) => ({
   editor: {
@@ -177,6 +176,7 @@ const SecretEditDataEditor = ({
   onChange,
 }: SecretEditDataEditorProps) => {
   const { styles, theme } = useStyles();
+  const t = useT();
   const [form] = Form.useForm<DataModalValues>();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string>();
@@ -249,21 +249,22 @@ const SecretEditDataEditor = ({
 
   const getValueText = (item: SecretEditItem) => {
     const reservedText = reserved[item.keyName];
+    const emptyText = t('pages.k8s.forms.common.empty');
 
     if (reservedText !== undefined) {
-      return reservedText || '空';
+      return reservedText || emptyText;
     }
     if (item.value !== undefined) {
-      return item.value || '空';
+      return item.value || emptyText;
     }
     if (item.binary) {
-      return BINARY_VALUE_TEXT;
+      return t(BINARY_VALUE_TEXT_ID);
     }
     if (item.revealed !== undefined) {
-      return item.revealed || '空';
+      return item.revealed || emptyText;
     }
 
-    return HIDDEN_VALUE_TEXT;
+    return t('pages.k8s.forms.common.hidden');
   };
 
   return (
@@ -291,12 +292,12 @@ const SecretEditDataEditor = ({
                         </Tooltip>
                         {item.sourceKey === undefined && (
                           <Tag className={styles.tag} color="success">
-                            新增
+                            {t('pages.k8s.forms.edit.secret.tag.new')}
                           </Tag>
                         )}
                         {isModified(item) && (
                           <Tag className={styles.tag} color="warning">
-                            已修改
+                            {t('pages.k8s.forms.edit.secret.tag.modified')}
                           </Tag>
                         )}
                       </div>
@@ -307,9 +308,13 @@ const SecretEditDataEditor = ({
                     {!isReserved && (
                       <div className={styles.actions}>
                         {!locked && (
-                          <Tooltip title="删除数据">
+                          <Tooltip
+                            title={t('pages.k8s.forms.common.deleteData')}
+                          >
                             <Button
-                              aria-label="删除数据"
+                              aria-label={t(
+                                'pages.k8s.forms.common.deleteData',
+                              )}
                               className={styles.actionButton}
                               icon={<DeleteOutlined />}
                               type="text"
@@ -318,9 +323,11 @@ const SecretEditDataEditor = ({
                           </Tooltip>
                         )}
                         {isModified(item) && (
-                          <Tooltip title="撤销修改">
+                          <Tooltip
+                            title={t('pages.k8s.forms.edit.secret.undo')}
+                          >
                             <Button
-                              aria-label="撤销修改"
+                              aria-label={t('pages.k8s.forms.edit.secret.undo')}
                               className={styles.actionButton}
                               icon={<UndoOutlined />}
                               type="text"
@@ -330,11 +337,17 @@ const SecretEditDataEditor = ({
                         )}
                         {!item.binary && (
                           <Tooltip
-                            title={isHidden(item) ? '替换数据' : '编辑数据'}
+                            title={
+                              isHidden(item)
+                                ? t('pages.k8s.forms.edit.secret.replaceData')
+                                : t('pages.k8s.forms.common.editData')
+                            }
                           >
                             <Button
                               aria-label={
-                                isHidden(item) ? '替换数据' : '编辑数据'
+                                isHidden(item)
+                                  ? t('pages.k8s.forms.edit.secret.replaceData')
+                                  : t('pages.k8s.forms.common.editData')
                               }
                               className={styles.actionButton}
                               icon={<EditOutlined />}
@@ -354,19 +367,27 @@ const SecretEditDataEditor = ({
         <button className={styles.add} type="button" onClick={openCreateModal}>
           <PlusOutlined />
           <span className={styles.addText}>
-            <span className={styles.addTitle}>添加数据</span>
-            <span className={styles.addDescription}>添加键值对数据。</span>
+            <span className={styles.addTitle}>
+              {t('pages.k8s.forms.common.addData')}
+            </span>
+            <span className={styles.addDescription}>
+              {t('pages.k8s.forms.secret.dataEditor.addDescription')}
+            </span>
           </span>
         </button>
       </div>
       <Modal
         destroyOnHidden
         mask={{ closable: false }}
-        okText={editingItem ? '保存' : '添加'}
+        okText={editingItem ? t('common.action.save') : t('pages.k8s.form.add')}
         open={open}
         styles={{ body: { paddingTop: theme.paddingMD } }}
         title={
-          editingItem ? (editingHidden ? '替换数据' : '编辑数据') : '添加数据'
+          editingItem
+            ? editingHidden
+              ? t('pages.k8s.forms.edit.secret.replaceData')
+              : t('pages.k8s.forms.common.editData')
+            : t('pages.k8s.forms.common.addData')
         }
         width={720}
         onCancel={() => setOpen(false)}
@@ -376,24 +397,23 @@ const SecretEditDataEditor = ({
           <Alert
             className={styles.modalNotice}
             showIcon
-            title="当前值已隐藏。保存后将以下方输入的内容替换原值；不想替换请点取消。"
+            title={t('pages.k8s.forms.edit.secret.replaceNotice')}
             type="info"
           />
         )}
         <Form form={form} layout="vertical">
           <Form.Item
-            label="键"
+            label={t('pages.k8s.form.key')}
             name="keyName"
             rules={[
               {
                 required: true,
-                message: '请输入键',
+                message: t('pages.k8s.forms.common.key.required'),
               },
-              { max: 253, message: '键最长 253 个字符' },
+              { max: 253, message: t('pages.k8s.forms.common.key.maxLength') },
               {
                 pattern: SECRET_KEY_PATTERN,
-                message:
-                  '键只能包含字母、数字、点（.）、下划线（_）和连字符（-）',
+                message: t('pages.k8s.forms.common.key.pattern'),
               },
               {
                 validator: (_, fieldValue?: string) => {
@@ -404,12 +424,20 @@ const SecretEditDataEditor = ({
                   }
                   if (keyName in reserved && editingItem?.keyName !== keyName) {
                     return Promise.reject(
-                      new Error(`${keyName} 为系统生成字段`),
+                      new Error(
+                        t('pages.k8s.forms.secret.dataEditor.systemKey', {
+                          keyName,
+                        }),
+                      ),
                     );
                   }
                   if (forbiddenKeys.includes(keyName)) {
                     return Promise.reject(
-                      new Error(`${keyName} 请在上方的表单项里填写`),
+                      new Error(
+                        t('pages.k8s.forms.edit.secret.dataEditor.fillAbove', {
+                          keyName,
+                        }),
+                      ),
                     );
                   }
                   if (
@@ -419,7 +447,11 @@ const SecretEditDataEditor = ({
                         item.keyName.trim() === keyName,
                     )
                   ) {
-                    return Promise.reject(new Error('键不能重复'));
+                    return Promise.reject(
+                      new Error(
+                        t('pages.k8s.forms.secret.dataEditor.keyDuplicate'),
+                      ),
+                    );
                   }
 
                   return Promise.resolve();
@@ -430,13 +462,22 @@ const SecretEditDataEditor = ({
             <Input autoFocus={!keyDisabled} disabled={keyDisabled} />
           </Form.Item>
           <Form.Item
-            label="值"
+            label={t('pages.k8s.form.value')}
             name="value"
             rules={[
               {
                 validator: (_, fieldValue?: string) =>
                   fieldValue === SECRET_MASK
-                    ? Promise.reject(new Error(`值不能是掩码 ${SECRET_MASK}`))
+                    ? Promise.reject(
+                        new Error(
+                          t(
+                            'pages.k8s.forms.edit.secret.mask.valueNotAllowed',
+                            {
+                              mask: SECRET_MASK,
+                            },
+                          ),
+                        ),
+                      )
                     : Promise.resolve(),
               },
             ]}

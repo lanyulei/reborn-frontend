@@ -361,7 +361,10 @@ export const InstanceDetail: React.FC<{
       };
       const id = typeof edge === 'string' ? edge : '';
       const name = branchNames.get(id.replace(/^in_/, '')) ?? id;
-      return `${name}：${typeof error === 'string' ? error : ''}`;
+      return t('pages.workflow.problem.edge', {
+        name,
+        error: typeof error === 'string' ? error : '',
+      });
     });
   };
   /** 详情里出现过的用户 ID → 显示名（流转记录里的转办对象、加签对象等只有 ID） */
@@ -441,9 +444,13 @@ export const InstanceDetail: React.FC<{
         ? (nodeNames.get(target) ?? userNames.get(target) ?? target)
         : '',
       from: nameOfUser(d.from),
-      users: Array.isArray(d.users) ? d.users.map(nameOfUser).join('、') : '',
+      users: Array.isArray(d.users)
+        ? d.users.map(nameOfUser).join(t('pages.workflow.separator'))
+        : '',
       signal: String(d.signal ?? ''),
-      fields: Array.isArray(d.fields) ? d.fields.join('、') : '',
+      fields: Array.isArray(d.fields)
+        ? d.fields.join(t('pages.workflow.separator'))
+        : '',
     });
   };
 
@@ -645,10 +652,12 @@ export const InstanceDetail: React.FC<{
       </Button>,
     );
   }
-  // 终止与改派是两项独立的权限，都以后端的判定为准（流程进行中且持有对应接口权限）：
-  // 按钮显示出来就一定能用，不会出现点了才报无权限 / 流程已结束
-  const canTerminate = manage && detail?.canManage;
-  const canReassign = manage && detail?.canReassign;
+  // 终止与改派是两项独立的权限：后端判定（流程进行中且持有对应接口权限）与前端的
+  // 元素权限同时满足才显示——按钮显示出来就一定能用，不会出现点了才报无权限 / 流程已结束
+  const canTerminate =
+    manage && detail?.canManage && has('workflow.instance.terminate');
+  const canReassign =
+    manage && detail?.canReassign && has('workflow.instance.reassign');
   if (canTerminate) {
     actions.unshift(
       <Button key="terminate" danger onClick={() => setAction('terminate')}>

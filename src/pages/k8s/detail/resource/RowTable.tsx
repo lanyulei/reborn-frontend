@@ -6,6 +6,7 @@ import { history } from '@umijs/max';
 import { Alert, Input } from 'antd';
 import { useMemo, useState } from 'react';
 import type { GVR, ListRow, StateCell } from '@/services/k8s/typings';
+import { useT } from '@/utils/i18n';
 import { formatTime, StateBadge } from '../../components/cells';
 import { detailPath } from '../../components/meta';
 
@@ -30,6 +31,7 @@ const RowTable = ({
   cells = [],
   notice,
 }: RowTableProps) => {
+  const t = useT();
   const [keyword, setKeyword] = useState('');
   const filtered = useMemo(() => {
     const text = keyword.trim().toLowerCase();
@@ -40,7 +42,7 @@ const RowTable = ({
 
   const columns: ProColumns<ListRow>[] = [
     {
-      title: '名称',
+      title: t('pages.k8s.column.name'),
       dataIndex: 'name',
       ellipsis: true,
       render: (_, row) => (
@@ -54,7 +56,7 @@ const RowTable = ({
       ),
     },
     {
-      title: '状态',
+      title: t('common.column.status'),
       key: 'status',
       width: 160,
       render: (_, row) => {
@@ -82,14 +84,14 @@ const RowTable = ({
       },
     })),
     {
-      title: '命名空间',
+      title: t('pages.k8s.column.namespace'),
       dataIndex: 'namespace',
       width: 200,
       ellipsis: true,
       renderText: (_, row) => row.namespace || '-',
     },
     {
-      title: '创建时间',
+      title: t('common.column.createTime'),
       dataIndex: 'createTime',
       width: 180,
       renderText: (_, row) => formatTime(row.createTime) || '-',
@@ -119,7 +121,7 @@ const RowTable = ({
           <Input
             allowClear
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder="按名称搜索"
+            placeholder={t('pages.k8s.table.keyword')}
             style={{ width: 260 }}
             suffix={<SearchOutlined />}
             value={keyword}

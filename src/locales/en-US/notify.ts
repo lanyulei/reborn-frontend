@@ -70,6 +70,8 @@ export default {
   'pages.notify.channel.form.headers.add': 'Add header',
   'pages.notify.channel.form.headers.key': 'Name',
   'pages.notify.channel.form.headers.value': 'Value',
+  'pages.notify.channel.form.headers.value.editPlaceholder':
+    'Leave blank to keep the current value',
   'pages.notify.channel.form.timeout': 'Outbound timeout (s)',
   'pages.notify.channel.form.timeout.tooltip':
     '1-10 seconds; backend default 5',

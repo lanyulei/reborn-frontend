@@ -3,6 +3,7 @@ import { EditOutlined } from '@ant-design/icons';
 import { App } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import { createKeyValueItem } from '../../ingress/helpers';
 import type { EditFormProps } from '../../shared/edit';
 import { useEditObject } from '../../shared/edit';
@@ -68,6 +69,7 @@ const useStyles = createStyles(({ token }) => ({
 
 const IngressAnnotationsEdit = (props: EditFormProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
   const state = useEditObject(props.clusterId, props.target);
   const initial = useMemo(
@@ -87,12 +89,12 @@ const IngressAnnotationsEdit = (props: EditFormProps) => {
     <EditDrawer
       {...props}
       state={state}
-      title="编辑注解"
+      title={t('pages.k8s.forms.edit.ingress.annotationsTitle')}
       onBuild={async (object) => {
         if (!initial) {
           return undefined;
         }
-        const error = getAnnotationRowsError(rows);
+        const error = getAnnotationRowsError(rows, t);
         if (error) {
           message.warning(error);
           return undefined;
@@ -100,25 +102,35 @@ const IngressAnnotationsEdit = (props: EditFormProps) => {
         return applyIngressAnnotations(object, initial, rows);
       }}
     >
-      <div className={styles.sectionTitle}>元数据</div>
+      <div className={styles.sectionTitle}>
+        {t('pages.k8s.forms.common.metadata')}
+      </div>
       <div className={styles.option}>
         <div className={styles.optionHeader}>
           <span className={styles.headerIcon}>
             <EditOutlined />
           </span>
           <span>
-            <div className={styles.title}>编辑注解</div>
-            <div className={styles.description}>为应用路由配置注解信息。</div>
+            <div className={styles.title}>
+              {t('pages.k8s.forms.edit.ingress.annotationsTitle')}
+            </div>
+            <div className={styles.description}>
+              {t('pages.k8s.forms.edit.ingress.annotations.description')}
+            </div>
           </span>
         </div>
         <div className={styles.metadataBody}>
-          <div className={styles.fieldLabel}>注解</div>
+          <div className={styles.fieldLabel}>
+            {t('pages.k8s.forms.common.annotations')}
+          </div>
           <KeyValueEditor
             addIcon={false}
-            addText="添加"
-            deleteAriaLabel="删除注解"
+            addText={t('pages.k8s.form.add')}
+            deleteAriaLabel={t('pages.k8s.forms.common.deleteAnnotation')}
             value={rows}
-            onAddBlocked={() => message.warning('请先填写已有注解的键。')}
+            onAddBlocked={() =>
+              message.warning(t('pages.k8s.forms.common.annotationKeyFirst'))
+            }
             onChange={setRows}
             onCreateItem={() => createKeyValueItem()}
           />

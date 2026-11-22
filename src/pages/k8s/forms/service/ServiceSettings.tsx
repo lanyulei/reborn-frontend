@@ -18,7 +18,8 @@ import {
 } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import KeyValueEditor from '../shared/KeyValueEditor';
 import {
@@ -37,15 +38,6 @@ import type {
 } from './types';
 import WorkloadSelectorModal from './WorkloadSelectorModal';
 
-const PORT_NUMBER_RULES = [
-  {
-    type: 'number' as const,
-    min: 1,
-    max: 65535,
-    message: '端口范围为 1-65535',
-  },
-];
-
 const PROTOCOL_OPTIONS: { label: string; value: ServicePortProtocol }[] = [
   { label: 'GRPC', value: 'GRPC' },
   { label: 'HTTP', value: 'HTTP' },
@@ -59,24 +51,11 @@ const PROTOCOL_OPTIONS: { label: string; value: ServicePortProtocol }[] = [
   { label: 'SCTP', value: 'SCTP' },
 ];
 
-const ACCESS_MODES: {
+type AccessModeItem = {
   description: string;
   title: string;
   value: ServiceInternalAccessMode;
-}[] = [
-  {
-    description:
-      '为服务分配虚拟 IP 地址，可通过虚拟 IP 地址在集群内部访问服务。',
-    title: '虚拟 IP 地址',
-    value: 'ClusterIP',
-  },
-  {
-    description:
-      '不为服务分配 IP 地址，可通过集群的 DNS 机制在集群内部访问服务。',
-    title: '内部域名',
-    value: 'Headless',
-  },
-];
+};
 
 const useStyles = createStyles(({ token }) => ({
   stack: {
@@ -264,14 +243,31 @@ type AccessModeSelectorProps = {
 
 const AccessModeSelector = ({ value, onChange }: AccessModeSelectorProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const [open, setOpen] = useState(false);
+  const accessModes = useMemo<AccessModeItem[]>(
+    () => [
+      {
+        description: t(
+          'pages.k8s.forms.service.accessMode.clusterIP.description',
+        ),
+        title: t('pages.k8s.forms.service.accessMode.clusterIP'),
+        value: 'ClusterIP',
+      },
+      {
+        description: t(
+          'pages.k8s.forms.service.accessMode.headless.description',
+        ),
+        title: t('pages.k8s.forms.service.accessMode.headless'),
+        value: 'Headless',
+      },
+    ],
+    [t],
+  );
   const selectedMode =
-    ACCESS_MODES.find((item) => item.value === value) || ACCESS_MODES[0];
+    accessModes.find((item) => item.value === value) || accessModes[0];
 
-  const renderMode = (
-    item: (typeof ACCESS_MODES)[number],
-    showArrow: boolean,
-  ) => (
+  const renderMode = (item: AccessModeItem, showArrow: boolean) => (
     <button
       aria-expanded={showArrow ? open : undefined}
       className={styles.accessModeItem}
@@ -303,9 +299,9 @@ const AccessModeSelector = ({ value, onChange }: AccessModeSelectorProps) => {
       {renderMode(selectedMode, true)}
       {open && (
         <div className={styles.accessModeOptions}>
-          {ACCESS_MODES.filter((item) => item.value !== selectedMode.value).map(
-            (item) => renderMode(item, false),
-          )}
+          {accessModes
+            .filter((item) => item.value !== selectedMode.value)
+            .map((item) => renderMode(item, false))}
         </div>
       )}
     </div>
@@ -374,6 +370,18 @@ type ServicePortEditorProps = {
 
 const ServicePortEditor = ({ form }: ServicePortEditorProps) => {
   const { styles } = useStyles();
+  const t = useT();
+  const portNumberRules = useMemo(
+    () => [
+      {
+        type: 'number' as const,
+        min: 1,
+        max: 65535,
+        message: t('pages.k8s.forms.common.port.range'),
+      },
+    ],
+    [t],
+  );
   const ports = (Form.useWatch('ports', form) as ServicePortItem[]) || [];
   const addDisabled = ports.some((item) => !item?.servicePort);
 
@@ -383,7 +391,7 @@ const ServicePortEditor = ({ form }: ServicePortEditorProps) => {
       rules={[
         {
           validator: async (_, value?: ServicePortItem[]) => {
-            const error = getServicePortsError(value);
+            const error = getServicePortsError(value, t);
             if (error) {
               throw new Error(error);
             }
@@ -400,8 +408,12 @@ const ServicePortEditor = ({ form }: ServicePortEditorProps) => {
                   <CompactField
                     label={
                       <>
-                        协议
-                        <Tooltip title="HTTP/HTTPS 等协议会在提交时写入 appProtocol，Kubernetes 端口协议按 TCP/UDP/SCTP 生成。">
+                        {t('pages.k8s.forms.service.port.protocol')}
+                        <Tooltip
+                          title={t(
+                            'pages.k8s.forms.service.port.protocol.tooltip',
+                          )}
+                        >
                           <QuestionCircleOutlined className={styles.helpIcon} />
                         </Tooltip>
                       </>
@@ -411,43 +423,55 @@ const ServicePortEditor = ({ form }: ServicePortEditorProps) => {
                       <Select<ServicePortProtocol>
                         className={styles.compactControl}
                         options={PROTOCOL_OPTIONS}
-                        placeholder="请选择协议"
+                        placeholder={t(
+                          'pages.k8s.forms.common.protocol.required',
+                        )}
                         variant="borderless"
                       />
                     </Form.Item>
                   </CompactField>
                 </Form.Item>
                 <Form.Item className={styles.formItem}>
-                  <CompactField label="名称">
+                  <CompactField label={t('pages.k8s.forms.common.name')}>
                     <Form.Item
                       name={[field.name, 'name']}
                       noStyle
                       rules={[
                         {
                           max: PORT_NAME_MAX_LENGTH,
-                          message: `端口名称最长 ${PORT_NAME_MAX_LENGTH} 个字符`,
+                          message: t(
+                            'pages.k8s.forms.service.port.name.maxLength',
+                            {
+                              max: PORT_NAME_MAX_LENGTH,
+                            },
+                          ),
                         },
                         {
                           pattern: PORT_NAME_PATTERN,
-                          message:
-                            '端口名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+                          message: t(
+                            'pages.k8s.forms.service.port.name.pattern',
+                          ),
                         },
                       ]}
                     >
                       <Input
                         className={styles.compactControl}
-                        placeholder="例如 http-0"
+                        placeholder={t('pages.k8s.forms.service.example', {
+                          value: 'http-0',
+                        })}
                         variant="borderless"
                       />
                     </Form.Item>
                   </CompactField>
                 </Form.Item>
                 <Form.Item className={styles.formItem}>
-                  <CompactField label="容器端口">
+                  <CompactField
+                    label={t('pages.k8s.forms.service.port.containerPort')}
+                  >
                     <Form.Item
                       name={[field.name, 'containerPort']}
                       noStyle
-                      rules={PORT_NUMBER_RULES}
+                      rules={portNumberRules}
                     >
                       <InputNumber
                         className={styles.compactControl}
@@ -456,7 +480,7 @@ const ServicePortEditor = ({ form }: ServicePortEditorProps) => {
                         placeholder={
                           ports[field.name]?.targetPort
                             ? String(ports[field.name]?.targetPort)
-                            : '可选'
+                            : t('common.optional')
                         }
                         precision={0}
                         variant="borderless"
@@ -465,20 +489,27 @@ const ServicePortEditor = ({ form }: ServicePortEditorProps) => {
                   </CompactField>
                 </Form.Item>
                 <Form.Item className={styles.formItem}>
-                  <CompactField label="服务端口">
+                  <CompactField
+                    label={t('pages.k8s.forms.service.port.servicePort')}
+                  >
                     <Form.Item
                       name={[field.name, 'servicePort']}
                       noStyle
                       rules={[
-                        { required: true, message: '请输入服务端口' },
-                        ...PORT_NUMBER_RULES,
+                        {
+                          required: true,
+                          message: t(
+                            'pages.k8s.forms.service.port.servicePort.required',
+                          ),
+                        },
+                        ...portNumberRules,
                       ]}
                     >
                       <InputNumber
                         className={styles.compactControl}
                         min={1}
                         max={65535}
-                        placeholder="必填"
+                        placeholder={t('pages.k8s.forms.service.required')}
                         precision={0}
                         variant="borderless"
                       />
@@ -486,7 +517,7 @@ const ServicePortEditor = ({ form }: ServicePortEditorProps) => {
                   </CompactField>
                 </Form.Item>
                 <Button
-                  aria-label="删除端口"
+                  aria-label={t('pages.k8s.forms.common.deletePort')}
                   className={styles.deleteButton}
                   icon={<DeleteOutlined />}
                   type="text"
@@ -513,7 +544,7 @@ const ServicePortEditor = ({ form }: ServicePortEditorProps) => {
                 }
               }}
             >
-              添加端口
+              {t('pages.k8s.forms.service.port.add')}
             </Button>
           </div>
         </>
@@ -534,6 +565,7 @@ const ServiceSettings = ({
   showInternalAccess = true,
 }: ServiceSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
   const [workloadModalOpen, setWorkloadModalOpen] = useState(false);
   const namespace = Form.useWatch('namespace', { form, preserve: true });
@@ -554,8 +586,8 @@ const ServiceSettings = ({
     <div className={styles.stack}>
       {showInternalAccess && (
         <ServiceFormSection
-          tooltip="选择服务在集群内部被访问时使用的地址形态"
-          title="内部访问模式"
+          tooltip={t('pages.k8s.forms.service.internalAccess.tooltip')}
+          title={t('pages.k8s.forms.service.internalAccess')}
         >
           <Form.Item name="internalAccessMode" noStyle>
             <AccessModeSelector />
@@ -564,8 +596,8 @@ const ServiceSettings = ({
       )}
 
       <ServiceFormSection
-        tooltip="通过标签选择一组工作负载，服务流量会转发到匹配的容器组"
-        title="工作负载选择"
+        tooltip={t('pages.k8s.forms.service.workloadSelector.tooltip')}
+        title={t('pages.k8s.forms.service.workloadSelector')}
       >
         <div className={styles.selectorBlock}>
           <Form.Item
@@ -577,23 +609,29 @@ const ServiceSettings = ({
                   if ((value || []).some((item) => item.keyName?.trim())) {
                     return;
                   }
-                  throw new Error('请添加至少一个工作负载选择器');
+                  throw new Error(
+                    t('pages.k8s.forms.service.validation.selectorRequired'),
+                  );
                 },
               },
             ]}
           >
             <KeyValueEditor
               addIcon
-              addText="添加选择器"
-              deleteAriaLabel="删除工作负载选择器"
+              addText={t('pages.k8s.forms.service.workloadSelector.add')}
+              deleteAriaLabel={t(
+                'pages.k8s.forms.service.workloadSelector.delete',
+              )}
               footerExtra={
                 <Button onClick={() => setWorkloadModalOpen(true)}>
-                  指定工作负载
+                  {t('pages.k8s.forms.service.workloadSelector.pick')}
                 </Button>
               }
               footerJustify="space-between"
               onAddBlocked={() =>
-                message.warning('请先填写已有工作负载选择器的键。')
+                message.warning(
+                  t('pages.k8s.forms.service.workloadSelector.keyFirst'),
+                )
               }
               onCreateItem={() => createKeyValueItem()}
             />
@@ -603,7 +641,7 @@ const ServiceSettings = ({
               banner
               className={styles.selectorAlert}
               showIcon={false}
-              title="没有工作负载匹配当前选择器。"
+              title={t('pages.k8s.forms.service.workloadSelector.noMatch')}
               type="warning"
             />
           )}
@@ -611,8 +649,8 @@ const ServiceSettings = ({
       </ServiceFormSection>
 
       <ServiceFormSection
-        tooltip="设置服务端口与目标容器端口，端口协议会同步写入服务清单"
-        title="端口"
+        tooltip={t('pages.k8s.forms.service.ports.tooltip')}
+        title={t('pages.k8s.form.port')}
       >
         <ServicePortEditor form={form} />
       </ServiceFormSection>
@@ -625,7 +663,9 @@ const ServiceSettings = ({
         onOk={(workload) => {
           const nextSelector = workload.selector || workload.labels || {};
           if (Object.keys(nextSelector).length === 0) {
-            message.warning('未读取到该工作负载的标签，请手动填写选择器。');
+            message.warning(
+              t('pages.k8s.forms.service.workloadSelector.noLabels'),
+            );
             setWorkloadModalOpen(false);
             return;
           }

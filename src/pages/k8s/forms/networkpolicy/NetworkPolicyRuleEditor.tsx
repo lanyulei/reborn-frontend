@@ -6,6 +6,8 @@ import {
 } from '@ant-design/icons';
 import { Button, Input, InputNumber, Select } from 'antd';
 import { createStyles } from 'antd-style';
+import { useMemo } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import {
   createNetworkPolicyPeerItem,
   createNetworkPolicyPortItem,
@@ -30,13 +32,6 @@ const PROTOCOL_OPTIONS: { label: string; value: NetworkPolicyProtocol }[] = [
   { label: 'TCP', value: 'TCP' },
   { label: 'UDP', value: 'UDP' },
   { label: 'SCTP', value: 'SCTP' },
-];
-
-const PEER_TYPE_OPTIONS: { label: string; value: NetworkPolicyPeerType }[] = [
-  { label: 'Pod 选择器', value: 'podSelector' },
-  { label: '命名空间选择器', value: 'namespaceSelector' },
-  { label: 'Pod + 命名空间', value: 'podAndNamespaceSelector' },
-  { label: 'IP 网段', value: 'ipBlock' },
 ];
 
 const useStyles = createStyles(({ token }) => ({
@@ -275,36 +270,45 @@ type NetworkPolicyRuleEditorProps = {
   onChange?: (value: NetworkPolicyRuleItem[]) => void;
 };
 
-const getDirectionText = (direction: NetworkPolicyRuleDirection) =>
-  direction === 'ingress'
-    ? {
-        add: '添加入站规则',
-        addDescription: '配置允许进入目标 Pod 的来源和端口。',
-        icon: <LoginOutlined />,
-        peer: '来源',
-        ruleDescription: '允许符合规则的来源访问目标 Pod',
-        rule: '入站规则',
-      }
-    : {
-        add: '添加出站规则',
-        addDescription: '配置目标 Pod 可访问的目的端和端口。',
-        icon: <LogoutOutlined />,
-        peer: '目标',
-        ruleDescription: '允许目标 Pod 访问符合规则的目的端',
-        rule: '出站规则',
-      };
+/** 方向相关文案：键位于 pages.k8s.forms.networkpolicy.{ingress|egress}.* */
+const getDirectionText = (
+  direction: NetworkPolicyRuleDirection,
+  t: Translate,
+) => {
+  const prefix = `pages.k8s.forms.networkpolicy.${direction}`;
+
+  return {
+    add: t(`${prefix}.add`),
+    addDescription: t(`${prefix}.addDescription`),
+    addPeer: t(`${prefix}.addPeer`),
+    allPeers: t(`${prefix}.allPeers`),
+    delete: t(`${prefix}.delete`),
+    deletePeer: t(`${prefix}.deletePeer`),
+    icon: direction === 'ingress' ? <LoginOutlined /> : <LogoutOutlined />,
+    peer: t(
+      direction === 'ingress'
+        ? 'pages.k8s.forms.networkpolicy.source'
+        : 'pages.k8s.forms.networkpolicy.destination',
+    ),
+    peerCount: (count: number) => t(`${prefix}.peerCount`, { count }),
+    ruleDescription: t(`${prefix}.description`),
+    rule: t(prefix),
+  };
+};
 
 const getRuleSummaryItems = (
   rule: NetworkPolicyRuleItem,
-  direction: NetworkPolicyRuleDirection,
+  directionText: ReturnType<typeof getDirectionText>,
+  t: Translate,
 ) => {
-  const { peer } = getDirectionText(direction);
   const peerText = rule.peers?.length
-    ? `${rule.peers.length} 个${peer}`
-    : `全部${peer}`;
+    ? directionText.peerCount(rule.peers.length)
+    : directionText.allPeers;
   const portText = rule.ports?.length
-    ? `${rule.ports.length} 个端口`
-    : '全部端口';
+    ? t('pages.k8s.forms.networkpolicy.summary.portCount', {
+        count: rule.ports.length,
+      })
+    : t('pages.k8s.forms.networkpolicy.summary.allPorts');
 
   return {
     peerText,
@@ -317,8 +321,29 @@ const NetworkPolicyRuleEditor = ({
   value = [],
   onChange,
 }: NetworkPolicyRuleEditorProps) => {
+  const t = useT();
   const { styles } = useStyles();
-  const directionText = getDirectionText(direction);
+  const directionText = getDirectionText(direction, t);
+  const peerTypeOptions = useMemo<
+    { label: string; value: NetworkPolicyPeerType }[]
+  >(
+    () => [
+      { label: t('pages.k8s.forms.common.podSelector'), value: 'podSelector' },
+      {
+        label: t('pages.k8s.forms.networkpolicy.namespaceSelector'),
+        value: 'namespaceSelector',
+      },
+      {
+        label: t('pages.k8s.forms.networkpolicy.peerType.podAndNamespace'),
+        value: 'podAndNamespaceSelector',
+      },
+      {
+        label: t('pages.k8s.forms.networkpolicy.peerType.ipBlock'),
+        value: 'ipBlock',
+      },
+    ],
+    [t],
+  );
 
   const updateRules = (nextRules: NetworkPolicyRuleItem[]) => {
     onChange?.(nextRules);
@@ -360,7 +385,7 @@ const NetworkPolicyRuleEditor = ({
   return (
     <div className={styles.stack}>
       {value.map((rule, index) => {
-        const summary = getRuleSummaryItems(rule, direction);
+        const summary = getRuleSummaryItems(rule, directionText, t);
 
         return (
           <div className={styles.card} key={rule.id}>
@@ -376,7 +401,7 @@ const NetworkPolicyRuleEditor = ({
               </div>
               <div className={styles.actions}>
                 <Button
-                  aria-label={`删除${directionText.rule}`}
+                  aria-label={directionText.delete}
                   className={styles.deleteButton}
                   icon={<DeleteOutlined />}
                   type="text"
@@ -389,10 +414,15 @@ const NetworkPolicyRuleEditor = ({
 
             <div className={styles.summary}>
               <span className={styles.summaryItem}>
-                {directionText.peer}： {summary.peerText}
+                {t('pages.k8s.forms.networkpolicy.summary.peers', {
+                  label: directionText.peer,
+                  text: summary.peerText,
+                })}
               </span>
               <span className={styles.summaryItem}>
-                端口： {summary.portText}
+                {t('pages.k8s.forms.networkpolicy.summary.ports', {
+                  text: summary.portText,
+                })}
               </span>
             </div>
 
@@ -405,7 +435,7 @@ const NetworkPolicyRuleEditor = ({
                       <div className={styles.peerHeader}>
                         <Select
                           className={styles.peerType}
-                          options={PEER_TYPE_OPTIONS}
+                          options={peerTypeOptions}
                           value={peer.type}
                           onChange={(nextType) =>
                             updatePeer(
@@ -417,7 +447,7 @@ const NetworkPolicyRuleEditor = ({
                         />
                         <span />
                         <Button
-                          aria-label={`删除${directionText.peer}`}
+                          aria-label={directionText.deletePeer}
                           className={styles.deleteButton}
                           icon={<DeleteOutlined />}
                           type="text"
@@ -437,7 +467,9 @@ const NetworkPolicyRuleEditor = ({
                             <div className={styles.ipBlockRow}>
                               <Input
                                 className={styles.input}
-                                placeholder="CIDR，如 10.0.0.0/24"
+                                placeholder={t(
+                                  'pages.k8s.forms.networkpolicy.ipBlock.cidrPlaceholder',
+                                )}
                                 status={
                                   peer.ipBlockCidr?.trim() &&
                                   !isValidCidr(peer.ipBlockCidr)
@@ -455,9 +487,11 @@ const NetworkPolicyRuleEditor = ({
                               <Select
                                 className={styles.input}
                                 mode="tags"
-                                placeholder="排除 CIDR，输入后回车"
+                                placeholder={t(
+                                  'pages.k8s.forms.networkpolicy.ipBlock.exceptPlaceholder',
+                                )}
                                 status={
-                                  getIpBlockExceptError(peer)
+                                  getIpBlockExceptError(peer, t)
                                     ? 'error'
                                     : undefined
                                 }
@@ -472,11 +506,13 @@ const NetworkPolicyRuleEditor = ({
                             </div>
                             {peer.ipBlockCidr?.trim() &&
                               (!isValidCidr(peer.ipBlockCidr) ||
-                                getIpBlockExceptError(peer)) && (
+                                getIpBlockExceptError(peer, t)) && (
                                 <div className={styles.fieldError}>
                                   {isValidCidr(peer.ipBlockCidr)
-                                    ? getIpBlockExceptError(peer)
-                                    : 'CIDR 格式不正确，例如 10.0.0.0/24 或 fd00::/64'}
+                                    ? getIpBlockExceptError(peer, t)
+                                    : t(
+                                        'pages.k8s.forms.networkpolicy.ipBlock.cidrInvalid',
+                                      )}
                                 </div>
                               )}
                           </>
@@ -484,7 +520,7 @@ const NetworkPolicyRuleEditor = ({
                           <div className={styles.selectorGrid}>
                             <div className={styles.selectorPanel}>
                               <div className={styles.selectorTitle}>
-                                Pod 选择器
+                                {t('pages.k8s.forms.common.podSelector')}
                               </div>
                               <LabelSelectorEditor
                                 value={peer.podSelector}
@@ -498,7 +534,9 @@ const NetworkPolicyRuleEditor = ({
                             </div>
                             <div className={styles.selectorPanel}>
                               <div className={styles.selectorTitle}>
-                                命名空间选择器
+                                {t(
+                                  'pages.k8s.forms.networkpolicy.namespaceSelector',
+                                )}
                               </div>
                               <LabelSelectorEditor
                                 value={peer.namespaceSelector}
@@ -515,8 +553,10 @@ const NetworkPolicyRuleEditor = ({
                           <div className={styles.selectorPanel}>
                             <div className={styles.selectorTitle}>
                               {peer.type === 'namespaceSelector'
-                                ? '命名空间选择器'
-                                : 'Pod 选择器'}
+                                ? t(
+                                    'pages.k8s.forms.networkpolicy.namespaceSelector',
+                                  )
+                                : t('pages.k8s.forms.common.podSelector')}
                             </div>
                             <LabelSelectorEditor
                               value={
@@ -555,13 +595,15 @@ const NetworkPolicyRuleEditor = ({
                       })
                     }
                   >
-                    添加{directionText.peer}
+                    {directionText.addPeer}
                   </Button>
                 </div>
               </div>
 
               <div className={styles.section}>
-                <div className={styles.sectionTitle}>端口</div>
+                <div className={styles.sectionTitle}>
+                  {t('pages.k8s.form.port')}
+                </div>
                 <div className={styles.portRows}>
                   {(rule.ports || []).map((port) => (
                     <div key={port.id}>
@@ -576,9 +618,11 @@ const NetworkPolicyRuleEditor = ({
                         />
                         <Input
                           className={styles.portInput}
-                          placeholder="端口号或端口名称"
+                          placeholder={t(
+                            'pages.k8s.forms.networkpolicy.port.placeholder',
+                          )}
                           status={
-                            getPortError(port)?.field === 'port'
+                            getPortError(port, t)?.field === 'port'
                               ? 'error'
                               : undefined
                           }
@@ -593,10 +637,12 @@ const NetworkPolicyRuleEditor = ({
                           className={styles.portInput}
                           max={65535}
                           min={1}
-                          placeholder="结束端口"
+                          placeholder={t(
+                            'pages.k8s.forms.networkpolicy.endPort',
+                          )}
                           precision={0}
                           status={
-                            getPortError(port)?.field === 'endPort'
+                            getPortError(port, t)?.field === 'endPort'
                               ? 'error'
                               : undefined
                           }
@@ -608,7 +654,7 @@ const NetworkPolicyRuleEditor = ({
                           }
                         />
                         <Button
-                          aria-label="删除端口"
+                          aria-label={t('pages.k8s.forms.common.deletePort')}
                           className={styles.deleteButton}
                           icon={<DeleteOutlined />}
                           type="text"
@@ -621,9 +667,9 @@ const NetworkPolicyRuleEditor = ({
                           }
                         />
                       </div>
-                      {getPortError(port) && (
+                      {getPortError(port, t) && (
                         <div className={styles.fieldError}>
-                          {getPortError(port)?.message}
+                          {getPortError(port, t)?.message}
                         </div>
                       )}
                     </div>
@@ -631,7 +677,7 @@ const NetworkPolicyRuleEditor = ({
                 </div>
                 {(rule.ports || []).length > 0 && (
                   <div className={styles.hint}>
-                    结束端口用于端口范围：需要起始端口为数字，且不小于起始端口。
+                    {t('pages.k8s.forms.networkpolicy.endPort.hint')}
                   </div>
                 )}
                 <div className={styles.footer}>
@@ -645,7 +691,7 @@ const NetworkPolicyRuleEditor = ({
                       })
                     }
                   >
-                    添加端口
+                    {t('pages.k8s.forms.networkpolicy.port.add')}
                   </Button>
                 </div>
               </div>

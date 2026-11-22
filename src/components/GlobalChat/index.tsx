@@ -4,6 +4,7 @@ import { Button, Modal, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
 import React, { useEffect, useState } from 'react';
 import ChatPanel from '@/components/ChatPanel';
+import type { ChatContext } from '@/services/assistant/typings';
 import { useT } from '@/utils/i18n';
 import useHeaderActionStyles from '../RightContent/style';
 import { onAskAssistant } from './ask';
@@ -29,11 +30,15 @@ const GlobalChat: React.FC = () => {
   const { styles: headerStyles } = useHeaderActionStyles();
   const access = useAccess();
   // 其他页面交来的问题（askAssistant）：打开弹窗并填进输入框；seq 让同一问题可以重复交来
-  const [draft, setDraft] = useState<{ text: string; seq: number }>();
+  const [draft, setDraft] = useState<{
+    text: string;
+    seq: number;
+    context?: ChatContext;
+  }>();
   useEffect(
     () =>
-      onAskAssistant((text) => {
-        setDraft((prev) => ({ text, seq: (prev?.seq ?? 0) + 1 }));
+      onAskAssistant(({ text, context }) => {
+        setDraft((prev) => ({ text, context, seq: (prev?.seq ?? 0) + 1 }));
         setOpen(true);
       }),
     [],
@@ -86,7 +91,7 @@ const GlobalChat: React.FC = () => {
           },
         }}
       >
-        <ChatPanel draft={draft} />
+        <ChatPanel draft={draft} visible={open} />
       </Modal>
     </>
   );

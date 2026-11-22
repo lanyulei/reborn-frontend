@@ -1,5 +1,6 @@
 import { Col, Form, Input, Row, Select } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import type { IngressClassParameterScope } from './types';
 
 const useStyles = createStyles(({ token }) => ({
@@ -21,32 +22,48 @@ const useStyles = createStyles(({ token }) => ({
   },
 }));
 
-const booleanOptions = [
-  { label: '启用', value: 'true' },
-  { label: '不启用', value: 'false' },
-];
-
-const scopeOptions: { label: string; value: IngressClassParameterScope }[] = [
-  { label: '集群级', value: 'Cluster' },
-  { label: '命名空间级', value: 'Namespace' },
-];
-
 const IngressClassParameterSettings = () => {
+  const t = useT();
   const { styles } = useStyles();
   const enableParameters = Form.useWatch('enableParameters');
   const parameterScope = Form.useWatch('parameterScope');
+  const booleanOptions = [
+    { label: t('common.status.enabled'), value: 'true' },
+    {
+      label: t('pages.k8s.forms.ingressclass.parameters.notEnabled'),
+      value: 'false',
+    },
+  ];
+  const scopeOptions: { label: string; value: IngressClassParameterScope }[] = [
+    {
+      label: t('pages.k8s.forms.ingressclass.scope.cluster'),
+      value: 'Cluster',
+    },
+    {
+      label: t('pages.k8s.forms.ingressclass.scope.namespace'),
+      value: 'Namespace',
+    },
+  ];
 
   return (
     <div className={styles.settings}>
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            extra="参数引用用于关联控制器需要的配置资源；未启用时不会输出 spec.parameters。"
-            label="参数引用"
+            extra={t('pages.k8s.forms.ingressclass.parameters.extra')}
+            label={t('pages.k8s.forms.ingressclass.parameters')}
             name="enableParameters"
-            rules={[{ required: true, message: '请选择是否启用参数引用' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.ingressclass.parameters.required'),
+              },
+            ]}
           >
-            <Select options={booleanOptions} placeholder="请选择" />
+            <Select
+              options={booleanOptions}
+              placeholder={t('pages.k8s.forms.common.select')}
+            />
           </Form.Item>
         </Col>
       </Row>
@@ -56,52 +73,78 @@ const IngressClassParameterSettings = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                extra="例如 k8s.example.com；核心 API 组可以留空。"
-                label="API 组"
+                extra={t('pages.k8s.forms.ingressclass.apiGroup.extra')}
+                label={t('pages.k8s.forms.ingressclass.apiGroup')}
                 name="parameterApiGroup"
               >
-                <Input placeholder="请输入 API 组" />
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.ingressclass.apiGroup.placeholder',
+                  )}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="类型"
+                label={t('pages.k8s.forms.common.type')}
                 name="parameterKind"
                 rules={[
                   {
                     required: true,
                     whitespace: true,
-                    message: '请输入参数资源类型',
+                    message: t(
+                      'pages.k8s.forms.ingressclass.parameterKind.required',
+                    ),
                   },
                 ]}
               >
-                <Input placeholder="请输入参数资源类型" />
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.ingressclass.parameterKind.required',
+                  )}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="名称"
+                label={t('pages.k8s.forms.common.name')}
                 name="parameterName"
                 rules={[
                   {
                     required: true,
                     whitespace: true,
-                    message: '请输入参数资源名称',
+                    message: t(
+                      'pages.k8s.forms.ingressclass.parameterName.required',
+                    ),
                   },
                 ]}
               >
-                <Input placeholder="请输入参数资源名称" />
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.ingressclass.parameterName.required',
+                  )}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="作用域"
+                label={t('pages.k8s.forms.ingressclass.scope')}
                 name="parameterScope"
-                rules={[{ required: true, message: '请选择参数作用域' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.ingressclass.scope.required'),
+                  },
+                ]}
               >
-                <Select options={scopeOptions} placeholder="请选择作用域" />
+                <Select
+                  options={scopeOptions}
+                  placeholder={t(
+                    'pages.k8s.forms.ingressclass.scope.placeholder',
+                  )}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -109,17 +152,23 @@ const IngressClassParameterSettings = () => {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
-                  label="命名空间"
+                  label={t('pages.k8s.forms.common.namespace')}
                   name="parameterNamespace"
                   rules={[
                     {
                       required: true,
                       whitespace: true,
-                      message: '请输入参数命名空间',
+                      message: t(
+                        'pages.k8s.forms.ingressclass.parameterNamespace.required',
+                      ),
                     },
                   ]}
                 >
-                  <Input placeholder="请输入参数命名空间" />
+                  <Input
+                    placeholder={t(
+                      'pages.k8s.forms.ingressclass.parameterNamespace.required',
+                    )}
+                  />
                 </Form.Item>
               </Col>
             </Row>

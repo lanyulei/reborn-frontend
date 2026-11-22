@@ -93,6 +93,60 @@ export const useStatsStyles = createStyles(({ token, css }) => ({
     color: ${token.colorText};
     font-weight: 600;
   `,
+  /** 卡片内的无边框指标（名称 / 数值 / 补充）：一行几格，格间竖线隔开；窄屏竖排 */
+  metricRow: css`
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 24px;
+    @media (min-width: 576px) {
+      > * + * {
+        padding-inline-start: 24px;
+        border-inline-start: 1px solid ${token.colorSplit};
+      }
+    }
+    @media (max-width: 575px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  `,
+  /** 同上，竖向堆叠、横线隔开（与左侧表格并排的侧栏）；落到下方时回到一行三格 */
+  metricStack: css`
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    > * + * {
+      padding-top: 16px;
+      margin-top: 16px;
+      border-top: 1px solid ${token.colorSplit};
+    }
+    @media (max-width: 991px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 24px;
+      > * + * {
+        padding-top: 0;
+        padding-inline-start: 24px;
+        margin-top: 0;
+        border-top: 0;
+        border-inline-start: 1px solid ${token.colorSplit};
+      }
+    }
+  `,
+  metricLabel: css`
+    color: ${token.colorTextSecondary};
+    font-size: ${token.fontSizeSM}px;
+  `,
+  metricValue: css`
+    margin-top: 2px;
+    color: ${token.colorText};
+    font-weight: 600;
+    font-size: ${token.fontSizeHeading3}px;
+    line-height: ${token.lineHeightHeading3};
+    font-variant-numeric: tabular-nums;
+  `,
+  metricExtra: css`
+    margin-top: 2px;
+    color: ${token.colorTextTertiary};
+    font-size: ${token.fontSizeSM}px;
+    font-variant-numeric: tabular-nums;
+  `,
   /** 图例：色块 + 名称 + 合计 */
   legend: css`
     display: flex;

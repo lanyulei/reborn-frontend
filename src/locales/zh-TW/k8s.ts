@@ -611,4 +611,8 @@ export default {
   'pages.k8s.audit.action.helm_upgrade': '升級應用',
   'pages.k8s.audit.action.helm_rollback': '回滾應用',
   'pages.k8s.audit.action.helm_uninstall': '卸載應用',
+  'pages.k8s.quota.delete.title': '確認移除配額 / 限制範圍？',
+  'pages.k8s.quota.delete.content':
+    '將刪除該命名空間的 {kinds}，刪除後容器組不再受其約束。',
+  'pages.k8s.detail.pods.noSelector': '沒有選擇器，不選中任何容器組',
 };

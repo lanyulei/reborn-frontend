@@ -1,8 +1,9 @@
 /**
- * 业务域请求包装的公共内核（作业中心 / 监控告警 / 容器平台的 request.ts 在此之上各自配置）：
+ * 业务域请求包装的公共内核（运维 Agent / 故障管理 / 监控告警 / 作业中心 / 容器平台的 request.ts
+ * 在此之上各自配置）：
  * - 读取后端 Kratos Status 的 reason / metadata 与 HTTP 状态码；
  * - 查询串里的数组按「重复键」序列化；
- * - createDomainRequest：在 authRequest 之上把错误提示换成各域自己的文案。
+ * - createDomainRequest：按该域的错误码表生成「错误 → 本地化文案」与带提示的请求函数。
  *
  * 令牌刷新、跳转登录仍只在 authRequest 里（./request.ts），这里不碰认证流程。
  */
@@ -10,15 +11,20 @@ import type { RequestOptions } from '@@/plugin-request/request';
 import { getAccessToken } from '@/utils/auth';
 import { message } from '@/utils/feedback';
 import { t } from '@/utils/i18n';
-import { authRequest } from './request';
+import { authRequest, getErrorMessage } from './request';
 
 interface ErrorLike {
   reason?: string;
+  message?: string;
   status?: number;
   metadata?: Record<string, string>;
   response?: {
     status?: number;
-    data?: { reason?: string; metadata?: Record<string, string> };
+    data?: {
+      reason?: string;
+      message?: string;
+      metadata?: Record<string, string>;
+    };
   };
 }
 
@@ -40,6 +46,12 @@ export const getErrorMetadata = (
 export const getErrorStatus = (error: unknown): number | undefined => {
   const err = error as ErrorLike | undefined;
   return err?.response?.status ?? err?.status;
+};
+
+/** 取后端 Kratos Status 的 message（英文原文，作为具体原因附在本地化文案之后） */
+const getErrorDetail = (error: unknown): string | undefined => {
+  const err = error as ErrorLike | undefined;
+  return err?.response?.data?.message ?? err?.message;
 };
 
 /**
@@ -65,9 +77,25 @@ export interface DomainRequestOptions extends RequestOptions {
   silent?: boolean;
 }
 
+/** reason + 后端 message（+ metadata）→ 当前语言的提示；不认识的 reason 原样返回后端 message */
+export type ReasonText = (
+  reason: string | undefined,
+  detail: string | undefined,
+  metadata?: Record<string, string>,
+) => string | undefined;
+
 interface DomainRequestConfig {
-  /** 错误 → 展示文案（该域的错误码映射；不认识的错误码回退后端 message） */
-  errorMessage: (error: unknown) => string;
+  /** 错误码文案键前缀：reason → `${reasonPrefix}.${reason}` */
+  reasonPrefix: string;
+  /** 有对应文案的错误码；true = 后端 message 带具体原因（哪一项不合法、被谁引用……），附在文案之后 */
+  reasonsWithDetail: Record<string, boolean>;
+  /** 个别错误码的文案键不按 `${reasonPrefix}.${reason}` 命名时在此指定 */
+  textIds?: Record<string, string>;
+  /** 带 metadata 的定制提示（如引用计数、认领人）；返回 undefined 则走通用映射 */
+  metadataText?: (
+    reason: string,
+    metadata: Record<string, string>,
+  ) => string | undefined;
   /**
    * 401 且令牌仍在（刷新令牌遇到暂时性故障，没有登出）时提示「请求失败，请重试」。
    * 域请求恒以 silent 调用 authRequest，后者这时不会提示；开启后由这里补上同一句。
@@ -76,12 +104,42 @@ interface DomainRequestConfig {
 }
 
 /**
- * 生成一个域的请求函数：数组查询参数按重复键序列化；失败时提示该域的本地化文案。
+ * 生成一个域的请求层：
+ * - reasonText：reason + 后端 message → 本地化文案（批量操作的逐条结果也用它）；
+ * - getErrorMessage：错误 → 展示文案（该域的错误码映射；不认识的错误码回退后端 message）；
+ * - request：数组查询参数按重复键序列化；失败时提示该域的本地化文案。
  * 401 的刷新 / 跳转登录由 authRequest 处理，这里不重复提示。
  */
-export const createDomainRequest =
-  ({ errorMessage, retryHintOn401 }: DomainRequestConfig) =>
-  async <T>(url: string, options: DomainRequestOptions = {}): Promise<T> => {
+export const createDomainRequest = ({
+  reasonPrefix,
+  reasonsWithDetail,
+  textIds,
+  metadataText,
+  retryHintOn401,
+}: DomainRequestConfig) => {
+  const reasonText: ReasonText = (reason, detail, metadata) => {
+    if (!reason || !(reason in reasonsWithDetail)) return detail;
+    const special = metadata && metadataText?.(reason, metadata);
+    if (special) return special;
+    const text = t(textIds?.[reason] ?? `${reasonPrefix}.${reason}`);
+    return reasonsWithDetail[reason] && detail
+      ? t('app.request.withDetail', { text, detail })
+      : text;
+  };
+
+  const domainErrorMessage = (error: unknown, fallback?: string): string => {
+    const reason = getErrorReason(error);
+    return (
+      (reason &&
+        reasonText(reason, getErrorDetail(error), getErrorMetadata(error))) ||
+      getErrorMessage(error, fallback)
+    );
+  };
+
+  const domainRequest = async <T>(
+    url: string,
+    options: DomainRequestOptions = {},
+  ): Promise<T> => {
     const { silent, ...rest } = options;
     try {
       return await authRequest<T>(url, {
@@ -92,10 +150,17 @@ export const createDomainRequest =
     } catch (error) {
       if (silent) throw error;
       if (getErrorStatus(error) !== 401) {
-        message.error(errorMessage(error));
+        message.error(domainErrorMessage(error));
       } else if (retryHintOn401 && getAccessToken() !== null) {
         message.error(t('app.request.retry'));
       }
       throw error;
     }
   };
+
+  return {
+    reasonText,
+    getErrorMessage: domainErrorMessage,
+    request: domainRequest,
+  };
+};

@@ -8,6 +8,7 @@ import { Alert, Button, Drawer, Spin } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import type { EditFormProps, EditObjectState } from '../../shared/edit';
 import { EditSubmit } from '../../shared/edit';
 import { toYaml } from '../../shared/kube';
@@ -87,6 +88,7 @@ const EditDrawer = ({
   onDone,
 }: EditDrawerProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { object, resourceVersion, loading, error, reload } = state;
   const [yaml, setYaml] = useState<string>();
   const ready = Boolean(object) && !loading && !error;
@@ -109,13 +111,13 @@ const EditDrawer = ({
         destroyOnHidden
         footer={
           <div className={styles.footer}>
-            <Button onClick={onClose}>取消</Button>
+            <Button onClick={onClose}>{t('common.action.cancel')}</Button>
             <Button
               disabled={!ready}
               type="primary"
               onClick={() => void handleSave()}
             >
-              保存
+              {t('common.action.save')}
             </Button>
           </div>
         }
@@ -131,7 +133,7 @@ const EditDrawer = ({
             <Alert
               action={
                 <Button size="small" onClick={reload}>
-                  重试
+                  {t('pages.k8s.table.retry')}
                 </Button>
               }
               className={styles.error}

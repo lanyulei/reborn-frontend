@@ -2,6 +2,7 @@ import { ApiOutlined, ClusterOutlined } from '@ant-design/icons';
 import { Empty } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
+import { useT } from '@/utils/i18n';
 import SubTitle from '../shared/SubTitle';
 import type { ServicePortItem } from './serviceHelpers';
 
@@ -113,12 +114,13 @@ type ServiceResourceStatusProps = {
 };
 
 const ServiceResourceStatus = ({ pods, ports }: ServiceResourceStatusProps) => {
+  const t = useT();
   const { styles } = useStyles();
 
   return (
     <div className={styles.resourceStatus}>
       <div>
-        <SubTitle>端口</SubTitle>
+        <SubTitle>{t('pages.k8s.detail.ports')}</SubTitle>
         {ports && ports.length > 0 ? (
           <div className={styles.list}>
             {ports.map((port) => (
@@ -131,7 +133,9 @@ const ServiceResourceStatus = ({ pods, ports }: ServiceResourceStatusProps) => {
                     <div className={styles.value}>
                       {port.target_port || '-'}
                     </div>
-                    <div className={styles.label}>容器端口</div>
+                    <div className={styles.label}>
+                      {t('pages.k8s.detail.containerPorts')}
+                    </div>
                   </div>
                 </div>
                 <div className={styles.arrow}>→ {port.protocol || 'TCP'} →</div>
@@ -141,12 +145,16 @@ const ServiceResourceStatus = ({ pods, ports }: ServiceResourceStatusProps) => {
                   </span>
                   <div className={styles.content}>
                     <div className={styles.value}>{port.port || '-'}</div>
-                    <div className={styles.label}>服务端口</div>
+                    <div className={styles.label}>
+                      {t('pages.k8s.detail.service.port')}
+                    </div>
                   </div>
                   {port.node_port ? (
                     <div className={styles.content}>
                       <div className={styles.value}>{port.node_port}</div>
-                      <div className={styles.label}>节点端口</div>
+                      <div className={styles.label}>
+                        {t('pages.k8s.detail.service.nodePort')}
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -159,7 +167,7 @@ const ServiceResourceStatus = ({ pods, ports }: ServiceResourceStatusProps) => {
       </div>
 
       <div>
-        <SubTitle>容器组</SubTitle>
+        <SubTitle>{t('pages.k8s.kind.Pod')}</SubTitle>
         {pods}
       </div>
     </div>

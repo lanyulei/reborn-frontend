@@ -68,25 +68,6 @@ export const FieldTypeIcon: React.FC<{
   );
 };
 
-/** 星标（收藏）：filled 为已收藏 */
-export const StarIcon: React.FC<{ filled?: boolean; size?: number }> = ({
-  filled,
-  size = 16,
-}) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill={filled ? 'currentColor' : 'none'}
-    stroke="currentColor"
-    strokeWidth={1.6}
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8L12 3.5Z" />
-  </svg>
-);
-
 /** 通用小图标：more（纵向三点）/ edit / trash / drag / back / fit / plus / minus */
 const UI_PATHS = {
   more: <path d="M12 5.5h.01M12 12h.01M12 18.5h.01" strokeWidth={2.6} />,

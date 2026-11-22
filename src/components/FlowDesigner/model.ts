@@ -6,6 +6,7 @@
  * （graph.design，后端原样存取、不解释），再次打开时直接还原；没有 design 的图
  * （经接口直接写入的）不支持可视化编辑。
  */
+import type { Translate } from '@/utils/i18n';
 
 /** 处理人规则类型（与后端 biz/workflow/graph.go 一致） */
 export type AssigneeRuleKind =
@@ -502,9 +503,14 @@ export const parallelPathOf = (flow: Flow, id: string): string | undefined => {
   return visit(flow.nodes, '');
 };
 
-/** 结构 → 后端图（nodes / edges / settings），并把结构本身放进 design 供下次还原 */
-export const toGraph = (flow: Flow): Record<string, unknown> => {
-  const nodes: GraphNode[] = [{ id: START, type: 'start', name: '发起' }];
+/**
+ * 结构 → 后端图（nodes / edges / settings），并把结构本身放进 design 供下次还原。
+ * 起止节点的名称会随图保存并出现在后端的流转记录 / 模拟步骤里，按保存时的语言生成。
+ */
+export const toGraph = (flow: Flow, t: Translate): Record<string, unknown> => {
+  const nodes: GraphNode[] = [
+    { id: START, type: 'start', name: t('component.flow.node.start') },
+  ];
   const edges: GraphEdge[] = [];
   let edgeSeq = 0;
   const link = (source: string, target: string, extra?: Partial<GraphEdge>) => {
@@ -590,7 +596,7 @@ export const toGraph = (flow: Flow): Record<string, unknown> => {
   };
 
   const done = chain(flow.nodes, START);
-  nodes.push({ id: END, type: 'end', name: '结束' });
+  nodes.push({ id: END, type: 'end', name: t('component.flow.node.end') });
   if (done.tail !== undefined) link(done.tail, END, done.pending);
   return {
     nodes,
@@ -746,7 +752,8 @@ export const jumpTargetsOf = (flow: Flow, branchId: string): StepNode[] => {
   }
   if (exit === undefined) return [];
   const taken = new Set(
-    (toGraph(probe).edges as GraphEdge[])
+    // 只看连线，节点名称无关紧要
+    (toGraph(probe, (id) => id).edges as GraphEdge[])
       .filter((e) => e.source === exit)
       .map((e) => e.target),
   );

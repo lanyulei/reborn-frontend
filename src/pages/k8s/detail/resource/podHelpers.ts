@@ -1,3 +1,4 @@
+import { t } from '@/utils/i18n';
 import {
   formatValue,
   getArrayValue,
@@ -120,12 +121,16 @@ const getEnvValueFrom = (env: Record<string, unknown>) => {
 
   const fieldRef = getRecordValue(valueFrom.fieldRef);
   if (fieldRef) {
-    return `字段引用: ${formatValue(fieldRef.fieldPath)}`;
+    return t('pages.k8s.detail.pod.env.fieldRef', {
+      path: formatValue(fieldRef.fieldPath),
+    });
   }
 
   const resourceFieldRef = getRecordValue(valueFrom.resourceFieldRef);
   if (resourceFieldRef) {
-    return `资源引用: ${formatValue(resourceFieldRef.resource)}`;
+    return t('pages.k8s.detail.pod.env.resourceRef', {
+      resource: formatValue(resourceFieldRef.resource),
+    });
   }
 
   return JSON.stringify(valueFrom);
@@ -140,7 +145,7 @@ const getProbeHandler = (probe: Record<string, unknown>) => {
     return {
       // 方式写协议（HTTP / HTTPS），目标写「路径（端口）」
       handler: getStringValue(httpGet.scheme) || 'HTTP',
-      detail: `${path}（端口 ${port}）`,
+      detail: t('pages.k8s.detail.probe.httpDetail', { path, port }),
     };
   }
 
@@ -148,7 +153,9 @@ const getProbeHandler = (probe: Record<string, unknown>) => {
   if (tcpSocket) {
     return {
       handler: 'TCP',
-      detail: `端口 ${formatValue(tcpSocket.port)}`,
+      detail: t('pages.k8s.detail.probe.tcpDetail', {
+        port: formatValue(tcpSocket.port),
+      }),
     };
   }
 
@@ -158,13 +165,13 @@ const getProbeHandler = (probe: Record<string, unknown>) => {
     .filter(Boolean);
   if (command.length > 0) {
     return {
-      handler: '命令',
+      handler: t('pages.k8s.detail.probe.exec'),
       detail: command.join(' '),
     };
   }
 
   return {
-    handler: '探针',
+    handler: t('pages.k8s.detail.probe.generic'),
     detail: '-',
   };
 };
@@ -314,9 +321,9 @@ const buildPodContainers = (
         command: getArrayValue(container?.command).map(String),
         args: getArrayValue(container?.args).map(String),
         probes: [
-          toPodProbe(container?.readinessProbe, '就绪探针'),
-          toPodProbe(container?.livenessProbe, '存活探针'),
-          toPodProbe(container?.startupProbe, '启动探针'),
+          toPodProbe(container?.readinessProbe, t('pages.k8s.form.readiness')),
+          toPodProbe(container?.livenessProbe, t('pages.k8s.form.liveness')),
+          toPodProbe(container?.startupProbe, t('pages.k8s.form.startup')),
         ].filter(Boolean) as ClusterNodePodContainerProbe[],
         volume_mounts: getArrayValue(container?.volumeMounts)
           .map((mountItem) => getRecordValue(mountItem))

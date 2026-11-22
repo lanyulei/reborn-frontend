@@ -21,6 +21,7 @@ import type {
   AssistantEvent,
   AssistantMessage,
   AssistantToolEvent,
+  ChatContext,
 } from '@/services/assistant/typings';
 import { getErrorMessage } from '@/services/system/request';
 import { useT } from '@/utils/i18n';
@@ -35,6 +36,14 @@ import type {
 
 /** 草稿会话的本地 key（后端尚无记录） */
 export const DRAFT_KEY = 'draft';
+
+/** 草稿会话项：label 由渲染层按当前语言填（component.chat.newConversation），列表数据不随语言变化 */
+const DRAFT_ITEM: ConversationItem = {
+  key: DRAFT_KEY,
+  label: '',
+  group: 'today',
+  isDraft: true,
+};
 
 const groupOf = (time?: string): ConversationGroup => {
   if (!time) return 'today';
@@ -114,16 +123,6 @@ export const useAssistantChat = () => {
   const abortRef = useRef<AbortController | null>(null);
   const activeRef = useRef(activeKey);
 
-  const draftItem = useCallback(
-    (): ConversationItem => ({
-      key: DRAFT_KEY,
-      label: t('component.chat.newConversation'),
-      group: 'today',
-      isDraft: true,
-    }),
-    [t],
-  );
-
   const setActive = useCallback((key: string) => {
     activeRef.current = key;
     setActiveKeyState(key);
@@ -133,7 +132,7 @@ export const useAssistantChat = () => {
     abortRef.current?.abort();
   }, []);
 
-  /** 拉取会话列表；当前为草稿时保留草稿项置顶 */
+  /** 拉取会话列表；当前为草稿时保留草稿项置顶（挂载时拉一次，弹窗重新打开等场景由调用方再拉） */
   const reloadConversations = useCallback(async () => {
     try {
       // 翻页取全（会话超过一页时不再被截断）
@@ -142,12 +141,12 @@ export const useAssistantChat = () => {
       );
       const items = all.map(toItem);
       setConversations(
-        activeRef.current === DRAFT_KEY ? [draftItem(), ...items] : items,
+        activeRef.current === DRAFT_KEY ? [DRAFT_ITEM, ...items] : items,
       );
     } catch {
       // authRequest 已按后端 message 提示，不重复弹
     }
-  }, [draftItem]);
+  }, []);
 
   useEffect(() => {
     void reloadConversations();
@@ -157,31 +156,31 @@ export const useAssistantChat = () => {
     stop();
     setActive(DRAFT_KEY);
     setMessages([]);
+    setHistoryLoading(false);
     setConversations((prev) =>
-      prev.some((c) => c.isDraft) ? prev : [draftItem(), ...prev],
+      prev.some((c) => c.isDraft) ? prev : [DRAFT_ITEM, ...prev],
     );
-  }, [draftItem, setActive, stop]);
+  }, [setActive, stop]);
 
   const select = useCallback(
     async (key: string) => {
       if (key === activeRef.current) return;
       stop();
       setActive(key);
-      if (key === DRAFT_KEY) {
-        setMessages([]);
-        return;
-      }
-      setHistoryLoading(true);
+      // 立即清空，避免旧会话的消息在历史加载期间残留；加载态只由仍是当前会话的那次请求收尾
+      setMessages([]);
+      setHistoryLoading(key !== DRAFT_KEY);
+      if (key === DRAFT_KEY) return;
       try {
         const result = await listMessages(key);
         if (activeRef.current === key) setMessages(fromHistory(result.items));
       } catch {
         // authRequest 已按后端 message 提示，不重复弹
       } finally {
-        setHistoryLoading(false);
+        if (activeRef.current === key) setHistoryLoading(false);
       }
     },
-    [message, setActive, stop, t],
+    [setActive, stop],
   );
 
   const remove = useCallback(
@@ -360,7 +359,7 @@ export const useAssistantChat = () => {
   );
 
   const send = useCallback(
-    (content: string) => {
+    (content: string, context?: ChatContext) => {
       const text = content.trim();
       if (!text || isRequesting) return;
       const conversationId =
@@ -384,11 +383,27 @@ export const useAssistantChat = () => {
         },
       ]);
       void runStream(assistantId, (opts) =>
-        streamChat({ conversationId, content: text }, opts),
+        streamChat({ conversationId, content: text, context }, opts),
       );
     },
     [isRequesting, runStream],
   );
+
+  /** 本地追加一问一答（不经模型、不落会话）：页内 @Agent 召唤的回执 */
+  const appendLocal = useCallback((userText: string, assistantText: string) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: nextId('u'), role: 'user', content: userText },
+      {
+        id: nextId('a'),
+        role: 'assistant',
+        content: assistantText,
+        reasoning: '',
+        steps: [],
+        streaming: false,
+      },
+    ]);
+  }, []);
 
   const confirm = useCallback(
     (messageId: string, toolCallId: string, approved: boolean) => {
@@ -428,10 +443,12 @@ export const useAssistantChat = () => {
     isRequesting,
     pending,
     send,
+    appendLocal,
     confirm,
     stop,
     newChat,
     select,
     remove,
+    reload: reloadConversations,
   };
 };

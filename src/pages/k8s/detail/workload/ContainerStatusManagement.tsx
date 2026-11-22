@@ -13,6 +13,7 @@ import {
 import { Empty, Spin, Tooltip, Typography } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useState } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import SegmentedTabs from '../../forms/shared/SegmentedTabs';
 import KeyValueList from '../shared/KeyValueList';
 import type { ContainerInfo } from './helpers';
@@ -312,32 +313,34 @@ const getImageRegistry = (image?: string) => {
   return firstSegment;
 };
 
-const formatResources = (resources?: Record<string, string>) => {
+const formatResources = (t: Translate, resources?: Record<string, string>) => {
   const values = [
     resources?.cpu ? `CPU ${resources.cpu}` : '',
-    resources?.memory ? `内存 ${resources.memory}` : '',
+    resources?.memory
+      ? t('pages.k8s.detail.container.memory', { value: resources.memory })
+      : '',
   ].filter(Boolean);
 
   return values.length > 0 ? values.join(' / ') : undefined;
 };
 
-const getPullPolicyLabel = (policy?: string) => {
+const getPullPolicyLabel = (t: Translate, policy?: string) => {
   if (policy === 'Always') {
-    return '每次拉取镜像';
+    return t('pages.k8s.detail.container.pull.always');
   }
   if (policy === 'Never') {
-    return '仅使用本地镜像';
+    return t('pages.k8s.detail.container.pull.never');
   }
 
-  return '优先使用本地镜像';
+  return t('pages.k8s.detail.container.pull.ifNotPresent');
 };
 
-const getVolumeSourceLabel = (type?: string) => {
+const getVolumeSourceLabel = (t: Translate, type?: string) => {
   if (type === 'ConfigMap') {
-    return '配置字典';
+    return t('pages.k8s.kind.ConfigMap');
   }
   if (type === 'Secret') {
-    return '保密字典';
+    return t('pages.k8s.kind.Secret');
   }
   if (type === 'HostPath') {
     return 'HostPath';
@@ -346,10 +349,10 @@ const getVolumeSourceLabel = (type?: string) => {
     return 'EmptyDir';
   }
   if (type === 'PersistentVolumeClaim') {
-    return '存储卷声明';
+    return t('pages.k8s.detail.container.volume.pvc');
   }
   if (type === 'Projected') {
-    return '投射卷';
+    return t('pages.k8s.relation.via.projected');
   }
   if (type === 'DownwardAPI') {
     return 'DownwardAPI';
@@ -375,17 +378,20 @@ const getVolumeIcon = (type?: string) => {
   return <FolderOpenOutlined />;
 };
 
-const containerConfigOptions: { label: string; value: ContainerConfigKey }[] = [
-  { label: '容器环境变量', value: 'env' },
-  { label: '容器端口', value: 'ports' },
-  { label: '容器挂载', value: 'mounts' },
-];
-
 const ContainerStatusManagement = ({
   loading = false,
   containers = [],
 }: ContainerStatusManagementProps) => {
+  const t = useT();
   const { styles, cx, theme: token } = useStyles();
+  const containerConfigOptions: {
+    label: string;
+    value: ContainerConfigKey;
+  }[] = [
+    { label: t('pages.k8s.detail.containerEnv'), value: 'env' },
+    { label: t('pages.k8s.detail.containerPorts'), value: 'ports' },
+    { label: t('pages.k8s.detail.containerMounts'), value: 'mounts' },
+  ];
   const [activeKey, setActiveKey] = useState<string>();
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [activeConfigKey, setActiveConfigKey] =
@@ -449,25 +455,33 @@ const ContainerStatusManagement = ({
         <Typography.Text className={styles.label} ellipsis>
           {getImageRegistry(container.image)}
         </Typography.Text>
-        <div className={styles.description}>镜像仓库地址</div>
+        <div className={styles.description}>
+          {t('pages.k8s.detail.container.registry')}
+        </div>
       </div>
       <div className={styles.field}>
         <Typography.Text className={styles.label} ellipsis>
-          {formatResources(container.requests) || '无预留'}
+          {formatResources(t, container.requests) ||
+            t('pages.k8s.detail.noRequest')}
         </Typography.Text>
-        <div className={styles.description}>资源预留</div>
+        <div className={styles.description}>
+          {t('pages.k8s.detail.container.requests')}
+        </div>
       </div>
       <div className={styles.field}>
         <Typography.Text className={styles.label} ellipsis>
-          {formatResources(container.limits) || '无上限'}
+          {formatResources(t, container.limits) ||
+            t('pages.k8s.detail.noLimit')}
         </Typography.Text>
-        <div className={styles.description}>资源上限</div>
+        <div className={styles.description}>{t('pages.k8s.detail.limits')}</div>
       </div>
       <div className={styles.field}>
         <Typography.Text className={styles.label} ellipsis>
-          {getPullPolicyLabel(container.imagePullPolicy)}
+          {getPullPolicyLabel(t, container.imagePullPolicy)}
         </Typography.Text>
-        <div className={styles.description}>镜像拉取策略</div>
+        <div className={styles.description}>
+          {t('pages.k8s.detail.container.pullPolicy')}
+        </div>
       </div>
       <div className={styles.toggle}>
         {options?.toggleIcon ? (
@@ -501,9 +515,15 @@ const ContainerStatusManagement = ({
           {container.ports.length > 0 ? (
             <div className={styles.portTable}>
               <div className={`${styles.portRow} ${styles.portHeader}`}>
-                <div className={styles.portCell}>名称</div>
-                <div className={styles.portCell}>协议</div>
-                <div className={styles.portCell}>端口</div>
+                <div className={styles.portCell}>
+                  {t('pages.k8s.column.name')}
+                </div>
+                <div className={styles.portCell}>
+                  {t('pages.k8s.detail.container.protocol')}
+                </div>
+                <div className={styles.portCell}>
+                  {t('pages.k8s.detail.ports')}
+                </div>
               </div>
               {container.ports.map((port) => (
                 <div
@@ -525,7 +545,7 @@ const ContainerStatusManagement = ({
           ) : (
             <Empty
               className={styles.empty}
-              description="暂无数据"
+              description={t('pages.k8s.metrics.noData')}
               image={Empty.PRESENTED_IMAGE_SIMPLE}
             />
           )}
@@ -538,7 +558,7 @@ const ContainerStatusManagement = ({
         {container.mounts.length > 0 ? (
           <div className={styles.mountList}>
             {container.mounts.map((mount) => {
-              const sourceLabel = getVolumeSourceLabel(mount.volumeType);
+              const sourceLabel = getVolumeSourceLabel(t, mount.volumeType);
               const sourceValue = mount.volumeSource || '-';
               const mountPath = mount.mountPath || '-';
 
@@ -562,7 +582,9 @@ const ContainerStatusManagement = ({
                           </Typography.Text>
                         </Tooltip>
                         <div className={styles.mountDescription}>
-                          卷类型：{sourceLabel}
+                          {t('pages.k8s.detail.container.volumeType', {
+                            type: sourceLabel,
+                          })}
                         </div>
                       </div>
                     </div>
@@ -595,7 +617,9 @@ const ContainerStatusManagement = ({
                         <Typography.Text className={styles.mountPath} ellipsis>
                           {mountPath}
                           {mount.subPath ? ` / ${mount.subPath}` : ''}
-                          {mount.readOnly ? '（只读）' : ''}
+                          {mount.readOnly
+                            ? t('pages.k8s.detail.container.readOnly')
+                            : ''}
                         </Typography.Text>
                       </Tooltip>
                     </div>
@@ -607,7 +631,7 @@ const ContainerStatusManagement = ({
         ) : (
           <Empty
             className={styles.empty}
-            description="暂无数据"
+            description={t('pages.k8s.metrics.noData')}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         )}
@@ -651,7 +675,9 @@ const ContainerStatusManagement = ({
               <div className={styles.panel}>
                 <div className={styles.panelHeader}>
                   <CaretDownOutlined />
-                  容器: {activeContainer.name || '-'}
+                  {t('pages.k8s.detail.container.current', {
+                    name: activeContainer.name || '-',
+                  })}
                 </div>
                 <SegmentedTabs
                   className={styles.configTabs}
@@ -666,7 +692,7 @@ const ContainerStatusManagement = ({
         ) : (
           <Empty
             className={styles.empty}
-            description="暂无容器"
+            description={t('pages.k8s.detail.container.empty')}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         )}

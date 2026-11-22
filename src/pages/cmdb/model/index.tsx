@@ -297,7 +297,7 @@ const ModelsTab: React.FC = () => {
             {t('pages.cmdb.model.create.title')}
           </CreateButton>
         )}
-        {canManageGroups && has('cmdb.model.create') && (
+        {canManageGroups && (
           <Button onClick={() => setGroupCreateOpen(true)}>
             {t('pages.cmdb.model.group.create.title')}
           </Button>

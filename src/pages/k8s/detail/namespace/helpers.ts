@@ -1,5 +1,6 @@
 /** 命名空间详情的纯逻辑：资源数量、配额汇总（取自 ResourceQuota / LimitRange 对象）。 */
 import type { K8sObject } from '@/services/k8s/typings';
+import { t } from '@/utils/i18n';
 
 export type NamespaceResourceStatus = {
   pods?: number;
@@ -114,10 +115,10 @@ export const getNamespaceStatusLabel = (status?: string) => {
   const normalizedStatus = status?.toLowerCase();
 
   if (normalizedStatus === 'active') {
-    return '活跃';
+    return t('pages.k8s.detail.status.active');
   }
   if (normalizedStatus === 'terminating') {
-    return '删除中';
+    return t('pages.k8s.detail.deleting');
   }
   return status || '-';
 };
@@ -136,7 +137,8 @@ export const getNamespaceStatusType = (
   return 'default';
 };
 
-export const formatQuotaValue = (value?: string) => value || '无上限';
+export const formatQuotaValue = (value?: string) =>
+  value || t('pages.k8s.detail.noLimit');
 
 export const parseCpuQuantity = (value?: string) => {
   if (!value) {

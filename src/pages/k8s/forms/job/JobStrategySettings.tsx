@@ -1,5 +1,6 @@
 import { Col, Form, InputNumber, Row } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 
 const useStyles = createStyles(({ token }) => ({
   strategyGrid: {
@@ -20,65 +21,68 @@ const useStyles = createStyles(({ token }) => ({
 
 const JobStrategySettings = () => {
   const { styles } = useStyles();
+  const t = useT();
 
   return (
     <Row className={styles.strategyGrid} gutter={18}>
       <Col span={12}>
         <Form.Item
-          extra="将任务标记为失败前的最大重试次数。默认值为 6。"
-          label="最大重试次数"
+          extra={t('pages.k8s.forms.job.backoffLimit.extra')}
+          label={t('pages.k8s.forms.job.backoffLimit')}
           name="backoffLimit"
         >
           <InputNumber
             className={styles.numberInput}
             controls={false}
             min={0}
-            placeholder="请输入最大重试次数"
+            placeholder={t('pages.k8s.forms.job.backoffLimit.placeholder')}
             precision={0}
           />
         </Form.Item>
       </Col>
       <Col span={12}>
         <Form.Item
-          extra="将任务标记为完成所需成功运行的容器组数量。"
-          label="容器组完成数量"
+          extra={t('pages.k8s.forms.job.completions.extra')}
+          label={t('pages.k8s.forms.job.completions')}
           name="completions"
         >
           <InputNumber
             className={styles.numberInput}
             controls={false}
             min={1}
-            placeholder="请输入容器组完成数量"
+            placeholder={t('pages.k8s.forms.job.completions.placeholder')}
             precision={0}
           />
         </Form.Item>
       </Col>
       <Col span={12}>
         <Form.Item
-          extra="并行运行的容器组数量。"
-          label="并行容器组数量"
+          extra={t('pages.k8s.forms.job.parallelism.extra')}
+          label={t('pages.k8s.forms.job.parallelism')}
           name="parallelism"
         >
           <InputNumber
             className={styles.numberInput}
             controls={false}
             min={1}
-            placeholder="请输入并行容器组数量"
+            placeholder={t('pages.k8s.forms.job.parallelism.placeholder')}
             precision={0}
           />
         </Form.Item>
       </Col>
       <Col span={12}>
         <Form.Item
-          extra="任务的最大运行时间。任务达到最大运行时间时将被结束。"
-          label="最大运行时间（s）"
+          extra={t('pages.k8s.forms.job.activeDeadlineSeconds.extra')}
+          label={t('pages.k8s.forms.job.activeDeadlineSeconds')}
           name="activeDeadlineSeconds"
         >
           <InputNumber
             className={styles.numberInput}
             controls={false}
             min={1}
-            placeholder="请输入最大运行时间"
+            placeholder={t(
+              'pages.k8s.forms.job.activeDeadlineSeconds.placeholder',
+            )}
             precision={0}
           />
         </Form.Item>

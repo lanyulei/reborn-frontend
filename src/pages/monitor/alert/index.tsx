@@ -46,6 +46,7 @@ import type {
 import { usePermissions } from '@/services/system/permissions';
 import { useT, useValueEnum } from '@/utils/i18n';
 import { parseBoolParam, timeRangeColumn, toTableResult } from '@/utils/table';
+import { usePageVisible } from '@/utils/usePageVisible';
 import {
   formatDuration,
   formatTime,
@@ -221,15 +222,22 @@ const AlertList: React.FC = () => {
     };
   }, [tab, aggKey, tick]);
 
-  // 自动刷新：只在活跃告警页签生效，抽屉或任一弹窗打开时暂停（避免正在看的内容跳动）
+  // 自动刷新：只在活跃告警页签生效，抽屉或任一弹窗打开时暂停（避免正在看的内容跳动）；
+  // 后台标签页不轮询，回到前台时补一次刷新
+  const autoRefresh = Boolean(refreshS) && tab === 'active' && !paused;
+  const autoRefreshRef = useRef(autoRefresh);
+  autoRefreshRef.current = autoRefresh;
+  const visible = usePageVisible(() => {
+    if (autoRefreshRef.current) actionRef.current?.reload();
+  });
   useEffect(() => {
-    if (!refreshS || tab !== 'active' || paused) return;
+    if (!autoRefresh || !visible) return;
     const timer = setInterval(
       () => actionRef.current?.reload(),
       refreshS * 1000,
     );
     return () => clearInterval(timer);
-  }, [refreshS, tab, paused]);
+  }, [autoRefresh, refreshS, visible]);
 
   const showHistory = useCallback((value: string) => {
     setDetailId(undefined);
@@ -750,8 +758,7 @@ const AlertList: React.FC = () => {
           tab === 'active' && (canBatchAck || canBatchClose)
             ? {
                 selectedRowKeys: selectedRows.map((alert) => alert.id),
-                // 跨页保留勾选
-                preserveSelectedRowKeys: true,
+                // 勾选只保留当前页：每次刷新按返回的数据收敛，已恢复 / 翻页离开的告警不再滞留在勾选里
                 onChange: (_, rows) => {
                   const picked = rows.filter(Boolean);
                   // 批量操作一次至多 200 条：超出的不保留勾选，并说明（而不是悄悄丢掉）
@@ -933,7 +940,11 @@ const AlertList: React.FC = () => {
             }
           }
           query.labels = labels.length ? labels : undefined;
-          return toTableResult(await listAlerts(query));
+          const result = await listAlerts(query);
+          // 勾选与当前页对齐：刷新后已不在列表里的（已恢复、已关闭）从勾选中剔除
+          const ids = new Set((result.items ?? []).map((alert) => alert.id));
+          setSelectedRows((prev) => prev.filter((alert) => ids.has(alert.id)));
+          return toTableResult(result);
         }}
       />
 

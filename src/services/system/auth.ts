@@ -66,6 +66,23 @@ export async function getLoginProfile(options?: {
 }
 
 /**
+ * ChangeMyPassword 当前登录用户自助修改密码：需校验当前密码；
+ * 两个口令均先经 encodeSensitive 编码。错误码 USER_PASSWORD_INVALID（当前密码错误）、
+ * USER_MACHINE_ACCOUNT（机器账号不可改密）由调用方按需本地化，故默认静默。
+ */
+export async function changeMyPassword(
+  oldPassword: string,
+  newPassword: string,
+  options?: { silent?: boolean },
+): Promise<void> {
+  await authRequest<void>('/api/v1/me/password', {
+    method: 'POST',
+    data: { oldPassword, newPassword },
+    silent: options?.silent,
+  });
+}
+
+/**
  * UploadMyAvatar 上传当前登录用户头像（自助接口）；文件转 base64 走 protojson
  * bytes 契约，返回带内容指纹的访问地址（已写入用户 avatar 字段）。
  */

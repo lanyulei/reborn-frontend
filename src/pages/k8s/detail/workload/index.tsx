@@ -127,7 +127,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = ({
     setScaling(true);
     try {
       await scaleWorkload(clusterId, ref, next);
-      message.success('副本数已更新');
+      message.success(t('pages.k8s.detail.workload.scaled'));
       await refreshDetail();
     } finally {
       setScaling(false);
@@ -149,10 +149,13 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = ({
       return;
     }
     modal.confirm({
-      title: '确认调整副本数量吗？',
-      content: `当前期望副本数为 ${replicas.desired}，确认调整为 ${next} 吗？`,
-      okText: '确认调整',
-      cancelText: '取消',
+      title: t('pages.k8s.detail.workload.scale.title'),
+      content: t('pages.k8s.detail.workload.scale.content', {
+        current: replicas.desired,
+        next,
+      }),
+      okText: t('pages.k8s.detail.workload.scale.ok'),
+      cancelText: t('common.action.cancel'),
       onOk,
     });
   };
@@ -169,7 +172,9 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = ({
           title={error}
         />
       )}
-      <SectionTitle style={{ marginTop: 0 }}>基本信息</SectionTitle>
+      <SectionTitle style={{ marginTop: 0 }}>
+        {t('pages.k8s.detail.basicInfo')}
+      </SectionTitle>
       <div className={styles.content}>
         <Spin spinning={loading}>
           {object || loading ? (
@@ -182,7 +187,9 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = ({
                   scalable: kind !== 'DaemonSet' && canScale && Boolean(object),
                 }}
                 disabledReason={
-                  kind === 'DaemonSet' ? undefined : '没有调整副本的权限'
+                  kind === 'DaemonSet'
+                    ? undefined
+                    : t('pages.k8s.detail.workload.scale.noPermission')
                 }
                 onScale={handleScaleReplicas}
               />
@@ -192,34 +199,34 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = ({
                 dataSource={{ name, namespace }}
                 columns={[
                   {
-                    title: '名称',
+                    title: t('pages.k8s.column.name'),
                     dataIndex: 'name',
                     copyable: true,
                   },
                   {
-                    title: '命名空间',
+                    title: t('pages.k8s.column.namespace'),
                     dataIndex: 'namespace',
                   },
                   {
-                    title: '状态',
+                    title: t('common.column.status'),
                     key: 'status',
                     render: () => (
                       <StatusText label={status.label} type={status.type} />
                     ),
                   },
                   {
-                    title: '类型',
+                    title: t('pages.k8s.event.type'),
                     key: 'type',
                     render: () => kindName(kind),
                   },
                   {
-                    title: '创建时间',
+                    title: t('common.column.createTime'),
                     key: 'createTime',
                     render: () =>
                       formatTime(object?.metadata?.creationTimestamp) || '-',
                   },
                   {
-                    title: '更新时间',
+                    title: t('common.column.updateTime'),
                     key: 'updateTime',
                     render: () => formatTime(workloadUpdateTime(object)) || '-',
                   },
@@ -227,16 +234,16 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = ({
               />
             </div>
           ) : (
-            <Empty description="未找到工作负载" />
+            <Empty description={t('pages.k8s.detail.workload.notFound')} />
           )}
         </Spin>
       </div>
-      <SectionTitle>容器状态管理</SectionTitle>
+      <SectionTitle>{t('pages.k8s.detail.workload.containers')}</SectionTitle>
       <ContainerStatusManagement
         loading={loading && !object}
         containers={containers}
       />
-      <SectionTitle>容器组</SectionTitle>
+      <SectionTitle>{t('pages.k8s.kind.Pod')}</SectionTitle>
       <PodTable
         clusterId={clusterId}
         containers={containerNames}
@@ -244,7 +251,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = ({
         onReload={() => void reloadPods()}
         pods={pods}
       />
-      <SectionTitle>修改记录</SectionTitle>
+      <SectionTitle>{t('pages.k8s.detail.workload.revisions')}</SectionTitle>
       <div className={styles.content}>
         <RevisionsTab
           clusterId={clusterId}
@@ -252,13 +259,13 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = ({
           onChanged={() => void refreshDetail()}
         />
       </div>
-      <SectionTitle>事件</SectionTitle>
+      <SectionTitle>{t('pages.k8s.detail.tab.events')}</SectionTitle>
       <EventTable clusterId={clusterId} target={ref} />
-      <SectionTitle>元数据</SectionTitle>
+      <SectionTitle>{t('pages.k8s.detail.tab.metadata')}</SectionTitle>
       <div className={styles.content}>
         <CollapsibleField
-          description="工作负载自身的标签与注解。"
-          title="标签与注解"
+          description={t('pages.k8s.detail.workload.metadata.desc')}
+          title={t('pages.k8s.detail.workload.metadata.title')}
         >
           <Metadata
             labels={object?.metadata?.labels}

@@ -258,7 +258,7 @@ const CheckResult: React.FC<{ check: JobAdhocCheck }> = ({ check }) => {
             type="info"
             showIcon
             title={t('pages.job.approval.notice', {
-              reasons: reasons.join('；'),
+              reasons: reasons.join(t('pages.job.common.separator')),
             })}
             style={{ marginTop: 8 }}
           />
@@ -267,7 +267,7 @@ const CheckResult: React.FC<{ check: JobAdhocCheck }> = ({ check }) => {
             type="error"
             showIcon
             title={t('pages.job.approval.unavailable')}
-            description={reasons.join('；')}
+            description={reasons.join(t('pages.job.common.separator'))}
             style={{ marginTop: 8 }}
           />
         ))}
@@ -725,6 +725,8 @@ const AdhocPage: React.FC = () => {
                   <Col span={24}>
                     <Form.Item
                       name="file"
+                      // 切换到脚本模式即丢弃文件值，避免隐藏字段带着旧文件提交
+                      preserve={false}
                       label={t('pages.job.adhoc.file')}
                       extra={t('pages.job.adhoc.file.extra')}
                       rules={[

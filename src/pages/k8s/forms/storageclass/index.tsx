@@ -2,6 +2,7 @@ import { AppstoreOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { App, Col, Form, Input, Row, Select } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useMemo, useState } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import { GVRS, listRows, parseObject, toYaml } from '../shared/kube';
 import ResourceCreateWizardDrawer from '../shared/ResourceCreateWizardDrawer';
 import { SubmitManifest } from '../shared/SubmitManifest';
@@ -23,11 +24,6 @@ const useStyles = createStyles(() => ({
   },
 }));
 
-const defaultClassOptions = [
-  { label: '是', value: 'true' },
-  { label: '否', value: 'false' },
-];
-
 const hasBasicInfoContent = (values: CreateStorageClassFormValues) =>
   Boolean(values.name);
 
@@ -38,17 +34,18 @@ const getStepStatusText = (
   current: number,
   index: number,
   values: CreateStorageClassFormValues,
+  t: Translate,
 ) => {
   if (current === index) {
-    return '当前';
+    return t('pages.k8s.forms.common.current');
   }
   if (index === 0 && hasBasicInfoContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 1 && hasStorageClassSettingsContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
-  return '未设置';
+  return t('pages.k8s.forms.common.unset');
 };
 
 const buildYaml = (values: CreateStorageClassFormValues) =>
@@ -60,7 +57,15 @@ const CreateStorageClassDrawer = ({
   onDone,
 }: CreateFormProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
+  const defaultClassOptions = useMemo(
+    () => [
+      { label: t('pages.k8s.forms.common.yes'), value: 'true' },
+      { label: t('pages.k8s.forms.common.no'), value: 'false' },
+    ],
+    [t],
+  );
   const [form] = Form.useForm<CreateStorageClassFormValues>();
   const [initialValues] = useState(getInitialStorageClassValues);
   const [current, setCurrent] = useState(0);
@@ -73,15 +78,15 @@ const CreateStorageClassDrawer = ({
   const steps = useMemo(
     () => [
       {
-        title: '基本信息',
+        title: t('pages.k8s.form.section.basic'),
         icon: <AppstoreOutlined />,
       },
       {
-        title: '存储类设置',
+        title: t('pages.k8s.forms.storageclass.step.settings'),
         icon: <DatabaseOutlined />,
       },
     ],
-    [],
+    [t],
   );
 
   useEffect(() => {
@@ -124,6 +129,7 @@ const CreateStorageClassDrawer = ({
     if (current === 1) {
       const error = validateStorageClassParameters(
         form.getFieldValue('parameters'),
+        t,
       );
 
       if (error) {
@@ -150,11 +156,11 @@ const CreateStorageClassDrawer = ({
       try {
         resource = parseObject(yamlValue);
       } catch {
-        message.error('YAML 格式不正确，内容必须是有效的资源对象');
+        message.error(t('pages.k8s.forms.common.yaml.invalidObject'));
         return;
       }
 
-      const yamlError = validateStorageClassManifest(resource);
+      const yamlError = validateStorageClassManifest(resource, t);
       if (yamlError) {
         message.error(yamlError);
         return;
@@ -167,7 +173,7 @@ const CreateStorageClassDrawer = ({
     // 向导只挂载当前步骤：先校验，再取完整表单值
     await form.validateFields();
     const formValues: CreateStorageClassFormValues = form.getFieldsValue(true);
-    const error = validateStorageClassParameters(formValues.parameters);
+    const error = validateStorageClassParameters(formValues.parameters, t);
 
     if (error) {
       form.setFields([{ name: 'parameters', errors: [error] }]);
@@ -183,34 +189,54 @@ const CreateStorageClassDrawer = ({
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            extra="名称只能包含小写字母、数字和连字符（-），必须以小写字母或数字开头和结尾，最长 63 个字符"
-            label="名称"
+            extra={t('pages.k8s.forms.common.name.dnsLabel')}
+            label={t('pages.k8s.forms.common.name')}
             name="name"
             rules={[
-              { required: true, message: '请输入名称' },
-              { max: 63, message: '名称最长 63 个字符' },
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.name.required'),
+              },
+              {
+                max: 63,
+                message: t('pages.k8s.forms.common.name.maxLength'),
+              },
               {
                 pattern: NAME_PATTERN,
-                message:
-                  '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+                message: t('pages.k8s.forms.common.name.pattern'),
               },
             ]}
           >
-            <Input placeholder="请输入名称" autoFocus />
+            <Input
+              placeholder={t('pages.k8s.forms.common.name.required')}
+              autoFocus
+            />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
             extra={
               values.isDefault === 'true' && defaultClassNames.length > 0
-                ? `集群已有默认存储类 ${defaultClassNames.join('、')}；同时存在多个默认存储类时，未指定存储类的声明会使用最新创建的那个。`
-                : '未指定存储类的持久卷声明会使用默认存储类。'
+                ? t('pages.k8s.forms.storageclass.isDefault.existing', {
+                    names: defaultClassNames.join(
+                      t('pages.k8s.forms.storageclass.listSeparator'),
+                    ),
+                  })
+                : t('pages.k8s.forms.storageclass.isDefault.extra')
             }
-            label="设为默认存储类"
+            label={t('pages.k8s.forms.storageclass.isDefault')}
             name="isDefault"
-            rules={[{ required: true, message: '请选择是否设为默认存储类' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.storageclass.isDefault.required'),
+              },
+            ]}
           >
-            <Select options={defaultClassOptions} placeholder="请选择" />
+            <Select
+              options={defaultClassOptions}
+              placeholder={t('pages.k8s.forms.common.select')}
+            />
           </Form.Item>
         </Col>
       </Row>
@@ -233,11 +259,11 @@ const CreateStorageClassDrawer = ({
       <ResourceCreateWizardDrawer
         current={current}
         getStepDescription={(_, index) =>
-          getStepStatusText(current, index, values)
+          getStepStatusText(current, index, values, t)
         }
         open
         steps={steps}
-        title="创建存储类"
+        title={t('pages.k8s.forms.storageclass.title')}
         yamlMode={yamlMode}
         yamlValue={yamlValue}
         onCancel={onClose}
@@ -279,7 +305,7 @@ const CreateStorageClassDrawer = ({
         <SubmitManifest
           clusterId={clusterId}
           yaml={submissionYaml}
-          title="创建存储类"
+          title={t('pages.k8s.forms.storageclass.title')}
           onBack={() => setSubmissionYaml(undefined)}
           onClose={onClose}
           onDone={onDone}

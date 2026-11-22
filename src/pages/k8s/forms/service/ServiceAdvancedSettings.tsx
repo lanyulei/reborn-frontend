@@ -4,6 +4,7 @@ import { Checkbox, Form, Input, InputNumber, Select } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import KubernetesCompatibilityNotice from '../shared/KubernetesCompatibilityNotice';
 import ResourceMetadataFields from '../shared/ResourceMetadataFields';
 import { NODE_PORT_MAX, NODE_PORT_MIN } from './helpers';
@@ -211,6 +212,7 @@ const getTransportProtocol = (port?: ServicePortItem) =>
 /** 每个服务端口可选的节点端口（留空由集群自动分配） */
 const ServiceNodePortFields = ({ form }: ServiceExternalAccessSectionProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const ports = (
     (Form.useWatch('ports', { form, preserve: true }) as ServicePortItem[]) ||
     []
@@ -224,7 +226,9 @@ const ServiceNodePortFields = ({ form }: ServiceExternalAccessSectionProps) => {
 
   return (
     <div>
-      <div className={styles.fieldLabel}>节点端口</div>
+      <div className={styles.fieldLabel}>
+        {t('pages.k8s.forms.service.nodePort')}
+      </div>
       <div className={styles.nodePortRows}>
         {ports.map(({ index, port }) => (
           <div className={styles.nodePortRow} key={port.id || index}>
@@ -239,7 +243,10 @@ const ServiceNodePortFields = ({ form }: ServiceExternalAccessSectionProps) => {
                   type: 'number',
                   min: NODE_PORT_MIN,
                   max: NODE_PORT_MAX,
-                  message: `节点端口范围为 ${NODE_PORT_MIN}-${NODE_PORT_MAX}`,
+                  message: t('pages.k8s.forms.service.nodePort.range', {
+                    min: NODE_PORT_MIN,
+                    max: NODE_PORT_MAX,
+                  }),
                 },
                 {
                   validator: async (_, value?: number | null) => {
@@ -256,16 +263,22 @@ const ServiceNodePortFields = ({ form }: ServiceExternalAccessSectionProps) => {
                           getTransportProtocol(allPorts[index]),
                     );
                     if (duplicated) {
-                      throw new Error(`节点端口 ${value} 重复`);
+                      throw new Error(
+                        t('pages.k8s.forms.service.nodePort.duplicate', {
+                          value,
+                        }),
+                      );
                     }
                   },
                 },
               ]}
             >
               <InputNumber
-                aria-label={`服务端口 ${port.servicePort} 的节点端口`}
+                aria-label={t('pages.k8s.forms.service.nodePort.ariaLabel', {
+                  port: port.servicePort,
+                })}
                 className={styles.nodePortInput}
-                placeholder="自动分配"
+                placeholder={t('pages.k8s.forms.service.nodePort.auto')}
                 precision={0}
               />
             </Form.Item>
@@ -273,8 +286,10 @@ const ServiceNodePortFields = ({ form }: ServiceExternalAccessSectionProps) => {
         ))}
       </div>
       <div className={styles.extra}>
-        可选。取值范围为 {NODE_PORT_MIN} 到 {NODE_PORT_MAX}
-        ，留空时由集群自动分配。
+        {t('pages.k8s.forms.service.nodePort.extra', {
+          min: NODE_PORT_MIN,
+          max: NODE_PORT_MAX,
+        })}
       </div>
     </div>
   );
@@ -284,6 +299,7 @@ const ServiceExternalAccessSection = ({
   form,
 }: ServiceExternalAccessSectionProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const enableExternalAccess = Form.useWatch('enableExternalAccess', form);
   const externalAccessMode = Form.useWatch('externalAccessMode', form);
   const external =
@@ -291,15 +307,20 @@ const ServiceExternalAccessSection = ({
 
   return (
     <div>
-      <div className={styles.sectionTitle}>外部访问</div>
+      <div className={styles.sectionTitle}>
+        {t('pages.k8s.forms.service.externalAccess')}
+      </div>
       <ServiceAdvancedOption
-        description="设置从集群外访问服务的方式。"
+        description={t('pages.k8s.forms.service.externalAccess.description')}
         formItemName="enableExternalAccess"
-        title="外部访问"
+        title={t('pages.k8s.forms.service.externalAccess')}
       >
         {enableExternalAccess && (
           <div className={styles.body}>
-            <Form.Item label="访问模式" name="externalAccessMode">
+            <Form.Item
+              label={t('pages.k8s.forms.common.accessMode')}
+              name="externalAccessMode"
+            >
               <Select
                 className={styles.field}
                 options={SERVICE_EXTERNAL_ACCESS_OPTIONS}
@@ -307,15 +328,17 @@ const ServiceExternalAccessSection = ({
             </Form.Item>
             {external && (
               <Form.Item
-                label="外部流量策略"
+                label={t('pages.k8s.forms.service.externalTrafficPolicy')}
                 name="externalTrafficPolicy"
-                extra="Local 可保留客户端源 IP，Cluster 会在集群范围内转发。"
+                extra={t('pages.k8s.forms.service.externalTrafficPolicy.extra')}
               >
                 <Select
                   allowClear
                   className={styles.field}
                   options={SERVICE_TRAFFIC_POLICY_OPTIONS}
-                  placeholder="默认由集群决定"
+                  placeholder={t(
+                    'pages.k8s.forms.service.placeholder.clusterDefault',
+                  )}
                 />
               </Form.Item>
             )}
@@ -325,19 +348,23 @@ const ServiceExternalAccessSection = ({
                 <Form.Item
                   label="LoadBalancer Class"
                   name="loadBalancerClass"
-                  extra="指定由哪类负载均衡器实现接管该 Service。"
+                  extra={t('pages.k8s.forms.service.loadBalancerClass.extra')}
                 >
                   <Input
                     className={styles.field}
-                    placeholder="例如 service.k8s.aws/nlb"
+                    placeholder={t('pages.k8s.forms.service.example', {
+                      value: 'service.k8s.aws/nlb',
+                    })}
                   />
                 </Form.Item>
                 <Form.Item
-                  label="分配 NodePort"
+                  label={t('pages.k8s.forms.service.allocateNodePorts')}
                   name="allocateLoadBalancerNodePorts"
                   valuePropName="checked"
                 >
-                  <Checkbox>为 LoadBalancer 服务自动分配 NodePort</Checkbox>
+                  <Checkbox>
+                    {t('pages.k8s.forms.service.allocateNodePorts.checkbox')}
+                  </Checkbox>
                 </Form.Item>
               </>
             )}
@@ -352,6 +379,7 @@ const ServiceNetworkingSection = ({
   form,
 }: ServiceExternalAccessSectionProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const ipFamilyPolicy = Form.useWatch('ipFamilyPolicy', form);
 
   useEffect(() => {
@@ -362,13 +390,15 @@ const ServiceNetworkingSection = ({
 
   return (
     <div>
-      <div className={styles.sectionTitle}>网络策略</div>
+      <div className={styles.sectionTitle}>
+        {t('pages.k8s.forms.service.networking')}
+      </div>
       <div className={styles.option}>
         <KubernetesCompatibilityNotice
-          message="Kubernetes 1.35+ Service 网络能力"
+          message={t('pages.k8s.forms.service.networking.notice')}
           items={[
-            '双栈集群建议显式设置 IP Family Policy 与 IP Families。',
-            'trafficDistribution 会通过 EndpointSlice 影响就近转发偏好。',
+            t('pages.k8s.forms.service.networking.notice.dualStack'),
+            t('pages.k8s.forms.service.networking.notice.trafficDistribution'),
           ]}
         />
         <div className={styles.metadataBody}>
@@ -377,7 +407,9 @@ const ServiceNetworkingSection = ({
               allowClear
               className={styles.field}
               options={SERVICE_IP_FAMILY_POLICY_OPTIONS}
-              placeholder="默认由集群决定"
+              placeholder={t(
+                'pages.k8s.forms.service.placeholder.clusterDefault',
+              )}
             />
           </Form.Item>
           {ipFamilyPolicy && (
@@ -387,32 +419,36 @@ const ServiceNetworkingSection = ({
                 className={styles.field}
                 mode="multiple"
                 options={SERVICE_IP_FAMILY_OPTIONS}
-                placeholder="请选择 IP 协议族"
+                placeholder={t(
+                  'pages.k8s.forms.service.ipFamilies.placeholder',
+                )}
               />
             </Form.Item>
           )}
           <Form.Item
-            label="内部流量策略"
+            label={t('pages.k8s.forms.service.internalTrafficPolicy')}
             name="internalTrafficPolicy"
-            extra="Local 仅转发到节点本地端点，Cluster 在集群范围内转发。"
+            extra={t('pages.k8s.forms.service.internalTrafficPolicy.extra')}
           >
             <Select
               allowClear
               className={styles.field}
               options={SERVICE_TRAFFIC_POLICY_OPTIONS}
-              placeholder="默认 Cluster"
+              placeholder={t(
+                'pages.k8s.forms.service.placeholder.defaultCluster',
+              )}
             />
           </Form.Item>
           <Form.Item
-            label="流量分布"
+            label={t('pages.k8s.forms.service.trafficDistribution')}
             name="trafficDistribution"
-            extra="在支持的集群中用于表达就近或同节点转发偏好。"
+            extra={t('pages.k8s.forms.service.trafficDistribution.extra')}
           >
             <Select
               allowClear
               className={styles.field}
               options={SERVICE_TRAFFIC_DISTRIBUTION_OPTIONS}
-              placeholder="默认不指定"
+              placeholder={t('pages.k8s.forms.service.placeholder.unspecified')}
             />
           </Form.Item>
         </div>
@@ -429,28 +465,38 @@ const ServiceSessionAffinitySection = ({
   form,
 }: ServiceSessionAffinitySectionProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const enableSessionAffinity = Form.useWatch('enableSessionAffinity', form);
 
   return (
     <div>
-      <div className={styles.sectionTitle}>会话保持</div>
+      <div className={styles.sectionTitle}>
+        {t('pages.k8s.forms.service.sessionAffinity')}
+      </div>
       <ServiceAdvancedOption
-        description="设置系统在指定的时间内将同一个会话中来自同一个客户端的请求全部转发给同一个容器组。"
+        description={t('pages.k8s.forms.service.sessionAffinity.description')}
         formItemName="enableSessionAffinity"
-        title="会话保持"
+        title={t('pages.k8s.forms.service.sessionAffinity')}
       >
         {enableSessionAffinity && (
           <div className={styles.body}>
             <Form.Item
-              label="最长会话保持时间（s）"
+              label={t('pages.k8s.forms.service.sessionAffinity.timeout')}
               name="sessionAffinityTimeoutSeconds"
               rules={[
-                { required: true, message: '请输入最长会话保持时间' },
+                {
+                  required: true,
+                  message: t(
+                    'pages.k8s.forms.service.sessionAffinity.timeout.required',
+                  ),
+                },
                 {
                   type: 'number',
                   min: 1,
                   max: 86400,
-                  message: '取值范围为 1 到 86400',
+                  message: t(
+                    'pages.k8s.forms.service.sessionAffinity.timeout.range',
+                  ),
                 },
               ]}
             >
@@ -462,7 +508,7 @@ const ServiceSessionAffinitySection = ({
               />
             </Form.Item>
             <div className={styles.extra}>
-              设置最大会话保持时间。取值范围为 1 到 86400，默认值 10800。
+              {t('pages.k8s.forms.service.sessionAffinity.timeout.extra')}
             </div>
           </div>
         )}
@@ -473,6 +519,7 @@ const ServiceSessionAffinitySection = ({
 
 const ServiceAdvancedSettings = ({ form }: ServiceAdvancedSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const [metadataOpen, setMetadataOpen] = useState(true);
 
   return (
@@ -482,7 +529,9 @@ const ServiceAdvancedSettings = ({ form }: ServiceAdvancedSettingsProps) => {
       <ServiceNetworkingSection form={form} />
 
       <div>
-        <div className={styles.sectionTitle}>元数据</div>
+        <div className={styles.sectionTitle}>
+          {t('pages.k8s.forms.common.metadata')}
+        </div>
         <div className={styles.option}>
           <button
             aria-expanded={metadataOpen}
@@ -494,8 +543,12 @@ const ServiceAdvancedSettings = ({ form }: ServiceAdvancedSettingsProps) => {
               {metadataOpen ? <UpOutlined /> : <DownOutlined />}
             </span>
             <span>
-              <div className={styles.title}>添加元数据</div>
-              <div className={styles.description}>为服务添加元数据。</div>
+              <div className={styles.title}>
+                {t('pages.k8s.forms.common.addMetadata')}
+              </div>
+              <div className={styles.description}>
+                {t('pages.k8s.forms.service.metadata.description')}
+              </div>
             </span>
           </button>
           {metadataOpen && (

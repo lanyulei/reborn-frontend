@@ -6,6 +6,8 @@ import {
 } from '@ant-design/icons';
 import { App, Col, Form, Input, Row, Select } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
+import type { Translate } from '@/utils/i18n';
+import { useT } from '@/utils/i18n';
 import {
   GVRS,
   listNames,
@@ -39,27 +41,6 @@ import type {
   EndpointSliceAddressType,
 } from './types';
 
-const TITLE = '创建端点切片';
-
-const STEPS: ResourceCreateWizardStep[] = [
-  {
-    title: '基本信息',
-    icon: <AppstoreOutlined />,
-  },
-  {
-    title: '端点设置',
-    icon: <ClusterOutlined />,
-  },
-  {
-    title: '端口设置',
-    icon: <ApiOutlined />,
-  },
-  {
-    title: '高级设置',
-    icon: <SlidersOutlined />,
-  },
-];
-
 const ADDRESS_TYPE_OPTIONS: {
   label: string;
   value: EndpointSliceAddressType;
@@ -76,9 +57,10 @@ const getStepStatusText = (
   current: number,
   index: number,
   values: CreateEndpointSliceFormValues,
+  t: Translate,
 ) => {
   if (current === index) {
-    return '当前';
+    return t('pages.k8s.forms.common.current');
   }
   if (
     index === 0 &&
@@ -91,17 +73,23 @@ const getStepStatusText = (
   }
   const endpointCount = getEndpointContentCount(values);
   if (index === 1 && endpointCount > 0) {
-    return `${endpointCount} 个端点`;
+    return t('pages.k8s.forms.endpointslice.status.endpointCount', {
+      count: endpointCount,
+    });
   }
   const portCount = getPortContentCount(values);
   if (index === 2 && portCount > 0) {
-    return `${portCount} 个端口`;
+    return t('pages.k8s.forms.endpointslice.status.portCount', {
+      count: portCount,
+    });
   }
   const metadataCount = getMetadataContentCount(values);
   if (index === 3 && metadataCount > 0) {
-    return `${metadataCount} 项元数据`;
+    return t('pages.k8s.forms.endpointslice.status.metadataCount', {
+      count: metadataCount,
+    });
   }
-  return '未设置';
+  return t('pages.k8s.forms.common.unset');
 };
 
 const CreateEndpointSliceForm = ({
@@ -110,8 +98,31 @@ const CreateEndpointSliceForm = ({
   onClose,
   onDone,
 }: CreateFormProps) => {
+  const t = useT();
   const { message } = App.useApp();
   const [form] = Form.useForm<CreateEndpointSliceFormValues>();
+  const title = t('pages.k8s.forms.endpointslice.title');
+  const steps = useMemo<ResourceCreateWizardStep[]>(
+    () => [
+      {
+        title: t('pages.k8s.form.section.basic'),
+        icon: <AppstoreOutlined />,
+      },
+      {
+        title: t('pages.k8s.forms.endpointslice.step.endpoints'),
+        icon: <ClusterOutlined />,
+      },
+      {
+        title: t('pages.k8s.forms.endpointslice.step.ports'),
+        icon: <ApiOutlined />,
+      },
+      {
+        title: t('pages.k8s.forms.common.advanced'),
+        icon: <SlidersOutlined />,
+      },
+    ],
+    [t],
+  );
   const [initialValues] = useState(() =>
     getInitialCreateEndpointSliceValues(defaultNamespace || undefined),
   );
@@ -176,7 +187,11 @@ const CreateEndpointSliceForm = ({
       // 表单项就地显示校验错误
       return false;
     }
-    const warning = validateEndpointSliceStep(form.getFieldsValue(true), step);
+    const warning = validateEndpointSliceStep(
+      form.getFieldsValue(true),
+      step,
+      t,
+    );
 
     if (warning) {
       message.warning(warning);
@@ -190,7 +205,7 @@ const CreateEndpointSliceForm = ({
     if (!(await validateCurrentStep(current))) {
       return;
     }
-    setCurrent((step) => Math.min(step + 1, STEPS.length - 1));
+    setCurrent((step) => Math.min(step + 1, steps.length - 1));
   };
 
   const handleSubmit = async () => {
@@ -199,12 +214,12 @@ const CreateEndpointSliceForm = ({
       try {
         resource = parseObject(yamlValue);
       } catch {
-        message.error('YAML 格式不正确或不是有效的资源对象，请检查后重试');
+        message.error(t('pages.k8s.forms.common.yaml.invalid'));
         return;
       }
 
       // 本地预检只拦明显的错误；最终以服务端预检为准
-      const validationError = getEndpointSliceYamlValidationError(resource);
+      const validationError = getEndpointSliceYamlValidationError(resource, t);
       if (validationError) {
         message.error(validationError);
         return;
@@ -222,7 +237,7 @@ const CreateEndpointSliceForm = ({
     }
     // 只挂载了当前步骤的表单项：取全量值，而不是 validateFields 的返回值
     const formValues: CreateEndpointSliceFormValues = form.getFieldsValue(true);
-    const warning = validateEndpointSliceFormValues(formValues);
+    const warning = validateEndpointSliceFormValues(formValues, t);
     if (warning) {
       message.warning(warning);
       return;
@@ -238,70 +253,94 @@ const CreateEndpointSliceForm = ({
     <Row gutter={16}>
       <Col md={12} xs={24}>
         <Form.Item
-          tooltip="名称只能包含小写字母、数字和连字符（-），必须以小写字母或数字开头和结尾，最长 63 个字符。"
-          label="名称"
+          tooltip={t('pages.k8s.forms.common.name.dnsLabel')}
+          label={t('pages.k8s.forms.common.name')}
           name="name"
           rules={[
-            { required: true, message: '请输入名称' },
-            { max: 63, message: '名称最长 63 个字符' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.name.required'),
+            },
+            { max: 63, message: t('pages.k8s.forms.common.name.maxLength') },
             {
               pattern: NAME_PATTERN,
-              message:
-                '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+              message: t('pages.k8s.forms.common.name.pattern'),
             },
           ]}
         >
-          <Input autoFocus placeholder="请输入名称" />
+          <Input
+            autoFocus
+            placeholder={t('pages.k8s.forms.common.name.required')}
+          />
         </Form.Item>
       </Col>
       <Col md={12} xs={24}>
         <Form.Item
-          tooltip="端点切片是命名空间级资源。"
-          label="命名空间"
+          tooltip={t('pages.k8s.forms.endpointslice.namespace.tooltip')}
+          label={t('pages.k8s.forms.common.namespace')}
           name="namespace"
-          rules={[{ required: true, message: '请选择命名空间' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.namespace.required'),
+            },
+          ]}
         >
           <Select
             loading={namespacesLoading}
             options={namespaceOptions}
-            placeholder="请选择命名空间"
+            placeholder={t('pages.k8s.forms.common.namespace.required')}
             showSearch={{ optionFilterProp: 'label' }}
           />
         </Form.Item>
       </Col>
       <Col md={12} xs={24}>
         <Form.Item
-          tooltip="将自动输出 metadata.labels.kubernetes.io/service-name。可从所选命名空间的服务中选择，也可直接输入。"
-          label="关联服务"
+          tooltip={t('pages.k8s.forms.endpointslice.serviceName.tooltip')}
+          label={t('pages.k8s.forms.endpointslice.serviceName')}
           name="serviceName"
           rules={[
             {
               required: true,
               whitespace: true,
-              message: '请选择或输入关联服务',
+              message: t('pages.k8s.forms.endpointslice.serviceName.required'),
             },
-            { max: 63, message: '服务名称最长 63 个字符' },
+            {
+              max: 63,
+              message: t('pages.k8s.forms.endpointslice.serviceName.maxLength'),
+            },
             {
               pattern: NAME_PATTERN,
-              message:
-                '服务名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+              message: t('pages.k8s.forms.endpointslice.serviceName.pattern'),
             },
           ]}
         >
           <CreatableSelect
             names={serviceNames}
-            placeholder="请选择或输入服务名称"
+            placeholder={t(
+              'pages.k8s.forms.endpointslice.serviceName.placeholder',
+            )}
           />
         </Form.Item>
       </Col>
       <Col md={12} xs={24}>
         <Form.Item
-          tooltip="必须与端点地址格式一致。"
-          label="地址类型"
+          tooltip={t('pages.k8s.forms.endpointslice.addressType.tooltip')}
+          label={t('pages.k8s.forms.endpointslice.addressType')}
           name="addressType"
-          rules={[{ required: true, message: '请选择地址类型' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.endpointslice.addressType.required'),
+            },
+          ]}
         >
-          <Select options={ADDRESS_TYPE_OPTIONS} placeholder="请选择地址类型" />
+          <Select
+            options={ADDRESS_TYPE_OPTIONS}
+            placeholder={t(
+              'pages.k8s.forms.endpointslice.addressType.required',
+            )}
+          />
         </Form.Item>
       </Col>
     </Row>
@@ -319,11 +358,11 @@ const CreateEndpointSliceForm = ({
       <ResourceCreateWizardDrawer
         current={current}
         getStepDescription={(_, index) =>
-          getStepStatusText(current, index, values)
+          getStepStatusText(current, index, values, t)
         }
         open
-        steps={STEPS}
-        title={TITLE}
+        steps={steps}
+        title={title}
         yamlMode={yamlMode}
         yamlValue={yamlValue}
         onCancel={onClose}
@@ -365,7 +404,7 @@ const CreateEndpointSliceForm = ({
           clusterId={clusterId}
           yaml={manifest.yaml}
           namespace={manifest.namespace}
-          title={TITLE}
+          title={title}
           onBack={() => setManifest(undefined)}
           onClose={onClose}
           onDone={onDone}

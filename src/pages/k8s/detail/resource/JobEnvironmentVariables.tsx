@@ -2,6 +2,7 @@ import { ClusterOutlined } from '@ant-design/icons';
 import { Empty } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import KeyValueList from '../shared/KeyValueList';
 import SubTitle from '../shared/SubTitle';
 import { buildPodContainers } from './podHelpers';
@@ -82,6 +83,7 @@ const getContainers = (manifest?: Record<string, unknown>) => {
 const JobEnvironmentVariables = ({
   manifest,
 }: JobEnvironmentVariablesProps) => {
+  const t = useT();
   const { styles } = useStyles();
   const containers = useMemo(
     () =>
@@ -124,7 +126,11 @@ const JobEnvironmentVariables = ({
                 >
                   <span className={styles.title}>
                     <ClusterOutlined className={styles.icon} />
-                    <span>容器：{container.name}</span>
+                    <span>
+                      {t('pages.k8s.detail.containerName', {
+                        name: container.name,
+                      })}
+                    </span>
                   </span>
                 </button>
               </SubTitle>

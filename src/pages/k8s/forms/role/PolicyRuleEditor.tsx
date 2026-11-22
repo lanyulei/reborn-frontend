@@ -5,6 +5,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Col, Form, Row, Select } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import { RBAC_VERB_OPTIONS } from './constants';
 
 const useStyles = createStyles(({ token }) => ({
@@ -161,8 +162,11 @@ const useStyles = createStyles(({ token }) => ({
 }));
 
 const RULE_MODE_OPTIONS = [
-  { label: '资源权限', value: 'resource' },
-  { label: '非资源 URL（仅 ClusterRole）', value: 'nonResource' },
+  { labelId: 'pages.k8s.forms.role.rule.mode.resource', value: 'resource' },
+  {
+    labelId: 'pages.k8s.forms.role.rule.mode.nonResource',
+    value: 'nonResource',
+  },
 ];
 
 const API_GROUP_OPTIONS = [
@@ -246,6 +250,7 @@ const PolicyRuleEditor = ({
 }: PolicyRuleEditorProps) => {
   const { styles } = useStyles();
   const form = Form.useFormInstance();
+  const t = useT();
 
   return (
     <Form.List name={name}>
@@ -257,14 +262,18 @@ const PolicyRuleEditor = ({
                 <div className={styles.ruleMain}>
                   <SafetyCertificateOutlined className={styles.ruleIcon} />
                   <div className={styles.ruleContent}>
-                    <div className={styles.ruleTitle}>权限规则 {index + 1}</div>
+                    <div className={styles.ruleTitle}>
+                      {t('pages.k8s.forms.role.rule.title', {
+                        index: index + 1,
+                      })}
+                    </div>
                     <div className={styles.ruleDescription}>
-                      配置 API 组、资源范围和允许执行的动作
+                      {t('pages.k8s.forms.role.rule.description')}
                     </div>
                   </div>
                 </div>
                 <Button
-                  aria-label="删除权限规则"
+                  aria-label={t('pages.k8s.forms.role.rule.delete')}
                   className={styles.ruleDeleteButton}
                   disabled={fields.length <= 1}
                   icon={<DeleteOutlined />}
@@ -274,13 +283,19 @@ const PolicyRuleEditor = ({
               </div>
               <div className={styles.ruleBody}>
                 <Form.Item
-                  label="规则类型"
+                  label={t('pages.k8s.forms.role.rule.mode')}
                   name={[field.name, 'mode']}
-                  rules={[{ required: true, message: '请选择规则类型' }]}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('pages.k8s.forms.role.rule.mode.required'),
+                    },
+                  ]}
                 >
                   <Select
                     options={RULE_MODE_OPTIONS.map((option) => ({
-                      ...option,
+                      label: t(option.labelId),
+                      value: option.value,
                       disabled:
                         !clusterScoped && option.value === 'nonResource',
                     }))}
@@ -311,41 +326,55 @@ const PolicyRuleEditor = ({
                         <>
                           {!clusterScoped && (
                             <div className={styles.unsupportedTip}>
-                              非资源 URL 权限仅适用于
-                              ClusterRole，请改为资源权限或删除这条规则。
+                              {t(
+                                'pages.k8s.forms.role.rule.nonResource.unsupported',
+                              )}
                             </div>
                           )}
                           <Row gutter={16}>
                             <Col md={12} xs={24}>
                               <Form.Item
-                                label="非资源 URL"
+                                label={t(
+                                  'pages.k8s.forms.role.rule.nonResourceURLs',
+                                )}
                                 name={[field.name, 'nonResourceURLs']}
                                 rules={[
                                   {
                                     required: true,
-                                    message: '请输入非资源 URL',
+                                    message: t(
+                                      'pages.k8s.forms.role.rule.nonResourceURLs.required',
+                                    ),
                                   },
                                 ]}
                               >
                                 <Select
                                   mode="tags"
                                   options={NON_RESOURCE_URL_OPTIONS}
-                                  placeholder="/healthz 或 /api/*"
+                                  placeholder={t(
+                                    'pages.k8s.forms.role.rule.nonResourceURLs.placeholder',
+                                  )}
                                 />
                               </Form.Item>
                             </Col>
                             <Col md={12} xs={24}>
                               <Form.Item
-                                label="动作"
+                                label={t('pages.k8s.forms.role.rule.verbs')}
                                 name={[field.name, 'verbs']}
                                 rules={[
-                                  { required: true, message: '请选择动作' },
+                                  {
+                                    required: true,
+                                    message: t(
+                                      'pages.k8s.forms.role.rule.verbs.required',
+                                    ),
+                                  },
                                 ]}
                               >
                                 <Select
                                   mode="tags"
                                   options={RBAC_VERB_OPTIONS}
-                                  placeholder="请选择动作"
+                                  placeholder={t(
+                                    'pages.k8s.forms.role.rule.verbs.required',
+                                  )}
                                 />
                               </Form.Item>
                             </Col>
@@ -359,31 +388,45 @@ const PolicyRuleEditor = ({
                         <Row gutter={16}>
                           <Col md={12} xs={24}>
                             <Form.Item
-                              label="API 组"
+                              label={t('pages.k8s.forms.role.rule.apiGroups')}
                               name={[field.name, 'apiGroups']}
                               rules={[
-                                { required: true, message: '请选择 API 组' },
+                                {
+                                  required: true,
+                                  message: t(
+                                    'pages.k8s.forms.role.rule.apiGroups.required',
+                                  ),
+                                },
                               ]}
                             >
                               <Select
                                 mode="tags"
                                 options={API_GROUP_OPTIONS}
-                                placeholder="core、apps 或 *"
+                                placeholder={t(
+                                  'pages.k8s.forms.role.rule.apiGroups.placeholder',
+                                )}
                               />
                             </Form.Item>
                           </Col>
                           <Col md={12} xs={24}>
                             <Form.Item
-                              label="资源"
+                              label={t('pages.k8s.forms.role.rule.resources')}
                               name={[field.name, 'resources']}
                               rules={[
-                                { required: true, message: '请选择资源' },
+                                {
+                                  required: true,
+                                  message: t(
+                                    'pages.k8s.forms.role.rule.resources.required',
+                                  ),
+                                },
                               ]}
                             >
                               <Select
                                 mode="tags"
                                 options={RESOURCE_OPTIONS}
-                                placeholder="pods、deployments 或 *"
+                                placeholder={t(
+                                  'pages.k8s.forms.role.rule.resources.placeholder',
+                                )}
                               />
                             </Form.Item>
                           </Col>
@@ -391,26 +434,40 @@ const PolicyRuleEditor = ({
                         <Row gutter={16}>
                           <Col md={12} xs={24}>
                             <Form.Item
-                              label="动作"
+                              label={t('pages.k8s.forms.role.rule.verbs')}
                               name={[field.name, 'verbs']}
                               rules={[
-                                { required: true, message: '请选择动作' },
+                                {
+                                  required: true,
+                                  message: t(
+                                    'pages.k8s.forms.role.rule.verbs.required',
+                                  ),
+                                },
                               ]}
                             >
                               <Select
                                 mode="tags"
                                 options={RBAC_VERB_OPTIONS}
-                                placeholder="请选择动作"
+                                placeholder={t(
+                                  'pages.k8s.forms.role.rule.verbs.required',
+                                )}
                               />
                             </Form.Item>
                           </Col>
                           <Col md={12} xs={24}>
                             <Form.Item
-                              tooltip="留空表示匹配该资源类型下的所有对象"
-                              label="资源名限制"
+                              tooltip={t(
+                                'pages.k8s.forms.role.rule.resourceNames.tooltip',
+                              )}
+                              label={t(
+                                'pages.k8s.forms.role.rule.resourceNames',
+                              )}
                               name={[field.name, 'resourceNames']}
                             >
-                              <Select mode="tags" placeholder="可选" />
+                              <Select
+                                mode="tags"
+                                placeholder={t('common.optional')}
+                              />
                             </Form.Item>
                           </Col>
                         </Row>
@@ -430,9 +487,11 @@ const PolicyRuleEditor = ({
               <span className={styles.addContent}>
                 <PlusOutlined className={styles.addIcon} />
                 <span className={styles.addText}>
-                  <span className={styles.addTitle}>添加权限规则</span>
+                  <span className={styles.addTitle}>
+                    {t('pages.k8s.forms.role.rule.add')}
+                  </span>
                   <span className={styles.addDescription}>
-                    配置新的 API 访问范围和允许动作
+                    {t('pages.k8s.forms.role.rule.add.description')}
                   </span>
                 </span>
               </span>

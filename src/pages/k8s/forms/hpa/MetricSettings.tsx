@@ -12,6 +12,8 @@ import {
   Select,
 } from 'antd';
 import { createStyles } from 'antd-style';
+import type { Translate } from '@/utils/i18n';
+import { useT } from '@/utils/i18n';
 import KeyValueEditor from '../shared/KeyValueEditor';
 import FormSection from '../shared/ResourceFormSection';
 import UnitInputNumber from '../shared/UnitInputNumber';
@@ -29,31 +31,31 @@ import type {
   HpaSelectorOperator,
 } from './types';
 
-const METRIC_TYPE_OPTIONS: { label: string; value: HpaMetricType }[] = [
-  { label: '资源指标', value: 'Resource' },
-  { label: '容器资源指标', value: 'ContainerResource' },
-  { label: 'Pod 指标', value: 'Pods' },
-  { label: '对象指标', value: 'Object' },
-  { label: '外部指标', value: 'External' },
+const METRIC_TYPES: HpaMetricType[] = [
+  'Resource',
+  'ContainerResource',
+  'Pods',
+  'Object',
+  'External',
 ];
 
-const RESOURCE_OPTIONS = [
+const getMetricTypeOptions = (
+  t: Translate,
+): { label: string; value: HpaMetricType }[] =>
+  METRIC_TYPES.map((value) => ({
+    label: t(`pages.k8s.forms.hpa.metricType.${value}`),
+    value,
+  }));
+
+const getResourceOptions = (t: Translate) => [
   { label: 'CPU', value: 'cpu' },
-  { label: '内存', value: 'memory' },
+  { label: t('pages.k8s.metrics.panel.memory'), value: 'memory' },
 ];
 
-const TARGET_TYPE_LABELS: Record<HpaMetricTargetType, string> = {
-  Utilization: '平均利用率',
-  AverageValue: '平均值',
-  Value: '总量值',
-};
-
-const METRIC_TYPE_DESCRIPTIONS: Record<HpaMetricType, string> = {
-  Resource: '按 Pod 的 CPU 或内存资源使用情况触发伸缩。',
-  ContainerResource: '按指定容器的 CPU 或内存资源使用情况触发伸缩。',
-  Pods: '按每个 Pod 上报的自定义指标平均值触发伸缩。',
-  Object: '按指定 Kubernetes 对象上的指标触发伸缩。',
-  External: '按集群外部系统提供的指标触发伸缩。',
+const TARGET_TYPE_LABEL_IDS: Record<HpaMetricTargetType, string> = {
+  Utilization: 'pages.k8s.forms.hpa.targetType.Utilization',
+  AverageValue: 'pages.k8s.forms.hpa.targetType.AverageValue',
+  Value: 'pages.k8s.forms.hpa.targetType.Value',
 };
 
 const SELECTOR_OPERATOR_OPTIONS: {
@@ -66,20 +68,21 @@ const SELECTOR_OPERATOR_OPTIONS: {
   { label: 'DoesNotExist', value: 'DoesNotExist' },
 ];
 
-const getTargetTypeOptions = (metricType?: HpaMetricType) => {
+const getTargetTypeOptions = (
+  metricType: HpaMetricType | undefined,
+  t: Translate,
+) => {
+  const option = (value: HpaMetricTargetType) => ({
+    label: t(TARGET_TYPE_LABEL_IDS[value]),
+    value,
+  });
   if (metricType === 'Resource' || metricType === 'ContainerResource') {
-    return [
-      { label: TARGET_TYPE_LABELS.Utilization, value: 'Utilization' },
-      { label: TARGET_TYPE_LABELS.AverageValue, value: 'AverageValue' },
-    ];
+    return [option('Utilization'), option('AverageValue')];
   }
   if (metricType === 'Pods') {
-    return [{ label: TARGET_TYPE_LABELS.AverageValue, value: 'AverageValue' }];
+    return [option('AverageValue')];
   }
-  return [
-    { label: TARGET_TYPE_LABELS.Value, value: 'Value' },
-    { label: TARGET_TYPE_LABELS.AverageValue, value: 'AverageValue' },
-  ];
+  return [option('Value'), option('AverageValue')];
 };
 
 const useStyles = createStyles(({ token }) => ({
@@ -218,11 +221,18 @@ type MetricSettingsProps = {
 const isSelectorMetric = (type?: HpaMetricType) =>
   type === 'Pods' || type === 'Object' || type === 'External';
 
-const getMetricTypeLabel = (type?: HpaMetricType) =>
-  METRIC_TYPE_OPTIONS.find((item) => item.value === type)?.label || '指标';
+const getMetricTypeLabel = (type: HpaMetricType | undefined, t: Translate) =>
+  type
+    ? t(`pages.k8s.forms.hpa.metricType.${type}`)
+    : t('pages.k8s.forms.hpa.metric');
 
-const getMetricTypeDescription = (type?: HpaMetricType) =>
-  type ? METRIC_TYPE_DESCRIPTIONS[type] : '选择指标来源后配置目标值。';
+const getMetricTypeDescription = (
+  type: HpaMetricType | undefined,
+  t: Translate,
+) =>
+  type
+    ? t(`pages.k8s.forms.hpa.metricType.${type}.description`)
+    : t('pages.k8s.forms.hpa.metric.description.empty');
 
 const getMetricValue = (metrics: HpaMetricItem[] | undefined, index: number) =>
   metrics?.[index] || createHpaMetricItem();
@@ -260,26 +270,25 @@ const updateTargetTypeDefaults = (
   }
 };
 
-const targetValueRules = [
-  {
-    required: true,
-    message: '请输入目标值',
-  },
-];
-
 const renderMetricTypeField = (
   form: FormInstance<CreateHorizontalPodAutoscalerFormValues>,
   index: number,
+  t: Translate,
 ) => (
   <Col span={8}>
     <Form.Item
-      label="指标类型"
+      label={t('pages.k8s.forms.hpa.metricType')}
       name={[index, 'type']}
-      rules={[{ required: true, message: '请选择指标类型' }]}
+      rules={[
+        {
+          required: true,
+          message: t('pages.k8s.forms.hpa.metricType.required'),
+        },
+      ]}
     >
       <Select
-        options={METRIC_TYPE_OPTIONS}
-        placeholder="请选择指标类型"
+        options={getMetricTypeOptions(t)}
+        placeholder={t('pages.k8s.forms.hpa.metricType.required')}
         onChange={(value) =>
           updateMetricTypeDefaults(form, index, value as HpaMetricType)
         }
@@ -292,31 +301,44 @@ const renderMetricSourceFields = (
   form: FormInstance<CreateHorizontalPodAutoscalerFormValues>,
   index: number,
   metric: HpaMetricItem,
+  t: Translate,
 ) => {
   if (metric.type === 'Resource' || metric.type === 'ContainerResource') {
     return (
       <Row gutter={16}>
-        {renderMetricTypeField(form, index)}
+        {renderMetricTypeField(form, index, t)}
         {metric.type === 'ContainerResource' && (
           <Col span={8}>
             <Form.Item
-              label="容器名称"
+              label={t('pages.k8s.forms.hpa.containerName')}
               name={[index, 'container']}
-              rules={[{ required: true, message: '请输入容器名称' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.hpa.containerName.required'),
+                },
+              ]}
             >
-              <Input placeholder="如 nginx" />
+              <Input
+                placeholder={t('pages.k8s.forms.hpa.containerName.placeholder')}
+              />
             </Form.Item>
           </Col>
         )}
         <Col span={8}>
           <Form.Item
-            label="资源名称"
+            label={t('pages.k8s.forms.hpa.resourceName')}
             name={[index, 'resourceName']}
-            rules={[{ required: true, message: '请选择资源名称' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.hpa.resourceName.required'),
+              },
+            ]}
           >
             <AutoComplete
-              options={RESOURCE_OPTIONS}
-              placeholder="请选择资源名称"
+              options={getResourceOptions(t)}
+              placeholder={t('pages.k8s.forms.hpa.resourceName.required')}
             />
           </Form.Item>
         </Col>
@@ -328,43 +350,71 @@ const renderMetricSourceFields = (
     return (
       <>
         <Row gutter={16}>
-          {renderMetricTypeField(form, index)}
+          {renderMetricTypeField(form, index, t)}
           <Col span={8}>
             <Form.Item
-              label="指标名称"
+              label={t('pages.k8s.forms.hpa.metricName')}
               name={[index, 'metricName']}
-              rules={[{ required: true, message: '请输入指标名称' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.hpa.metricName.required'),
+                },
+              ]}
             >
-              <Input placeholder="如 requests_per_second" />
+              <Input
+                placeholder={t('pages.k8s.forms.hpa.metricName.placeholder')}
+              />
             </Form.Item>
           </Col>
         </Row>
         <Row gutter={16}>
           <Col span={8}>
             <Form.Item
-              label="对象 API 版本"
+              label={t('pages.k8s.forms.hpa.objectApiVersion')}
               name={[index, 'describedObjectApiVersion']}
-              rules={[{ required: true, message: '请输入对象 API 版本' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.hpa.objectApiVersion.required'),
+                },
+              ]}
             >
-              <Input placeholder="如 apps/v1" />
+              <Input
+                placeholder={t('pages.k8s.forms.hpa.apiVersion.placeholder')}
+              />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item
-              label="对象类型"
+              label={t('pages.k8s.event.kind')}
               name={[index, 'describedObjectKind']}
-              rules={[{ required: true, message: '请输入对象类型' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.hpa.objectKind.required'),
+                },
+              ]}
             >
-              <Input placeholder="如 Deployment" />
+              <Input
+                placeholder={t('pages.k8s.forms.hpa.objectKind.placeholder')}
+              />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item
-              label="对象名称"
+              label={t('pages.k8s.form.refName')}
               name={[index, 'describedObjectName']}
-              rules={[{ required: true, message: '请输入对象名称' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.hpa.objectName.required'),
+                },
+              ]}
             >
-              <Input placeholder="请输入对象名称" />
+              <Input
+                placeholder={t('pages.k8s.forms.hpa.objectName.required')}
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -374,14 +424,21 @@ const renderMetricSourceFields = (
 
   return (
     <Row gutter={16}>
-      {renderMetricTypeField(form, index)}
+      {renderMetricTypeField(form, index, t)}
       <Col span={8}>
         <Form.Item
-          label="指标名称"
+          label={t('pages.k8s.forms.hpa.metricName')}
           name={[index, 'metricName']}
-          rules={[{ required: true, message: '请输入指标名称' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.hpa.metricName.required'),
+            },
+          ]}
         >
-          <Input placeholder="如 requests_per_second" />
+          <Input
+            placeholder={t('pages.k8s.forms.hpa.metricName.placeholder')}
+          />
         </Form.Item>
       </Col>
     </Row>
@@ -392,66 +449,90 @@ const renderTargetFields = (
   form: FormInstance<CreateHorizontalPodAutoscalerFormValues>,
   index: number,
   metric: HpaMetricItem,
-) => (
-  <Row gutter={16}>
-    <Col span={8}>
-      <Form.Item
-        label="目标类型"
-        name={[index, 'targetType']}
-        rules={[{ required: true, message: '请选择目标类型' }]}
-      >
-        <Select
-          options={getTargetTypeOptions(metric.type)}
-          placeholder="请选择目标类型"
-          onChange={(value) =>
-            updateTargetTypeDefaults(form, index, value as HpaMetricTargetType)
-          }
-        />
-      </Form.Item>
-    </Col>
-    {metric.targetType === 'Utilization' && (
+  t: Translate,
+) => {
+  const targetValueRules = [
+    {
+      required: true,
+      message: t('pages.k8s.forms.hpa.targetValue.required'),
+    },
+  ];
+
+  return (
+    <Row gutter={16}>
       <Col span={8}>
         <Form.Item
-          label="平均利用率"
-          name={[index, 'averageUtilization']}
+          label={t('pages.k8s.forms.hpa.targetType')}
+          name={[index, 'targetType']}
           rules={[
-            { required: true, message: '请输入平均利用率' },
             {
-              type: 'number',
-              min: 1,
-              max: 100,
-              message: '平均利用率范围为 1-100',
+              required: true,
+              message: t('pages.k8s.forms.hpa.targetType.required'),
             },
           ]}
         >
-          <UnitInputNumber min={1} max={100} precision={0} unit="%" />
+          <Select
+            options={getTargetTypeOptions(metric.type, t)}
+            placeholder={t('pages.k8s.forms.hpa.targetType.required')}
+            onChange={(value) =>
+              updateTargetTypeDefaults(
+                form,
+                index,
+                value as HpaMetricTargetType,
+              )
+            }
+          />
         </Form.Item>
       </Col>
-    )}
-    {metric.targetType === 'AverageValue' && (
-      <Col span={8}>
-        <Form.Item
-          label="平均目标值"
-          name={[index, 'averageValue']}
-          rules={targetValueRules}
-        >
-          <Input placeholder="如 500m / 512Mi / 100" />
-        </Form.Item>
-      </Col>
-    )}
-    {metric.targetType === 'Value' && (
-      <Col span={8}>
-        <Form.Item
-          label="目标值"
-          name={[index, 'value']}
-          rules={targetValueRules}
-        >
-          <Input placeholder="如 100" />
-        </Form.Item>
-      </Col>
-    )}
-  </Row>
-);
+      {metric.targetType === 'Utilization' && (
+        <Col span={8}>
+          <Form.Item
+            label={t('pages.k8s.forms.hpa.targetType.Utilization')}
+            name={[index, 'averageUtilization']}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.hpa.averageUtilization.required'),
+              },
+              {
+                type: 'number',
+                min: 1,
+                max: 100,
+                message: t('pages.k8s.forms.hpa.averageUtilization.range'),
+              },
+            ]}
+          >
+            <UnitInputNumber min={1} max={100} precision={0} unit="%" />
+          </Form.Item>
+        </Col>
+      )}
+      {metric.targetType === 'AverageValue' && (
+        <Col span={8}>
+          <Form.Item
+            label={t('pages.k8s.forms.hpa.averageValue')}
+            name={[index, 'averageValue']}
+            rules={targetValueRules}
+          >
+            <Input
+              placeholder={t('pages.k8s.forms.hpa.averageValue.placeholder')}
+            />
+          </Form.Item>
+        </Col>
+      )}
+      {metric.targetType === 'Value' && (
+        <Col span={8}>
+          <Form.Item
+            label={t('pages.k8s.forms.hpa.value')}
+            name={[index, 'value']}
+            rules={targetValueRules}
+          >
+            <Input placeholder={t('pages.k8s.forms.hpa.value.placeholder')} />
+          </Form.Item>
+        </Col>
+      )}
+    </Row>
+  );
+};
 
 const MetricSelectorFields = ({
   index,
@@ -460,6 +541,7 @@ const MetricSelectorFields = ({
   index: number;
   metric: HpaMetricItem;
 }) => {
+  const t = useT();
   const { styles } = useStyles();
   const { message } = App.useApp();
 
@@ -470,20 +552,24 @@ const MetricSelectorFields = ({
   return (
     <div className={styles.fieldGroup}>
       <div>
-        <div className={styles.fieldLabel}>指标选择器</div>
+        <div className={styles.fieldLabel}>
+          {t('pages.k8s.forms.hpa.selector')}
+        </div>
         <div className={styles.fieldDescription}>
-          可选配置，留空时表示不限制指标标签；输出到 metric.selector。
+          {t('pages.k8s.forms.hpa.selector.description')}
         </div>
       </div>
       <div className={styles.selectorStack}>
         <Form.Item name={[index, 'selectorLabels']}>
           <KeyValueEditor
             addIcon
-            addText="添加标签"
-            deleteAriaLabel="删除指标标签"
-            keyPlaceholder="标签键"
-            valuePlaceholder="标签值"
-            onAddBlocked={() => message.warning('请先填写已有标签键。')}
+            addText={t('pages.k8s.forms.hpa.selector.addLabel')}
+            deleteAriaLabel={t('pages.k8s.forms.hpa.selector.deleteLabel')}
+            keyPlaceholder={t('pages.k8s.forms.common.labelKey')}
+            valuePlaceholder={t('pages.k8s.forms.common.labelValue')}
+            onAddBlocked={() =>
+              message.warning(t('pages.k8s.forms.common.labelKeyFirst'))
+            }
             onCreateItem={() => createKeyValueItem()}
           />
         </Form.Item>
@@ -504,11 +590,17 @@ const MetricSelectorFields = ({
                         rules={[
                           {
                             required: true,
-                            message: '请输入表达式键',
+                            message: t(
+                              'pages.k8s.forms.hpa.selector.expressionKey.required',
+                            ),
                           },
                         ]}
                       >
-                        <Input placeholder="表达式键" />
+                        <Input
+                          placeholder={t(
+                            'pages.k8s.forms.hpa.selector.expressionKey',
+                          )}
+                        />
                       </Form.Item>
                       <Form.Item
                         className={styles.expressionItem}
@@ -516,13 +608,17 @@ const MetricSelectorFields = ({
                         rules={[
                           {
                             required: true,
-                            message: '请选择操作符',
+                            message: t(
+                              'pages.k8s.forms.hpa.selector.operator.required',
+                            ),
                           },
                         ]}
                       >
                         <Select
                           options={SELECTOR_OPERATOR_OPTIONS}
-                          placeholder="操作符"
+                          placeholder={t(
+                            'pages.k8s.forms.hpa.selector.operator',
+                          )}
                         />
                       </Form.Item>
                       <Form.Item
@@ -540,15 +636,25 @@ const MetricSelectorFields = ({
                               if (value?.trim()) {
                                 return;
                               }
-                              throw new Error('请输入匹配值');
+                              throw new Error(
+                                t(
+                                  'pages.k8s.forms.hpa.selector.values.required',
+                                ),
+                              );
                             },
                           },
                         ]}
                       >
-                        <Input placeholder="多个值用逗号或换行分隔" />
+                        <Input
+                          placeholder={t(
+                            'pages.k8s.forms.hpa.selector.values.placeholder',
+                          )}
+                        />
                       </Form.Item>
                       <Button
-                        aria-label="删除指标表达式"
+                        aria-label={t(
+                          'pages.k8s.forms.hpa.selector.deleteExpression',
+                        )}
                         className={styles.expressionDelete}
                         icon={<DeleteOutlined />}
                         type="text"
@@ -563,7 +669,7 @@ const MetricSelectorFields = ({
                   onClick={() => add(createMetricSelectorRequirementItem())}
                 >
                   <PlusOutlined />
-                  添加表达式
+                  {t('pages.k8s.forms.hpa.selector.addExpression')}
                 </Button>
               </div>
             </>
@@ -575,27 +681,28 @@ const MetricSelectorFields = ({
 };
 
 const MetricSettings = ({ form }: MetricSettingsProps) => {
+  const t = useT();
   const { styles } = useStyles();
   const metrics = Form.useWatch('metrics', form) as HpaMetricItem[] | undefined;
 
   return (
     <div className={styles.stack}>
       <FormSection
-        description="设置 HPA 可调整的副本数上下限。"
-        title="副本范围"
-        tooltip="maxReplicas 为必填字段，minReplicas 留空时 Kubernetes 默认按 1 处理。"
+        description={t('pages.k8s.forms.hpa.replicas.description')}
+        title={t('pages.k8s.forms.hpa.replicas')}
+        tooltip={t('pages.k8s.forms.hpa.replicas.tooltip')}
       >
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               dependencies={['maxReplicas']}
-              label="最小副本数"
+              label={t('pages.k8s.forms.hpa.minReplicas')}
               name="minReplicas"
               rules={[
                 {
                   type: 'number',
                   min: 1,
-                  message: '最小副本数不能小于 1',
+                  message: t('pages.k8s.forms.hpa.minReplicas.min'),
                 },
                 ({ getFieldValue }) => ({
                   validator: async (_, value?: number) => {
@@ -607,14 +714,16 @@ const MetricSettings = ({ form }: MetricSettingsProps) => {
                     ) {
                       return;
                     }
-                    throw new Error('最小副本数不能大于最大副本数');
+                    throw new Error(
+                      t('pages.k8s.forms.hpa.minReplicas.aboveMax'),
+                    );
                   },
                 }),
               ]}
             >
               <InputNumber
                 min={1}
-                placeholder="请输入最小副本数"
+                placeholder={t('pages.k8s.forms.hpa.minReplicas.placeholder')}
                 precision={0}
                 style={{ width: '100%' }}
               />
@@ -623,14 +732,17 @@ const MetricSettings = ({ form }: MetricSettingsProps) => {
           <Col span={12}>
             <Form.Item
               dependencies={['minReplicas']}
-              label="最大副本数"
+              label={t('pages.k8s.forms.hpa.maxReplicas')}
               name="maxReplicas"
               rules={[
-                { required: true, message: '请输入最大副本数' },
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.hpa.maxReplicas.required'),
+                },
                 {
                   type: 'number',
                   min: 1,
-                  message: '最大副本数不能小于 1',
+                  message: t('pages.k8s.forms.hpa.maxReplicas.min'),
                 },
                 ({ getFieldValue }) => ({
                   validator: async (_, value?: number) => {
@@ -642,14 +754,16 @@ const MetricSettings = ({ form }: MetricSettingsProps) => {
                     ) {
                       return;
                     }
-                    throw new Error('最大副本数不能小于最小副本数');
+                    throw new Error(
+                      t('pages.k8s.forms.hpa.maxReplicas.belowMin'),
+                    );
                   },
                 }),
               ]}
             >
               <InputNumber
                 min={1}
-                placeholder="请输入最大副本数"
+                placeholder={t('pages.k8s.forms.hpa.maxReplicas.required')}
                 precision={0}
                 style={{ width: '100%' }}
               />
@@ -660,8 +774,8 @@ const MetricSettings = ({ form }: MetricSettingsProps) => {
 
       <FormSection
         bordered={false}
-        description="至少配置一条指标。不同来源会输出到 resource、containerResource、pods、object 或 external 字段。"
-        title="伸缩指标"
+        description={t('pages.k8s.forms.hpa.metrics.description')}
+        title={t('pages.k8s.forms.hpa.step.metrics')}
       >
         <Form.List
           name="metrics"
@@ -671,7 +785,7 @@ const MetricSettings = ({ form }: MetricSettingsProps) => {
                 if (value?.length) {
                   return;
                 }
-                throw new Error('请至少添加一条伸缩指标');
+                throw new Error(t('pages.k8s.forms.hpa.metrics.required'));
               },
             },
           ]}
@@ -687,14 +801,17 @@ const MetricSettings = ({ form }: MetricSettingsProps) => {
                       <div className={styles.metricHeader}>
                         <div>
                           <div className={styles.metricTitle}>
-                            指标 {index + 1} · {getMetricTypeLabel(metric.type)}
+                            {t('pages.k8s.forms.hpa.metric.title', {
+                              index: index + 1,
+                              type: getMetricTypeLabel(metric.type, t),
+                            })}
                           </div>
                           <div className={styles.metricDescription}>
-                            {getMetricTypeDescription(metric.type)}
+                            {getMetricTypeDescription(metric.type, t)}
                           </div>
                         </div>
                         <Button
-                          aria-label="删除伸缩指标"
+                          aria-label={t('pages.k8s.forms.hpa.metric.delete')}
                           className={styles.metricDelete}
                           disabled={fields.length <= 1}
                           icon={<DeleteOutlined />}
@@ -703,8 +820,8 @@ const MetricSettings = ({ form }: MetricSettingsProps) => {
                         />
                       </div>
                       <div className={styles.metricBody}>
-                        {renderMetricSourceFields(form, field.name, metric)}
-                        {renderTargetFields(form, field.name, metric)}
+                        {renderMetricSourceFields(form, field.name, metric, t)}
+                        {renderTargetFields(form, field.name, metric, t)}
                         <MetricSelectorFields
                           index={field.name}
                           metric={metric}
@@ -719,11 +836,13 @@ const MetricSettings = ({ form }: MetricSettingsProps) => {
                   icon={<PlusOutlined />}
                   onClick={() => add(createHpaMetricItem())}
                 >
-                  添加指标
+                  {t('pages.k8s.forms.hpa.metric.add')}
                 </Button>
               </div>
               {errors.length > 0 && (
-                <div className={styles.listError}>{errors.join('，')}</div>
+                <div className={styles.listError}>
+                  {errors.join(t('pages.k8s.forms.hpa.errorSeparator'))}
+                </div>
               )}
             </>
           )}

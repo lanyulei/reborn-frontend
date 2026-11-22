@@ -13,6 +13,7 @@ import {
 import type { FormInstance } from 'antd';
 import { Alert, App, Button, Form } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import type { EditFormProps } from '../../shared/edit';
 import { EditSubmit, useEditObject } from '../../shared/edit';
 import { toYaml } from '../../shared/kube';
@@ -46,8 +47,6 @@ type WorkloadSettingsEditProps = EditFormProps & {
   kind: WorkloadSettingsKind;
 };
 
-const TITLE = '编辑设置';
-
 const WorkloadSettingsEdit = ({
   clusterId,
   kind,
@@ -55,6 +54,8 @@ const WorkloadSettingsEdit = ({
   onClose,
   onDone,
 }: WorkloadSettingsEditProps) => {
+  const t = useT();
+  const title = t('pages.k8s.forms.common.editSettings');
   const { message } = App.useApp();
   const [form] = Form.useForm<CreateWorkloadFormValues>();
   const state = useEditObject(clusterId, target);
@@ -96,12 +97,14 @@ const WorkloadSettingsEdit = ({
         {
           key: 'updateStrategy',
           icon: <SyncOutlined />,
-          title: '更新策略',
-          description: '配置工作负载更新容器组副本时采用的策略。',
+          title: t('pages.k8s.form.strategy'),
+          description: t(
+            'pages.k8s.forms.edit.workload.updateStrategy.description',
+          ),
           content: (
             <WorkloadUpdateStrategySelector
               form={form as FormInstance}
-              label="策略类型"
+              label={t('pages.k8s.forms.edit.workload.strategyType')}
               marginTop={0}
               type={formKind}
             />
@@ -110,8 +113,10 @@ const WorkloadSettingsEdit = ({
         {
           key: 'containers',
           icon: <DockerOutlined />,
-          title: '容器',
-          description: '维护容器镜像、端口、资源和高级配置。',
+          title: t('pages.k8s.forms.common.container'),
+          description: t(
+            'pages.k8s.forms.edit.workload.containers.description',
+          ),
           content: (
             <WorkloadContainerEditor
               form={form}
@@ -124,22 +129,31 @@ const WorkloadSettingsEdit = ({
         {
           key: 'storage',
           icon: <HddOutlined />,
-          title: '存储',
-          description: '为容器组挂载持久卷、临时卷、配置字典或保密字典。',
+          title: t('pages.k8s.config.tab.storage'),
+          description: t('pages.k8s.forms.edit.workload.storage.description'),
           content: <StorageSettings form={form} type={formKind} />,
         },
         {
           key: 'scheduling',
           icon: <ClusterOutlined />,
-          title: '容器组调度规则',
-          description: '设置容器组副本调度到节点的规则。',
-          content: <PodSchedulingRuleSelector label="规则类型" marginTop={0} />,
+          title: t('pages.k8s.forms.edit.workload.scheduling'),
+          description: t(
+            'pages.k8s.forms.edit.workload.scheduling.description',
+          ),
+          content: (
+            <PodSchedulingRuleSelector
+              label={t('pages.k8s.forms.edit.workload.ruleType')}
+              marginTop={0}
+            />
+          ),
         },
         {
           key: 'termination',
           icon: <ClockCircleOutlined />,
-          title: '容器组优雅终止',
-          description: '设置容器终止前等待的时间，超时后容器将强制终止。',
+          title: t('pages.k8s.forms.edit.workload.termination'),
+          description: t(
+            'pages.k8s.forms.edit.workload.termination.description',
+          ),
           content: <PodGracefulTerminationFields embedded />,
         },
       ].filter(
@@ -147,7 +161,7 @@ const WorkloadSettingsEdit = ({
           !isCronJob ||
           (section.key !== 'updateStrategy' && section.key !== 'scheduling'),
       ) as SettingsNavDrawerSection<WorkloadSettingKey>[],
-    [form, formKind, isCronJob],
+    [form, formKind, isCronJob, t],
   );
 
   const handleSubmit = async () => {
@@ -162,7 +176,7 @@ const WorkloadSettingsEdit = ({
       return;
     }
     const values: CreateWorkloadFormValues = form.getFieldsValue(true);
-    const warning = checkContainers(values);
+    const warning = checkContainers(values, t);
     if (warning) {
       message.warning(warning);
       setActiveKey('containers');
@@ -190,7 +204,7 @@ const WorkloadSettingsEdit = ({
               <Alert
                 action={
                   <Button size="small" onClick={reload}>
-                    重试
+                    {t('pages.k8s.table.retry')}
                   </Button>
                 }
                 banner
@@ -206,7 +220,7 @@ const WorkloadSettingsEdit = ({
           open
           sections={sections}
           size="max(1000px, 78vw)"
-          title={TITLE}
+          title={title}
           onActiveKeyChange={setActiveKey}
           onCancel={onClose}
           onOk={() => void handleSubmit()}
@@ -217,7 +231,7 @@ const WorkloadSettingsEdit = ({
           clusterId={clusterId}
           resourceVersion={resourceVersion}
           target={target}
-          title={TITLE}
+          title={title}
           yaml={yaml}
           onBack={() => setYaml(undefined)}
           onClose={onClose}

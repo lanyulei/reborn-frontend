@@ -4,11 +4,12 @@
  * 「操作」与列表行的操作同一份清单。
  */
 import { history } from '@umijs/max';
-import { Modal } from 'antd';
+import { Empty, Modal } from 'antd';
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import type { GVR, K8sObject, ResourceRef } from '@/services/k8s/typings';
 import { usePermissions } from '@/services/system/permissions';
+import { useT } from '@/utils/i18n';
 import { RelationsTab, usePodSelector } from '../../components/Insight';
 import { type LogContainer, LogViewer } from '../../components/LogViewer';
 import { MetricsPanel } from '../../components/MetricsPanel';
@@ -131,6 +132,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   name,
   tab: initialTab,
 }) => {
+  const t = useT();
   const has = usePermissions();
   const terminal = useTerminal();
   const ref = useMemo<ResourceRef>(
@@ -236,12 +238,10 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
       section={isService}
     />
   ) : (
-    <PodList
-      // 没有选择器：不选中任何容器组
-      clusterId={clusterId}
-      namespace={namespace}
-      fixed={{ labelSelector: 'kubernetes.io/no-such-label=none' }}
-      section={isService}
+    // 没有选择器：不选中任何容器组，直接给空态，不再用伪造的选择器去查列表
+    <Empty
+      image={Empty.PRESENTED_IMAGE_SIMPLE}
+      description={t('pages.k8s.detail.pods.noSelector')}
     />
   );
 

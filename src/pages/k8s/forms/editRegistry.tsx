@@ -5,6 +5,7 @@
 import type React from 'react';
 import { lazy } from 'react';
 import type { GVR } from '@/services/k8s/typings';
+import { t } from '@/utils/i18n';
 import { GVRS, gvrKey } from '../components/meta';
 import type { EditFormProps } from './shared/edit';
 
@@ -16,24 +17,27 @@ export interface EditEntry {
   component: React.LazyExoticComponent<React.ComponentType<EditFormProps>>;
 }
 
+/** 登记项：菜单文案以 i18n 键保存，editEntriesOf 调用时按当前语言翻译 */
+type EditEntryDef = Omit<EditEntry, 'label'> & { labelId: string };
+
 const entry = (
   key: string,
-  label: string,
+  labelId: string,
   load: () => Promise<{ default: React.ComponentType<EditFormProps> }>,
-): EditEntry => ({ key, label, component: lazy(load) });
+): EditEntryDef => ({ key, labelId, component: lazy(load) });
 
-const ENTRIES: [GVR, EditEntry[]][] = [
+const ENTRIES: [GVR, EditEntryDef[]][] = [
   [
     GVRS.service,
     [
       entry(
         'serviceSettings',
-        '编辑服务设置',
+        'pages.k8s.forms.editRegistry.serviceSettings',
         () => import('./edit/service/ServiceSettingsEdit'),
       ),
       entry(
         'serviceExternalAccess',
-        '编辑外部访问',
+        'pages.k8s.forms.editRegistry.serviceExternalAccess',
         () => import('./edit/service/ServiceExternalAccessEdit'),
       ),
     ],
@@ -43,26 +47,49 @@ const ENTRIES: [GVR, EditEntry[]][] = [
     [
       entry(
         'ingressRules',
-        '编辑路由规则',
+        'pages.k8s.forms.editRegistry.ingressRules',
         () => import('./edit/ingress/IngressRulesEdit'),
       ),
       entry(
         'ingressAnnotations',
-        '编辑注解',
+        'pages.k8s.forms.editRegistry.ingressAnnotations',
         () => import('./edit/ingress/IngressAnnotationsEdit'),
       ),
     ],
   ],
   [
     GVRS.configMap,
-    [entry('settings', '编辑设置', () => import('./edit/configmap'))],
+    [
+      entry(
+        'settings',
+        'pages.k8s.action.settings',
+        () => import('./edit/configmap'),
+      ),
+    ],
   ],
-  [GVRS.secret, [entry('settings', '编辑设置', () => import('./edit/secret'))]],
+  [
+    GVRS.secret,
+    [
+      entry(
+        'settings',
+        'pages.k8s.action.settings',
+        () => import('./edit/secret'),
+      ),
+    ],
+  ],
   [
     GVRS.pvc,
     [
-      entry('expand', '扩容', () => import('./edit/pvc/Expand')),
-      entry('clone', '克隆', () => import('./edit/pvc/Clone')),
+      entry(
+        'expand',
+        'pages.k8s.forms.editRegistry.pvcExpand',
+        () => import('./edit/pvc/Expand'),
+      ),
+      entry(
+        'clone',
+        'pages.k8s.forms.editRegistry.pvcClone',
+        () => import('./edit/pvc/Clone'),
+      ),
     ],
   ],
   [
@@ -70,12 +97,12 @@ const ENTRIES: [GVR, EditEntry[]][] = [
     [
       entry(
         'default',
-        '设为默认 / 取消默认',
+        'pages.k8s.forms.editRegistry.storageClassDefault',
         () => import('./edit/storageclass/Default'),
       ),
       entry(
         'expansion',
-        '允许卷扩容',
+        'pages.k8s.forms.editRegistry.storageClassExpansion',
         () => import('./edit/storageclass/VolumeOperations'),
       ),
     ],
@@ -84,5 +111,9 @@ const ENTRIES: [GVR, EditEntry[]][] = [
 
 const REGISTRY = new Map(ENTRIES.map(([gvr, list]) => [gvrKey(gvr), list]));
 
+/** 某类资源的编辑项（文案已按当前语言翻译；调用方在渲染期调用，切换语言后重新取即得新文案） */
 export const editEntriesOf = (gvr: GVR): EditEntry[] =>
-  REGISTRY.get(gvrKey(gvr)) ?? [];
+  (REGISTRY.get(gvrKey(gvr)) ?? []).map(({ labelId, ...rest }) => ({
+    ...rest,
+    label: t(labelId),
+  }));

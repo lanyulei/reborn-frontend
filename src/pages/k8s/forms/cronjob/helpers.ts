@@ -13,13 +13,19 @@ import type { CreateCronJobFormValues } from './types';
 const CRON_JOB_API_VERSION = 'batch/v1';
 const CRON_JOB_KIND = 'CronJob';
 
-/** 常用定时计划（快捷选项，仍可输入任意 cron 表达式） */
+/** 常用定时计划（快捷选项，仍可输入任意 cron 表达式）；文案以 i18n 键表达，调用方用 t(labelId) 翻译 */
 const cronScheduleOptions = [
-  { label: '每分钟', value: '* * * * *' },
-  { label: '每 5 分钟', value: '*/5 * * * *' },
-  { label: '每小时', value: '0 * * * *' },
-  { label: '每天', value: '0 0 * * *' },
-  { label: '每周', value: '0 0 * * 0' },
+  {
+    labelId: 'pages.k8s.forms.cronjob.schedule.everyMinute',
+    value: '* * * * *',
+  },
+  {
+    labelId: 'pages.k8s.forms.cronjob.schedule.every5Minutes',
+    value: '*/5 * * * *',
+  },
+  { labelId: 'pages.k8s.forms.cronjob.schedule.hourly', value: '0 * * * *' },
+  { labelId: 'pages.k8s.forms.cronjob.schedule.daily', value: '0 0 * * *' },
+  { labelId: 'pages.k8s.forms.cronjob.schedule.weekly', value: '0 0 * * 0' },
 ];
 
 const CRON_MACROS = new Set([

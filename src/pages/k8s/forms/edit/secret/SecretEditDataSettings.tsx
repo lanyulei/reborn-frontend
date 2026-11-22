@@ -5,8 +5,11 @@
 import type { FormInstance } from 'antd';
 import { Alert, Col, Form, Input, Row, Select, Space } from 'antd';
 import { createStyles } from 'antd-style';
+import { useMemo } from 'react';
+import type { Translate } from '@/utils/i18n';
+import { useT } from '@/utils/i18n';
 import {
-  BINARY_VALUE_TEXT,
+  BINARY_VALUE_TEXT_ID,
   DOCKER_CONFIG_JSON_KEY,
   registryProtocolOptions,
   secretTypeOptions,
@@ -90,9 +93,6 @@ type SecretEditDataSettingsProps = {
   reveal?: SecretPlaintext;
 };
 
-const HIDDEN_PLACEHOLDER = '已隐藏，输入新内容以替换';
-const KEEP_HINT = '留空则保持原值。';
-
 const TYPED_KEYS: Record<TypedField, string> = {
   basicAuthPassword: 'password',
   basicAuthUsername: 'username',
@@ -100,27 +100,24 @@ const TYPED_KEYS: Record<TypedField, string> = {
   tlsPrivateKey: 'tls.key',
 };
 
-const getDockerNotice = (state: DockerEditState, canReveal: boolean) => {
+const getDockerNotice = (
+  state: DockerEditState,
+  canReveal: boolean,
+  t: Translate,
+) => {
   if (state === 'hidden') {
     return canReveal
-      ? '镜像服务信息已隐藏。点击「查看明文」后可编辑镜像服务地址、用户名和密码；也可以在下方整体替换 .dockerconfigjson 的内容。'
-      : '镜像服务信息已隐藏，当前账号没有查看明文的权限，无法编辑镜像服务地址、用户名和密码。可以在下方整体替换 .dockerconfigjson 的内容，或只修改标签与注解。';
+      ? t('pages.k8s.forms.edit.secret.docker.hiddenCanReveal')
+      : t('pages.k8s.forms.edit.secret.docker.hiddenNoPermission');
   }
   if (state === 'unparsed') {
-    return '无法从 .dockerconfigjson 解析出镜像服务信息，只能在下方整体替换它的内容。';
+    return t('pages.k8s.forms.edit.secret.docker.unparsed');
   }
   if (state === 'replaced') {
-    return '已整体替换 .dockerconfigjson，镜像服务信息以替换的内容为准；撤销替换后可恢复按表单编辑。';
+    return t('pages.k8s.forms.edit.secret.docker.replaced');
   }
 
   return undefined;
-};
-
-const maskRule = {
-  validator: (_: unknown, value?: string) =>
-    value === SECRET_MASK
-      ? Promise.reject(new Error(`不能是掩码 ${SECRET_MASK}`))
-      : Promise.resolve(),
 };
 
 const SecretEditDataSettings = ({
@@ -130,6 +127,27 @@ const SecretEditDataSettings = ({
   reveal,
 }: SecretEditDataSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
+  const typeOptions = useMemo(
+    () =>
+      secretTypeOptions.map((option) => ({
+        label: t(option.labelId),
+        value: option.value,
+      })),
+    [t],
+  );
+  const maskRule = {
+    validator: (_: unknown, value?: string) =>
+      value === SECRET_MASK
+        ? Promise.reject(
+            new Error(
+              t('pages.k8s.forms.edit.secret.mask.notAllowed', {
+                mask: SECRET_MASK,
+              }),
+            ),
+          )
+        : Promise.resolve(),
+  };
   const values: Partial<SecretEditFormValues> =
     Form.useWatch([], { form, preserve: true }) || {};
   const type = getSecretEditType(manifest);
@@ -142,7 +160,8 @@ const SecretEditDataSettings = ({
   };
   const dockerState = getDockerEditState(manifest, fullValues, reveal);
   const registryDisabled = dockerState !== 'editable';
-  const dockerNotice = dockerState && getDockerNotice(dockerState, canReveal);
+  const dockerNotice =
+    dockerState && getDockerNotice(dockerState, canReveal, t);
   // 可按表单编辑时，.dockerconfigjson 在列表里只读，展示将要写出的内容
   const reserved =
     dockerState === 'editable' &&
@@ -162,7 +181,10 @@ const SecretEditDataSettings = ({
 
     return {
       item: {
-        extra: loaded && !binary ? KEEP_HINT : undefined,
+        extra:
+          loaded && !binary
+            ? t('pages.k8s.forms.edit.secret.keepHint')
+            : undefined,
         name: field,
         required: !loaded,
         rules: [{ required: !loaded, message: emptyMessage }, maskRule],
@@ -170,9 +192,9 @@ const SecretEditDataSettings = ({
       input: {
         disabled: binary,
         placeholder: binary
-          ? BINARY_VALUE_TEXT
+          ? t(BINARY_VALUE_TEXT_ID)
           : loaded
-            ? HIDDEN_PLACEHOLDER
+            ? t('pages.k8s.forms.edit.secret.hiddenPlaceholder')
             : emptyMessage,
       },
     };
@@ -195,18 +217,30 @@ const SecretEditDataSettings = ({
   );
 
   const renderTlsFields = () => {
-    const certificate = getTypedFieldProps('tlsCertificate', '请输入证书');
-    const privateKey = getTypedFieldProps('tlsPrivateKey', '请输入私钥');
+    const certificate = getTypedFieldProps(
+      'tlsCertificate',
+      t('pages.k8s.forms.secret.certificate.required'),
+    );
+    const privateKey = getTypedFieldProps(
+      'tlsPrivateKey',
+      t('pages.k8s.forms.secret.privateKey.required'),
+    );
 
     return (
       <div className={styles.compactField}>
-        <Form.Item label="证书" {...certificate.item}>
+        <Form.Item
+          label={t('pages.k8s.forms.secret.certificate')}
+          {...certificate.item}
+        >
           <TextArea
             {...certificate.input}
             autoSize={{ minRows: 6, maxRows: 10 }}
           />
         </Form.Item>
-        <Form.Item label="私钥" {...privateKey.item}>
+        <Form.Item
+          label={t('pages.k8s.forms.secret.privateKey')}
+          {...privateKey.item}
+        >
           <TextArea
             {...privateKey.input}
             autoSize={{ minRows: 6, maxRows: 10 }}
@@ -222,8 +256,8 @@ const SecretEditDataSettings = ({
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            extra="设置镜像服务地址，例如 docker.io。"
-            label="镜像服务地址"
+            extra={t('pages.k8s.forms.secret.registryAddress.extra')}
+            label={t('pages.k8s.forms.secret.registryAddress')}
             required={!registryDisabled}
           >
             <Space.Compact block className={styles.compactInput}>
@@ -241,14 +275,20 @@ const SecretEditDataSettings = ({
                 rules={[
                   {
                     required: !registryDisabled,
-                    message: '请输入镜像服务地址',
+                    message: t(
+                      'pages.k8s.forms.secret.registryAddress.required',
+                    ),
                   },
                 ]}
               >
                 <Input
                   className={styles.compactInputValue}
                   disabled={registryDisabled}
-                  placeholder={registryDisabled ? '已隐藏' : '例如 docker.io'}
+                  placeholder={
+                    registryDisabled
+                      ? t('pages.k8s.forms.common.hidden')
+                      : t('pages.k8s.forms.secret.registryAddress.placeholder')
+                  }
                 />
               </Form.Item>
             </Space.Compact>
@@ -256,53 +296,90 @@ const SecretEditDataSettings = ({
         </Col>
         <Col span={12}>
           <Form.Item
-            label="用户名"
+            label={t('pages.k8s.forms.common.username')}
             name="registryUsername"
-            rules={[{ required: !registryDisabled, message: '请输入用户名' }]}
+            rules={[
+              {
+                required: !registryDisabled,
+                message: t('pages.k8s.forms.common.username.required'),
+              },
+            ]}
           >
             <Input
               disabled={registryDisabled}
-              placeholder={registryDisabled ? '已隐藏' : '请输入用户名'}
+              placeholder={
+                registryDisabled
+                  ? t('pages.k8s.forms.common.hidden')
+                  : t('pages.k8s.forms.common.username.required')
+              }
             />
           </Form.Item>
         </Col>
       </Row>
       <Row gutter={16}>
         <Col span={12}>
-          <Form.Item label="邮箱" name="registryEmail">
+          <Form.Item
+            label={t('pages.k8s.forms.secret.email')}
+            name="registryEmail"
+          >
             <Input
               disabled={registryDisabled}
-              placeholder={registryDisabled ? '已隐藏' : '请输入邮箱'}
+              placeholder={
+                registryDisabled
+                  ? t('pages.k8s.forms.common.hidden')
+                  : t('pages.k8s.forms.secret.email.placeholder')
+              }
             />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
-            label="密码"
+            label={t('pages.k8s.forms.common.password')}
             name="registryPassword"
-            rules={[{ required: !registryDisabled, message: '请输入密码' }]}
+            rules={[
+              {
+                required: !registryDisabled,
+                message: t('pages.k8s.forms.common.password.required'),
+              },
+            ]}
           >
             <Password
               disabled={registryDisabled}
-              placeholder={registryDisabled ? '已隐藏' : '请输入密码'}
+              placeholder={
+                registryDisabled
+                  ? t('pages.k8s.forms.common.hidden')
+                  : t('pages.k8s.forms.common.password.required')
+              }
             />
           </Form.Item>
         </Col>
       </Row>
-      {renderData('数据', [DOCKER_CONFIG_JSON_KEY])}
+      {renderData(t('pages.k8s.forms.common.data'), [DOCKER_CONFIG_JSON_KEY])}
     </div>
   );
 
   const renderBasicAuthFields = () => {
-    const username = getTypedFieldProps('basicAuthUsername', '请输入用户名');
-    const password = getTypedFieldProps('basicAuthPassword', '请输入密码');
+    const username = getTypedFieldProps(
+      'basicAuthUsername',
+      t('pages.k8s.forms.common.username.required'),
+    );
+    const password = getTypedFieldProps(
+      'basicAuthPassword',
+      t('pages.k8s.forms.common.password.required'),
+    );
 
     return (
       <div className={styles.compactField}>
-        <Form.Item label="用户名" {...username.item}>
+        <Form.Item
+          label={t('pages.k8s.forms.common.username')}
+          {...username.item}
+        >
           <Input {...username.input} />
         </Form.Item>
-        <Form.Item label="密码" {...password.item}>
+        <Form.Item
+          label={t('pages.k8s.forms.common.password')}
+          {...password.item}
+        >
           <Password {...password.input} />
         </Form.Item>
       </div>
@@ -313,12 +390,12 @@ const SecretEditDataSettings = ({
     <div className={styles.settings}>
       <Form.Item
         className={styles.compactField}
-        extra="类型创建后不可修改。"
-        label="类型"
+        extra={t('pages.k8s.forms.edit.secret.typeImmutable')}
+        label={t('pages.k8s.forms.common.type')}
       >
         <Select
           disabled
-          options={secretTypeOptions}
+          options={typeOptions}
           // 表单不支持的类型按「默认」的方式编辑，这里如实显示它的类型
           value={rawType}
         />
@@ -326,9 +403,9 @@ const SecretEditDataSettings = ({
       {type === 'kubernetes.io/tls' && renderTlsFields()}
       {type === 'kubernetes.io/dockerconfigjson' && renderRegistryFields()}
       {type === 'kubernetes.io/basic-auth' && renderBasicAuthFields()}
-      {type === 'Opaque' && renderData('数据')}
+      {type === 'Opaque' && renderData(t('pages.k8s.forms.common.data'))}
       {(type === 'kubernetes.io/tls' || type === 'kubernetes.io/basic-auth') &&
-        renderData('其他数据')}
+        renderData(t('pages.k8s.forms.edit.secret.otherData'))}
     </div>
   );
 };

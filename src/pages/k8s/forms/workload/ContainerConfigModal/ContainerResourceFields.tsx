@@ -3,6 +3,8 @@ import { Form } from 'antd';
 import type { NamePath } from 'antd/es/form/interface';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
+import { useMemo } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import UnitInputNumber from '../../shared/UnitInputNumber';
 
 const useStyles = createStyles(({ token }) => ({
@@ -84,27 +86,33 @@ type ResourceFieldProps = {
   notGreaterThanMessage?: string;
 };
 
-const resourceFields: {
+const getResourceFields = (
+  t: Translate,
+): {
   icon: ReactNode;
   iconClassName?: string;
   fields: ResourceFieldProps[];
-}[] = [
+}[] => [
   {
     icon: <CodeSandboxOutlined />,
     fields: [
       {
-        label: 'CPU 预留',
+        label: t('pages.k8s.forms.workload.container.resources.cpuRequest'),
         name: 'cpuRequest',
-        placeholder: '无预留',
+        placeholder: t(
+          'pages.k8s.forms.workload.container.resources.noRequest',
+        ),
         unit: 'Core',
         precision: 3,
         notGreaterThanField: 'cpuLimit',
-        notGreaterThanMessage: 'CPU 预留不能大于 CPU 限制',
+        notGreaterThanMessage: t(
+          'pages.k8s.forms.workload.container.resources.cpuRequest.exceedsLimit',
+        ),
       },
       {
-        label: 'CPU 限制',
+        label: t('pages.k8s.forms.workload.container.resources.cpuLimit'),
         name: 'cpuLimit',
-        placeholder: '无上限',
+        placeholder: t('pages.k8s.forms.workload.container.noLimit'),
         unit: 'Core',
         precision: 3,
       },
@@ -115,18 +123,22 @@ const resourceFields: {
     iconClassName: 'memory',
     fields: [
       {
-        label: '内存预留',
+        label: t('pages.k8s.forms.workload.container.resources.memoryRequest'),
         name: 'memoryRequest',
-        placeholder: '无预留',
+        placeholder: t(
+          'pages.k8s.forms.workload.container.resources.noRequest',
+        ),
         unit: 'Mi',
         precision: 0,
         notGreaterThanField: 'memoryLimit',
-        notGreaterThanMessage: '内存预留不能大于内存限制',
+        notGreaterThanMessage: t(
+          'pages.k8s.forms.workload.container.resources.memoryRequest.exceedsLimit',
+        ),
       },
       {
-        label: '内存限制',
+        label: t('pages.k8s.forms.workload.container.resources.memoryLimit'),
         name: 'memoryLimit',
-        placeholder: '无上限',
+        placeholder: t('pages.k8s.forms.workload.container.noLimit'),
         unit: 'Mi',
         precision: 0,
       },
@@ -136,6 +148,8 @@ const resourceFields: {
 
 const ContainerResourceFields = () => {
   const { styles } = useStyles();
+  const t = useT();
+  const resourceFields = useMemo(() => getResourceFields(t), [t]);
 
   return (
     <div className={styles.panel}>

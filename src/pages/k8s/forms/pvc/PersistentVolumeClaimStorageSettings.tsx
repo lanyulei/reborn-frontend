@@ -13,6 +13,7 @@ import {
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
+import { useT } from '@/utils/i18n';
 import { parseQuantity, STORAGE_UNITS } from './helpers';
 import type {
   CreatePersistentVolumeClaimFormValues,
@@ -151,21 +152,6 @@ const volumeModeOptions = [
   { label: 'Block', value: 'Block' },
 ];
 
-const createModeOptions: CreateModeOption[] = [
-  {
-    description: '选择已有的存储类来创建卷。',
-    icon: <DatabaseOutlined />,
-    label: '通过存储类创建',
-    value: 'storageClass',
-  },
-  {
-    description: '选择已有的持久卷来创建卷。',
-    icon: <CloudServerOutlined />,
-    label: '绑定已有持久卷创建',
-    value: 'persistentVolume',
-  },
-];
-
 const filterByValue = (input: string, option?: { value?: unknown }) =>
   String(option?.value ?? '')
     .toLowerCase()
@@ -192,6 +178,24 @@ const PersistentVolumeClaimStorageSettings = ({
   storageClasses,
 }: PersistentVolumeClaimStorageSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
+  const createModeOptions = useMemo<CreateModeOption[]>(
+    () => [
+      {
+        description: t('pages.k8s.forms.pvc.mode.storageClass.desc'),
+        icon: <DatabaseOutlined />,
+        label: t('pages.k8s.forms.pvc.mode.storageClass'),
+        value: 'storageClass',
+      },
+      {
+        description: t('pages.k8s.forms.pvc.mode.persistentVolume.desc'),
+        icon: <CloudServerOutlined />,
+        label: t('pages.k8s.forms.pvc.mode.persistentVolume'),
+        value: 'persistentVolume',
+      },
+    ],
+    [t],
+  );
   const createMode = Form.useWatch('createMode', form);
   const storageSize = Form.useWatch('storageSize', {
     form,
@@ -202,10 +206,12 @@ const PersistentVolumeClaimStorageSettings = ({
   const storageClassOptions = useMemo(
     () =>
       storageClasses.map((item) => ({
-        label: item.isDefault ? `${item.name}（默认）` : item.name,
+        label: item.isDefault
+          ? t('pages.k8s.forms.pvc.storageClass.default', { name: item.name })
+          : item.name,
         value: item.name,
       })),
-    [storageClasses],
+    [storageClasses, t],
   );
   // 已被声明占用的持久卷无法再绑定，不列入候选
   const persistentVolumeOptions = useMemo(
@@ -268,9 +274,11 @@ const PersistentVolumeClaimStorageSettings = ({
     <div className={styles.settings}>
       <Form.Item
         className={styles.compactField}
-        label="创建方式"
+        label={t('pages.k8s.forms.pvc.mode')}
         name="createMode"
-        rules={[{ required: true, message: '请选择创建方式' }]}
+        rules={[
+          { required: true, message: t('pages.k8s.forms.pvc.mode.required') },
+        ]}
       >
         <Select
           labelRender={({ value }) => {
@@ -291,19 +299,28 @@ const PersistentVolumeClaimStorageSettings = ({
         {!bindVolume && (
           <Form.Item
             className={styles.compactField}
-            extra="选择一个存储类来创建特定种类的卷。"
-            label="存储类"
+            extra={t('pages.k8s.forms.pvc.storageClass.extra')}
+            label={t('pages.k8s.forms.common.storageClass')}
             name="storageClassName"
-            rules={[{ required: true, message: '请选择存储类' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.pvc.storageClass.required'),
+              },
+            ]}
           >
             <AutoComplete
               allowClear
               showSearch={{ filterOption: filterByValue }}
               notFoundContent={
-                loading ? <Spin size="small" /> : '未发现可用存储类'
+                loading ? (
+                  <Spin size="small" />
+                ) : (
+                  t('pages.k8s.forms.pvc.storageClass.notFound')
+                )
               }
               options={storageClassOptions}
-              placeholder="请选择或输入存储类"
+              placeholder={t('pages.k8s.forms.pvc.storageClass.placeholder')}
             />
           </Form.Item>
         )}
@@ -311,29 +328,43 @@ const PersistentVolumeClaimStorageSettings = ({
           <>
             <Form.Item
               className={styles.compactField}
-              extra="选择或输入需要绑定的持久卷名称（仅列出尚未被声明绑定的持久卷）。"
-              label="持久卷"
+              extra={t('pages.k8s.forms.pvc.volume.extra')}
+              label={t('pages.k8s.kind.PersistentVolume')}
               name="volumeName"
-              rules={[{ required: true, message: '请输入卷名称' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.common.volumeName.required'),
+                },
+              ]}
             >
               <AutoComplete
                 allowClear
                 showSearch={{ filterOption: filterByValue }}
                 notFoundContent={
-                  loading ? <Spin size="small" /> : '未发现可绑定的持久卷'
+                  loading ? (
+                    <Spin size="small" />
+                  ) : (
+                    t('pages.k8s.forms.pvc.volume.notFound')
+                  )
                 }
                 options={persistentVolumeOptions}
-                placeholder="请输入卷名称"
+                placeholder={t('pages.k8s.forms.common.volumeName.required')}
                 onChange={handleVolumeNameChange}
               />
             </Form.Item>
             <Form.Item
               className={styles.compactField}
-              extra="须与持久卷的存储类一致；持久卷未设置存储类时留空。"
-              label="持久卷的存储类"
+              extra={t('pages.k8s.forms.pvc.volumeStorageClass.extra')}
+              label={t('pages.k8s.forms.pvc.volumeStorageClass')}
               name="volumeStorageClassName"
             >
-              <Input allowClear placeholder="留空表示持久卷没有存储类" />
+              <Input
+                allowClear
+                placeholder={t(
+                  'pages.k8s.forms.pvc.volumeStorageClass.placeholder',
+                )}
+              />
             </Form.Item>
           </>
         )}
@@ -341,34 +372,49 @@ const PersistentVolumeClaimStorageSettings = ({
           className={styles.compactField}
           extra={
             bindVolume
-              ? '须包含在持久卷支持的访问模式之内。'
-              : '选择存储类支持的一种或多种访问模式。'
+              ? t('pages.k8s.forms.pvc.accessModes.extra.bind')
+              : t('pages.k8s.forms.pvc.accessModes.extra.storageClass')
           }
-          label="访问模式"
+          label={t('pages.k8s.forms.common.accessMode')}
           name="accessModes"
-          rules={[{ required: true, message: '请选择访问模式' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.accessMode.required'),
+            },
+          ]}
         >
           <Select
             mode="multiple"
             options={accessModeOptions}
-            placeholder="请选择访问模式"
+            placeholder={t('pages.k8s.forms.common.accessMode.required')}
           />
         </Form.Item>
         <Form.Item
           className={styles.compactField}
-          extra="Filesystem 以目录形式挂载；Block 以裸块设备形式提供给容器。"
-          label="卷模式"
+          extra={t('pages.k8s.forms.pvc.volumeMode.extra')}
+          label={t('pages.k8s.forms.pvc.volumeMode')}
           name="volumeMode"
-          rules={[{ required: true, message: '请选择卷模式' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.volumeMode.required'),
+            },
+          ]}
         >
-          <Select options={volumeModeOptions} placeholder="请选择卷模式" />
+          <Select
+            options={volumeModeOptions}
+            placeholder={t('pages.k8s.forms.common.volumeMode.required')}
+          />
         </Form.Item>
       </div>
 
       <Form.Item
         className={styles.capacityFormItem}
-        extra={bindVolume ? '申请容量不能超过所绑定持久卷的容量。' : undefined}
-        label="卷容量"
+        extra={
+          bindVolume ? t('pages.k8s.forms.pvc.capacity.extra.bind') : undefined
+        }
+        label={t('pages.k8s.forms.pvc.capacity')}
         required
       >
         <div className={styles.capacityRow}>
@@ -392,12 +438,17 @@ const PersistentVolumeClaimStorageSettings = ({
               name="storageSize"
               noStyle
               rules={[
-                { required: true, message: '请输入卷容量' },
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.pvc.capacity.required'),
+                },
                 {
                   validator: (_, value?: number | null) =>
                     value === undefined || value === null || value > 0
                       ? Promise.resolve()
-                      : Promise.reject(new Error('卷容量必须大于 0')),
+                      : Promise.reject(
+                          new Error(t('pages.k8s.forms.pvc.capacity.positive')),
+                        ),
                 },
               ]}
             >
@@ -405,12 +456,12 @@ const PersistentVolumeClaimStorageSettings = ({
                 className={styles.capacityInput}
                 controls={false}
                 min={0}
-                placeholder="请输入卷容量"
+                placeholder={t('pages.k8s.forms.pvc.capacity.required')}
               />
             </Form.Item>
             <Form.Item name="storageUnit" noStyle>
               <Select
-                aria-label="容量单位"
+                aria-label={t('pages.k8s.forms.pvc.capacity.unit')}
                 className={styles.capacityUnit}
                 options={STORAGE_UNITS.map((unit) => ({
                   label: unit,

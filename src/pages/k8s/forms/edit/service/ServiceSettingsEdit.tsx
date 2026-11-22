@@ -1,6 +1,7 @@
 /** 编辑服务设置：工作负载选择器、端口、会话保持、网络策略 */
 import { App, Form } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import { getServicePortsError } from '../../service/helpers';
 import {
   ServiceNetworkingSection,
@@ -23,6 +24,7 @@ const useStyles = createStyles(({ token }) => ({
 
 const ServiceSettingsEdit = (props: EditFormProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
   const state = useEditObject(props.clusterId, props.target);
   const [form] = Form.useForm<CreateServiceFormValues>();
@@ -32,7 +34,7 @@ const ServiceSettingsEdit = (props: EditFormProps) => {
     <EditDrawer
       {...props}
       state={state}
-      title="编辑服务设置"
+      title={t('pages.k8s.forms.edit.service.settingsTitle')}
       onBuild={async (object) => {
         if (!initial) {
           return undefined;
@@ -44,7 +46,7 @@ const ServiceSettingsEdit = (props: EditFormProps) => {
           return undefined;
         }
         const values: CreateServiceFormValues = form.getFieldsValue(true);
-        const error = getServicePortsError(values.ports);
+        const error = getServicePortsError(values.ports, t);
         if (error) {
           message.error(error);
           return undefined;

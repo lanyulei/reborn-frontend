@@ -1,5 +1,5 @@
 /** 通用资源详情用到的关联数据：服务的端点、使用某个持久卷声明的容器组、存储类的供应者。 */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { K8sObject, ListRow } from '@/services/k8s/typings';
 import { fetchObject, GVRS, listRows } from '../../forms/shared/kube';
 import type { ClusterServiceEndpointItem } from './types';
@@ -75,8 +75,11 @@ export const useServiceEndpoints = (
   return items;
 };
 
-/** 至多检查这么多个容器组（逐个读取卷定义） */
-const CLAIM_POD_LIMIT = 200;
+/**
+ * 至多检查这么多个容器组（逐个读取卷定义）。列表接口没有按卷过滤的参数
+ * （只有 labelSelector / keyword / state / node / owner），只能取回再筛。
+ */
+const CLAIM_POD_LIMIT = 100;
 
 /** 使用了某个持久卷声明的容器组（名称清单） */
 export const useClaimPods = (
@@ -91,12 +94,17 @@ export const useClaimPods = (
     truncated: boolean;
   }>({ loading: enabled, pods: [], truncated: false });
 
+  /** 请求序号：只采纳最后一次加载的结果（切换对象 / 卸载后丢弃在途结果） */
+  const seq = useRef(0);
   const reload = useCallback(async () => {
     if (!enabled || !namespace) return;
+    const id = ++seq.current;
     setState((prev) => ({ ...prev, loading: true }));
     const rows = await listRows(clusterId, GVRS.pod, namespace);
+    if (id !== seq.current) return;
     const checked = rows.slice(0, CLAIM_POD_LIMIT);
     const objects = await fetchObjects(clusterId, checked, namespace, GVRS.pod);
+    if (id !== seq.current) return;
     const using = new Set(
       objects
         .filter((pod) =>
@@ -116,6 +124,9 @@ export const useClaimPods = (
 
   useEffect(() => {
     void reload();
+    return () => {
+      seq.current += 1;
+    };
   }, [reload]);
 
   return { ...state, reload };

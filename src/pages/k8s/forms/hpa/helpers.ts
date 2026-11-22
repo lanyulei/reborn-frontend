@@ -1,3 +1,4 @@
+import type { Translate } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import {
   createId,
@@ -362,17 +363,17 @@ export const buildCreateHpaManifest = (
   };
 };
 
-const getMetricError = (metric: HpaMetricItem, label: string) => {
+const getMetricError = (metric: HpaMetricItem, label: string, t: Translate) => {
   const targetType = metric.targetType || getDefaultTargetType(metric.type);
 
   if (
     (metric.type === 'Resource' || metric.type === 'ContainerResource') &&
     !normalizeText(metric.resourceName)
   ) {
-    return `${label}：请选择资源名称`;
+    return t('pages.k8s.forms.hpa.error.resourceName', { label });
   }
   if (metric.type === 'ContainerResource' && !normalizeText(metric.container)) {
-    return `${label}：请输入容器名称`;
+    return t('pages.k8s.forms.hpa.error.container', { label });
   }
   if (
     (metric.type === 'Pods' ||
@@ -380,7 +381,7 @@ const getMetricError = (metric: HpaMetricItem, label: string) => {
       metric.type === 'External') &&
     !normalizeText(metric.metricName)
   ) {
-    return `${label}：请输入指标名称`;
+    return t('pages.k8s.forms.hpa.error.metricName', { label });
   }
   if (
     metric.type === 'Object' &&
@@ -390,7 +391,7 @@ const getMetricError = (metric: HpaMetricItem, label: string) => {
       normalizeText(metric.describedObjectName)
     )
   ) {
-    return `${label}：请完整填写对象 API 版本、类型和名称`;
+    return t('pages.k8s.forms.hpa.error.describedObject', { label });
   }
   if (targetType === 'Utilization') {
     const utilization = metric.averageUtilization;
@@ -399,14 +400,14 @@ const getMetricError = (metric: HpaMetricItem, label: string) => {
       !Number.isInteger(utilization) ||
       utilization < 1
     ) {
-      return `${label}：请输入平均利用率`;
+      return t('pages.k8s.forms.hpa.error.averageUtilization', { label });
     }
   }
   if (targetType === 'AverageValue' && !normalizeText(metric.averageValue)) {
-    return `${label}：请输入平均目标值`;
+    return t('pages.k8s.forms.hpa.error.averageValue', { label });
   }
   if (targetType === 'Value' && !normalizeText(metric.value)) {
-    return `${label}：请输入目标值`;
+    return t('pages.k8s.forms.hpa.error.value', { label });
   }
   return undefined;
 };
@@ -422,35 +423,40 @@ const hasScalingPolicy = (items?: HpaScalingPolicyItem[]) =>
 /** 整张表单的跨步骤校验（提交前兜底）：返回第一条错误信息 */
 export const getHpaFormError = (
   values: CreateHorizontalPodAutoscalerFormValues,
+  t: Translate,
 ): string | undefined => {
   if (!values.name?.trim() || !values.namespace?.trim()) {
-    return '请填写名称和命名空间';
+    return t('pages.k8s.forms.hpa.error.nameNamespace');
   }
   if (
     !normalizeText(values.targetApiVersion) ||
     !normalizeText(values.targetKind) ||
     !normalizeText(values.targetName)
   ) {
-    return '请完整填写伸缩目标';
+    return t('pages.k8s.forms.hpa.error.target');
   }
   if (typeof values.maxReplicas !== 'number' || values.maxReplicas < 1) {
-    return '请输入最大副本数';
+    return t('pages.k8s.forms.hpa.maxReplicas.required');
   }
   if (typeof values.minReplicas === 'number') {
     if (values.minReplicas < 1) {
-      return '最小副本数不能小于 1';
+      return t('pages.k8s.forms.hpa.minReplicas.min');
     }
     if (values.minReplicas > values.maxReplicas) {
-      return '最大副本数不能小于最小副本数';
+      return t('pages.k8s.forms.hpa.maxReplicas.belowMin');
     }
   }
 
   const metrics = (values.metrics || []).filter(Boolean);
   if (metrics.length === 0) {
-    return '请至少添加一条伸缩指标';
+    return t('pages.k8s.forms.hpa.metrics.required');
   }
   for (const [index, metric] of metrics.entries()) {
-    const error = getMetricError(metric, `指标 ${index + 1}`);
+    const error = getMetricError(
+      metric,
+      t('pages.k8s.forms.hpa.error.metricLabel', { index: index + 1 }),
+      t,
+    );
     if (error) {
       return error;
     }
@@ -459,13 +465,17 @@ export const getHpaFormError = (
     values.enableScaleUpBehavior &&
     !hasScalingPolicy(values.scaleUpPolicies)
   ) {
-    return '扩容策略：请至少添加一条伸缩策略';
+    return t('pages.k8s.forms.hpa.error.policiesRequired', {
+      label: t('pages.k8s.forms.hpa.scaleUp'),
+    });
   }
   if (
     values.enableScaleDownBehavior &&
     !hasScalingPolicy(values.scaleDownPolicies)
   ) {
-    return '缩容策略：请至少添加一条伸缩策略';
+    return t('pages.k8s.forms.hpa.error.policiesRequired', {
+      label: t('pages.k8s.forms.hpa.scaleDown'),
+    });
   }
   return undefined;
 };

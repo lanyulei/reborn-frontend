@@ -23,8 +23,8 @@ import {
   OfflineBanner,
 } from '@/components';
 import type { LoginProfile } from '@/services/system/auth';
-import { getLoginProfile } from '@/services/system/auth';
 import { getSystemConfig } from '@/services/system/config';
+import { authRequest } from '@/services/system/request';
 import type {
   SystemConfig,
   SystemRole,
@@ -66,7 +66,13 @@ export async function getInitialState(): Promise<{
   let profileError = false;
   const fetchUserInfo = async () => {
     try {
-      return await getLoginProfile({ silent: true });
+      // 失败由这里自行处理（下方 history.replace 跳登录 / 重试页）：不弹提示，
+      // 也不让 authRequest 再整页跳转一次
+      return await authRequest<LoginProfile>('/api/v1/me', {
+        method: 'GET',
+        silent: true,
+        redirectOnInvalid: false,
+      });
     } catch (error) {
       const status = (error as { response?: { status?: number } })?.response
         ?.status;
@@ -88,9 +94,14 @@ export async function getInitialState(): Promise<{
   // 也要显示标题/logo）；接口匿名可读，失败时静默回退构建期默认值。
   // 子标题仅登录页展示：不注入 settings（ProLayout 会向各页面页头
   // 下发 subTitle），登录页直接读 systemConfig.subTitle
-  const systemConfig = await getSystemConfig()
-    .then((res) => res.config)
-    .catch(() => null);
+  // 登录态（非登录页 / 公共页才拉）与展示配置互不依赖，并行请求缩短首屏等待
+  const anonymous = isAnonymousPath(history.location.pathname);
+  const [systemConfig, profile] = await Promise.all([
+    getSystemConfig()
+      .then((res) => res.config)
+      .catch(() => null),
+    anonymous ? undefined : fetchUserInfo(),
+  ]);
   const settings = {
     ...defaultSettings,
     ...(systemConfig?.title ? { title: systemConfig.title } : {}),
@@ -98,10 +109,7 @@ export async function getInitialState(): Promise<{
   } as Partial<LayoutSettings>;
   // 浏览器标签页标题：登录页由 Helmet 设置，主布局由 ProLayout 的
   // useDocumentTitle 设为「页面名 - 系统标题」，无需在此直接赋值
-  // 如果不是登录页面 / 公共页面，执行
-  const { location } = history;
-  if (!isAnonymousPath(location.pathname)) {
-    const profile = await fetchUserInfo();
+  if (!anonymous) {
     return {
       fetchUserInfo,
       currentUser: profile?.user,

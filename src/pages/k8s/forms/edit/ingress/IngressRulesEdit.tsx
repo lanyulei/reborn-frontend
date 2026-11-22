@@ -1,6 +1,7 @@
 /** 编辑路由规则：规则（域名 / 路径 / 后端）、Ingress Class、TLS Secret、路径重写 */
 import { App, Form } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import {
   getIngressFormError,
   getServicePortOptions,
@@ -26,6 +27,7 @@ const ROUTE_FIELDS = [
 
 const IngressRulesEdit = (props: EditFormProps) => {
   const { clusterId } = props;
+  const t = useT();
   const { message } = App.useApp();
   // 目标在挂载期间不变
   const namespace = useRef(props.target.namespace).current;
@@ -101,7 +103,7 @@ const IngressRulesEdit = (props: EditFormProps) => {
     <EditDrawer
       {...props}
       state={state}
-      title="编辑路由规则"
+      title={t('pages.k8s.forms.edit.ingress.rulesTitle')}
       onBuild={async (object) => {
         if (!initial) {
           return undefined;

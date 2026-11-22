@@ -8,6 +8,8 @@ export type RoleStatus = 0 | 1;
 
 /** 用户状态：1=可用 2=停用 3=暂停 4=离职 */
 export type UserStatus = 1 | 2 | 3 | 4;
+/** 账号类型 1=人 2=机器（不能登录，只能被签发短期访问令牌） */
+export type UserKind = 1 | 2;
 
 export type Gender = 'male' | 'female' | 'unknown';
 
@@ -146,6 +148,8 @@ export interface SystemUser {
   gender: Gender;
   isAdmin: boolean;
   status: UserStatus;
+  /** 账号类型：1=人 2=机器（不能登录，只能被签发短期访问令牌） */
+  kind?: UserKind;
   /** 头像地址；空 = 未设置 */
   avatar?: string;
   /** 所属部门（主部门在前）；仅用户详情与用户列表填充 */
@@ -188,4 +192,14 @@ export interface PageQuery {
 export interface PagedResult<T> {
   items: T[];
   total: string;
+}
+
+/** CreateMachineUser 新建机器账号入参 */
+export interface CreateMachineUserParams {
+  /** 3-64 位字母/数字/下划线/中划线 */
+  username: string;
+  /** 1-64 位 */
+  nickname: string;
+  /** 绑定的角色，至少一个 */
+  roleIds: string[];
 }

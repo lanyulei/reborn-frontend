@@ -1,3 +1,4 @@
+import type { Translate } from '@/utils/i18n';
 import { getRecordValue } from '../shared/manifest';
 import type {
   BindingSubjectFormValue,
@@ -118,22 +119,29 @@ const getCreateBindingStepFields = (
 /** 授权主体检查；通过返回 undefined */
 const getSubjectsError = (
   values: CreateBindingFormValues,
+  t: Translate,
 ): string | undefined => {
   const subjects = values.subjects || [];
 
   if (!subjects.length) {
-    return '请至少添加一个授权主体';
+    return t('pages.k8s.forms.binding.subjects.required');
   }
 
   for (const [index, subject] of subjects.entries()) {
     if (!subject.kind) {
-      return `授权主体 ${index + 1} 需要选择类型`;
+      return t('pages.k8s.forms.binding.subjects.kindRequired', {
+        index: index + 1,
+      });
     }
     if (!subject.name?.trim()) {
-      return `授权主体 ${index + 1} 需要填写名称`;
+      return t('pages.k8s.forms.binding.subjects.nameRequired', {
+        index: index + 1,
+      });
     }
     if (subject.kind === 'ServiceAccount' && !subject.namespace?.trim()) {
-      return `授权主体 ${index + 1} 需要选择命名空间`;
+      return t('pages.k8s.forms.binding.subjects.namespaceRequired', {
+        index: index + 1,
+      });
     }
   }
 
@@ -146,6 +154,7 @@ const getSubjectsError = (
  */
 const getBindingManifestError = (
   resource: Record<string, unknown>,
+  t: Translate,
   expectedKind?: CreateBindingType,
 ): string | undefined => {
   const metadata = getRecordValue(resource.metadata);
@@ -161,37 +170,43 @@ const getBindingManifestError = (
   const roleName = typeof roleRef?.name === 'string' ? roleRef.name.trim() : '';
 
   if (expectedKind && kind !== expectedKind) {
-    return `YAML kind 必须为 ${expectedKind}`;
+    return t('pages.k8s.forms.common.yaml.kindMismatch', {
+      kind: expectedKind,
+    });
   }
   if (kind !== 'RoleBinding' && kind !== 'ClusterRoleBinding') {
-    return 'YAML kind 必须为 RoleBinding 或 ClusterRoleBinding';
+    return t('pages.k8s.forms.binding.yaml.kind');
   }
   if (resource.apiVersion !== RBAC_API_VERSION) {
-    return `YAML apiVersion 必须为 ${RBAC_API_VERSION}`;
+    return t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+      apiVersion: RBAC_API_VERSION,
+    });
   }
   if (!name) {
-    return 'YAML 必须包含 metadata.name';
+    return t('pages.k8s.forms.common.yaml.nameRequired');
   }
   if (kind === 'RoleBinding' && !namespace) {
-    return 'RoleBinding YAML 必须包含 metadata.namespace';
+    return t('pages.k8s.forms.binding.yaml.namespaceRequired');
   }
   if (kind === 'ClusterRoleBinding' && namespace) {
-    return 'ClusterRoleBinding YAML 不应包含 metadata.namespace';
+    return t('pages.k8s.forms.binding.yaml.namespaceForbidden');
   }
   if (!roleRef || !roleName) {
-    return 'YAML 必须包含 roleRef.kind、roleRef.name 和 roleRef.apiGroup';
+    return t('pages.k8s.forms.binding.yaml.roleRefRequired');
   }
   if (roleRef.apiGroup !== RBAC_API_GROUP) {
-    return `YAML roleRef.apiGroup 必须为 ${RBAC_API_GROUP}`;
+    return t('pages.k8s.forms.binding.yaml.roleRefApiGroup', {
+      apiGroup: RBAC_API_GROUP,
+    });
   }
   if (kind === 'ClusterRoleBinding' && roleKind !== 'ClusterRole') {
-    return 'ClusterRoleBinding 只能引用 ClusterRole';
+    return t('pages.k8s.forms.binding.yaml.clusterRoleOnly');
   }
   if (roleKind !== 'Role' && roleKind !== 'ClusterRole') {
-    return 'RoleBinding 只能引用 Role 或 ClusterRole';
+    return t('pages.k8s.forms.binding.yaml.roleKind');
   }
   if (!subjects.length) {
-    return 'YAML 必须至少包含一个 subjects 项';
+    return t('pages.k8s.forms.binding.yaml.subjectsRequired');
   }
 
   const invalidSubjectIndex = subjects.findIndex((subject) => {
@@ -210,7 +225,9 @@ const getBindingManifestError = (
   });
 
   if (invalidSubjectIndex >= 0) {
-    return `YAML subjects[${invalidSubjectIndex}] 需要包含 kind 和 name，ServiceAccount 还需要 namespace`;
+    return t('pages.k8s.forms.binding.yaml.subjectInvalid', {
+      index: invalidSubjectIndex,
+    });
   }
 
   return undefined;

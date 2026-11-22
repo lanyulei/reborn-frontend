@@ -10,6 +10,7 @@ import {
   PlaySquareOutlined,
 } from '@ant-design/icons';
 import { Spin } from 'antd';
+import { useT } from '@/utils/i18n';
 import SubTitle from '../shared/SubTitle';
 import type { NamespaceResourceStatus } from './helpers';
 import useStyles from './styles';
@@ -23,60 +24,61 @@ const ResourceOverview = ({
   loading,
   resourceStatus,
 }: ResourceOverviewProps) => {
+  const t = useT();
   const { styles } = useStyles();
   const resourceStatusItems = [
     {
       key: 'pods',
-      label: '容器组',
+      label: t('pages.k8s.kind.Pod'),
       value: resourceStatus.pods,
       icon: <ClusterOutlined />,
     },
     {
       key: 'deployments',
-      label: '部署',
+      label: t('pages.k8s.kind.Deployment'),
       value: resourceStatus.deployments,
       icon: <DeploymentUnitOutlined />,
       active: (resourceStatus.deployments ?? 0) > 0,
     },
     {
       key: 'statefulsets',
-      label: '有状态副本集',
+      label: t('pages.k8s.kind.StatefulSet'),
       value: resourceStatus.statefulsets,
       icon: <PlaySquareOutlined />,
     },
     {
       key: 'daemonsets',
-      label: '守护进程集',
+      label: t('pages.k8s.kind.DaemonSet'),
       value: resourceStatus.daemonsets,
       icon: <ApartmentOutlined />,
     },
     {
       key: 'jobs',
-      label: '任务',
+      label: t('pages.k8s.kind.Job'),
       value: resourceStatus.jobs,
       icon: <AppstoreOutlined />,
     },
     {
       key: 'cronjobs',
-      label: '定时任务',
+      label: t('pages.k8s.kind.CronJob'),
       value: resourceStatus.cronjobs,
       icon: <FieldTimeOutlined />,
     },
     {
       key: 'persistentVolumeClaims',
-      label: '持久卷声明',
+      label: t('pages.k8s.kind.PersistentVolumeClaim'),
       value: resourceStatus.persistentVolumeClaims,
       icon: <HddOutlined />,
     },
     {
       key: 'services',
-      label: '服务',
+      label: t('pages.k8s.kind.Service'),
       value: resourceStatus.services,
       icon: <DatabaseOutlined />,
     },
     {
       key: 'ingresses',
-      label: '应用路由',
+      label: t('pages.k8s.kind.Ingress'),
       value: resourceStatus.ingresses,
       icon: <ApiOutlined />,
     },
@@ -84,7 +86,7 @@ const ResourceOverview = ({
 
   return (
     <div>
-      <SubTitle>资源状态</SubTitle>
+      <SubTitle>{t('pages.k8s.detail.namespace.resourceStatus')}</SubTitle>
       <Spin spinning={loading} className={styles.resourceSpin}>
         <div className={styles.overview}>
           {resourceStatusItems.map((item) => (

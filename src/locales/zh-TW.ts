@@ -1,13 +1,18 @@
+import agent from './zh-TW/agent';
 import cmdb from './zh-TW/cmdb';
 import common from './zh-TW/common';
 import component from './zh-TW/component';
 import enumMessages from './zh-TW/enum';
 import globalHeader from './zh-TW/globalHeader';
+import incident from './zh-TW/incident';
 import job from './zh-TW/job';
 import k8s from './zh-TW/k8s';
 import k8sApps from './zh-TW/k8sApps';
 import k8sChange from './zh-TW/k8sChange';
+import k8sDetail from './zh-TW/k8sDetail';
+import k8sForms from './zh-TW/k8sForms';
 import k8sGov from './zh-TW/k8sGov';
+import knowledge from './zh-TW/knowledge';
 import menu from './zh-TW/menu';
 import monitor from './zh-TW/monitor';
 import network from './zh-TW/network';
@@ -45,6 +50,11 @@ export default {
   ...k8sApps,
   ...k8sChange,
   ...k8sGov,
+  ...k8sDetail,
+  ...k8sForms,
+  ...knowledge,
+  ...incident,
+  ...agent,
   ...ticket,
   ...workflow,
 };

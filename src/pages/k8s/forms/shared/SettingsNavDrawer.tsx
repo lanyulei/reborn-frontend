@@ -3,6 +3,7 @@ import type { DrawerProps } from 'antd';
 import { Button, Drawer, Spin } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
+import { useT } from '@/utils/i18n';
 
 type SettingsNavDrawerSection<Value extends string> = {
   description: string;
@@ -161,13 +162,13 @@ const useStyles = createStyles(({ token }) => ({
 const SettingsNavDrawer = <Value extends string>({
   activeKey,
   banner,
-  cancelText = '取消',
+  cancelText: cancelTextProp,
   footerExtra,
   loading = false,
   okButtonDisabled = false,
   okButtonIcon,
   okButtonLoading = false,
-  okText = '保存',
+  okText: okTextProp,
   open,
   sections,
   title,
@@ -176,6 +177,9 @@ const SettingsNavDrawer = <Value extends string>({
   onCancel,
   onOk,
 }: SettingsNavDrawerProps<Value>) => {
+  const t = useT();
+  const cancelText = cancelTextProp ?? t('common.action.cancel');
+  const okText = okTextProp ?? t('common.action.save');
   const { styles, cx } = useStyles();
 
   return (

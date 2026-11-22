@@ -1,3 +1,4 @@
+import type { Translate } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import {
   createId,
@@ -82,13 +83,16 @@ const getStorageClassStepFields = (
   ];
 };
 
-const validateStorageClassParameters = (items?: KeyValueEditorItem[]) => {
+const validateStorageClassParameters = (
+  items: KeyValueEditorItem[] | undefined,
+  t: Translate,
+) => {
   const normalizedKeys = (items || [])
     .map((item) => normalizeName(item.keyName))
     .filter(Boolean);
 
   if (new Set(normalizedKeys).size !== normalizedKeys.length) {
-    return '参数键不能重复';
+    return t('pages.k8s.forms.storageclass.parameters.duplicate');
   }
 
   return undefined;
@@ -97,24 +101,29 @@ const validateStorageClassParameters = (items?: KeyValueEditorItem[]) => {
 /** YAML 模式提交前的检查；通过返回 undefined，否则返回提示语 */
 const validateStorageClassManifest = (
   resource: Record<string, unknown>,
+  t: Translate,
 ): string | undefined => {
   const metadata = getRecordValue(resource.metadata);
   const name = typeof metadata?.name === 'string' ? metadata.name.trim() : '';
 
   if (!name) {
-    return 'YAML 必须包含 metadata.name';
+    return t('pages.k8s.forms.common.yaml.nameRequired');
   }
   if (resource.kind !== STORAGE_CLASS_KIND) {
-    return `YAML kind 必须为 ${STORAGE_CLASS_KIND}`;
+    return t('pages.k8s.forms.common.yaml.kindMismatch', {
+      kind: STORAGE_CLASS_KIND,
+    });
   }
   if (resource.apiVersion !== STORAGE_CLASS_API_VERSION) {
-    return `YAML apiVersion 必须为 ${STORAGE_CLASS_API_VERSION}`;
+    return t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+      apiVersion: STORAGE_CLASS_API_VERSION,
+    });
   }
   if (
     typeof resource.provisioner !== 'string' ||
     !resource.provisioner.trim()
   ) {
-    return 'YAML 必须包含 provisioner';
+    return t('pages.k8s.forms.storageclass.yaml.provisionerRequired');
   }
   return undefined;
 };

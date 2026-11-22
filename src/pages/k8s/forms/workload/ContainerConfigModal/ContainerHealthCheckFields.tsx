@@ -2,6 +2,8 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Col, Form, InputNumber, Row } from 'antd';
 import type { NamePath } from 'antd/es/form/interface';
 import { createStyles } from 'antd-style';
+import { useMemo } from 'react';
+import { useT } from '@/utils/i18n';
 import SegmentedTabs from '../../shared/SegmentedTabs';
 import ArgListEditor, { validateArgListRequired } from '../ArgListEditor';
 import type {
@@ -14,37 +16,31 @@ import ContainerHttpTargetFields from './ContainerHttpTargetFields';
 
 const PROBE_OPTIONS: {
   name: ContainerProbeKind;
-  title: string;
-  description: string;
+  titleId: string;
+  descriptionId: string;
 }[] = [
   {
     name: 'liveness',
-    title: '存活检查',
-    description: '检查容器是否存活。',
+    titleId: 'pages.k8s.forms.workload.container.probe.liveness',
+    descriptionId:
+      'pages.k8s.forms.workload.container.probe.liveness.description',
   },
   {
     name: 'readiness',
-    title: '就绪检查',
-    description: '检查容器是否可以处理请求。',
+    titleId: 'pages.k8s.forms.workload.container.probe.readiness',
+    descriptionId:
+      'pages.k8s.forms.workload.container.probe.readiness.description',
   },
   {
     name: 'startup',
-    title: '启动检查',
-    description: '检查容器是否启动成功。',
+    titleId: 'pages.k8s.forms.workload.container.probe.startup',
+    descriptionId:
+      'pages.k8s.forms.workload.container.probe.startup.description',
   },
 ];
 
-const HANDLER_OPTIONS: {
-  label: string;
-  value: ContainerProbeHandlerType;
-}[] = [
-  { label: 'HTTP 请求', value: 'httpGet' },
-  { label: '命令', value: 'exec' },
-  { label: 'TCP 端口', value: 'tcpSocket' },
-];
-
 const TIMING_FIELDS: {
-  label: string;
+  labelId: string;
   name: keyof Pick<
     ContainerProbeFormValue,
     | 'initialDelaySeconds'
@@ -54,45 +50,48 @@ const TIMING_FIELDS: {
     | 'failureThreshold'
   >;
   min: number;
-  message: string;
-  description: string;
+  messageId: string;
+  descriptionId: string;
 }[] = [
   {
-    label: '初始延迟（s）',
+    labelId: 'pages.k8s.forms.workload.container.probe.initialDelay',
     name: 'initialDelaySeconds',
     min: 0,
-    message: '初始延迟最小值为 0',
-    description: '容器启动后探针启动前的延迟时间。',
+    messageId: 'pages.k8s.forms.workload.container.probe.initialDelay.min',
+    descriptionId:
+      'pages.k8s.forms.workload.container.probe.initialDelay.description',
   },
   {
-    label: '超时时间（s）',
+    labelId: 'pages.k8s.forms.workload.container.probe.timeout',
     name: 'timeoutSeconds',
     min: 0,
-    message: '超时时间最小值为 0',
-    description:
-      '探针超时时间。探针超时后，检查将被视为失败。取值必须为整数，最小值为 0。',
+    messageId: 'pages.k8s.forms.workload.container.probe.timeout.min',
+    descriptionId:
+      'pages.k8s.forms.workload.container.probe.timeout.description',
   },
   {
-    label: '检查间隔（s）',
+    labelId: 'pages.k8s.forms.workload.container.probe.period',
     name: 'periodSeconds',
     min: 1,
-    message: '检查间隔最小值为 1',
-    description: '执行检查的时间间隔。取值必须为整数，最小值为 1。',
+    messageId: 'pages.k8s.forms.workload.container.probe.period.min',
+    descriptionId:
+      'pages.k8s.forms.workload.container.probe.period.description',
   },
   {
-    label: '成功阈值',
+    labelId: 'pages.k8s.forms.workload.container.probe.successThreshold',
     name: 'successThreshold',
     min: 1,
-    message: '成功阈值最小值为 1',
-    description:
-      '检查失败后再次被视为成功所需的最小连续成功次数。最小值为 1。对于存活探针和启动探针，此参数值必须为 1。',
+    messageId: 'pages.k8s.forms.workload.container.probe.successThreshold.min',
+    descriptionId:
+      'pages.k8s.forms.workload.container.probe.successThreshold.description',
   },
   {
-    label: '失败阈值',
+    labelId: 'pages.k8s.forms.workload.container.probe.failureThreshold',
     name: 'failureThreshold',
     min: 1,
-    message: '失败阈值最小值为 1',
-    description: '检查成功后再次被视为失败所需的最小连续失败次数。最小值为 1。',
+    messageId: 'pages.k8s.forms.workload.container.probe.failureThreshold.min',
+    descriptionId:
+      'pages.k8s.forms.workload.container.probe.failureThreshold.description',
   },
 ];
 
@@ -224,7 +223,24 @@ const withHandlerDefaults = (
 
 const ContainerHealthCheckFields = () => {
   const { styles } = useStyles();
+  const t = useT();
   const form = Form.useFormInstance();
+  const handlerOptions = useMemo<
+    { label: string; value: ContainerProbeHandlerType }[]
+  >(
+    () => [
+      {
+        label: t('pages.k8s.forms.workload.container.handler.httpGet'),
+        value: 'httpGet',
+      },
+      { label: t('pages.k8s.forms.common.command'), value: 'exec' },
+      {
+        label: t('pages.k8s.forms.workload.container.handler.tcpSocket'),
+        value: 'tcpSocket',
+      },
+    ],
+    [t],
+  );
   const healthChecks =
     (Form.useWatch('healthChecks', {
       form,
@@ -259,7 +275,7 @@ const ContainerHealthCheckFields = () => {
     handlerType: ContainerProbeHandlerType,
   ) => (
     <SegmentedTabs
-      items={HANDLER_OPTIONS}
+      items={handlerOptions}
       value={handlerType}
       onChange={(value) => selectHandler(probeName, value)}
     />
@@ -281,15 +297,20 @@ const ContainerHealthCheckFields = () => {
   const renderCommandFields = (probeName: ContainerProbeKind) => (
     <div className={styles.fieldBlock}>
       <Form.Item
-        label="命令"
+        label={t('pages.k8s.forms.common.command')}
         name={getProbeFieldName(probeName, 'command')}
         required
-        rules={[{ validator: validateArgListRequired }]}
+        rules={[{ validator: validateArgListRequired(t) }]}
       >
-        <ArgListEditor addText="添加参数" placeholder="例如 cat" />
+        <ArgListEditor
+          addText={t('pages.k8s.forms.workload.container.args.add')}
+          placeholder={t(
+            'pages.k8s.forms.workload.container.probe.command.placeholder',
+          )}
+        />
       </Form.Item>
       <div className={styles.fieldHelp}>
-        每项填写命令的一个参数，例如 cat、/tmp/healthy。
+        {t('pages.k8s.forms.workload.container.probe.command.help')}
       </div>
     </div>
   );
@@ -298,22 +319,25 @@ const ContainerHealthCheckFields = () => {
     <Row gutter={16}>
       <Col span={12}>
         <Form.Item
-          label="端口"
+          label={t('pages.k8s.form.port')}
           name={getProbeFieldName(probeName, 'port')}
           rules={[
-            { required: true, message: '请输入端口' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.port.required'),
+            },
             {
               type: 'number',
               min: 1,
               max: 65535,
-              message: '端口范围为 1-65535',
+              message: t('pages.k8s.forms.common.port.range'),
             },
           ]}
         >
           <InputNumber
             min={1}
             max={65535}
-            placeholder="请输入端口"
+            placeholder={t('pages.k8s.forms.common.port.required')}
             precision={0}
             style={{ width: '100%' }}
           />
@@ -324,35 +348,44 @@ const ContainerHealthCheckFields = () => {
 
   const renderTimingFields = (probeName: ContainerProbeKind) => (
     <Row className={styles.timing} gutter={[16, 16]}>
-      {TIMING_FIELDS.map((field) => (
-        <Col key={field.name} span={12}>
-          <div className={styles.fieldBlock}>
-            <Form.Item
-              label={field.label}
-              name={getProbeFieldName(probeName, field.name)}
-              rules={[
-                { required: true, message: `请输入${field.label}` },
-                {
-                  type: 'number',
-                  min: field.min,
-                  message: field.message,
-                },
-              ]}
-            >
-              <InputNumber
-                disabled={
-                  field.name === 'successThreshold' && probeName !== 'readiness'
-                }
-                min={field.min}
-                placeholder={`请输入${field.label}`}
-                precision={0}
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-            <div className={styles.fieldHelp}>{field.description}</div>
-          </div>
-        </Col>
-      ))}
+      {TIMING_FIELDS.map((field) => {
+        const label = t(field.labelId);
+        const requiredMessage = t(
+          'pages.k8s.forms.workload.container.probe.timing.required',
+          { label },
+        );
+
+        return (
+          <Col key={field.name} span={12}>
+            <div className={styles.fieldBlock}>
+              <Form.Item
+                label={label}
+                name={getProbeFieldName(probeName, field.name)}
+                rules={[
+                  { required: true, message: requiredMessage },
+                  {
+                    type: 'number',
+                    min: field.min,
+                    message: t(field.messageId),
+                  },
+                ]}
+              >
+                <InputNumber
+                  disabled={
+                    field.name === 'successThreshold' &&
+                    probeName !== 'readiness'
+                  }
+                  min={field.min}
+                  placeholder={requiredMessage}
+                  precision={0}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+              <div className={styles.fieldHelp}>{t(field.descriptionId)}</div>
+            </div>
+          </Col>
+        );
+      })}
     </Row>
   );
 
@@ -367,7 +400,7 @@ const ContainerHealthCheckFields = () => {
         <div className={styles.editorHeader}>
           {renderHandlerTabs(probeName, handlerType)}
           <Button
-            aria-label="移除探针"
+            aria-label={t('pages.k8s.forms.workload.container.probe.remove')}
             className={styles.removeButton}
             icon={<DeleteOutlined />}
             type="text"
@@ -390,7 +423,7 @@ const ContainerHealthCheckFields = () => {
 
         return (
           <div key={probe.name}>
-            <div className={styles.probeTitle}>{probe.title}</div>
+            <div className={styles.probeTitle}>{t(probe.titleId)}</div>
             {enabled && probeValue ? (
               renderProbeEditor(probe.name, probeValue)
             ) : (
@@ -400,10 +433,12 @@ const ContainerHealthCheckFields = () => {
                 onClick={() => addProbe(probe.name)}
               >
                 <PlusOutlined />
-                添加探针
+                {t('pages.k8s.forms.workload.container.probe.add')}
               </button>
             )}
-            <div className={styles.probeDescription}>{probe.description}</div>
+            <div className={styles.probeDescription}>
+              {t(probe.descriptionId)}
+            </div>
           </div>
         );
       })}

@@ -3,6 +3,7 @@ import { Button, Input } from 'antd';
 import { createStyles } from 'antd-style';
 import type { CSSProperties, ReactNode } from 'react';
 import { useEffect } from 'react';
+import { useT } from '@/utils/i18n';
 
 /**
  * 样式入参。footerJustify 写成 string 而非 CSSProperties['justifyContent']：样式对象的类型会进到
@@ -86,13 +87,13 @@ type KeyValueEditorProps = {
 
 const KeyValueEditor = ({
   addIcon = true,
-  addText = '添加',
-  deleteAriaLabel = '删除',
+  addText: addTextProp,
+  deleteAriaLabel: deleteAriaLabelProp,
   footerJustify = 'flex-end',
-  keyPlaceholder = '键',
+  keyPlaceholder: keyPlaceholderProp,
   minRows,
   value = [],
-  valuePlaceholder = '值',
+  valuePlaceholder: valuePlaceholderProp,
   footerExtra,
   onAddBlocked,
   onChange,
@@ -100,6 +101,11 @@ const KeyValueEditor = ({
   validateKey,
   invalidKeyHint,
 }: KeyValueEditorProps) => {
+  const t = useT();
+  const addText = addTextProp ?? t('pages.k8s.form.add');
+  const deleteAriaLabel = deleteAriaLabelProp ?? t('common.action.delete');
+  const keyPlaceholder = keyPlaceholderProp ?? t('pages.k8s.form.key');
+  const valuePlaceholder = valuePlaceholderProp ?? t('pages.k8s.form.value');
   const { styles } = useStyles({ footerJustify });
   const addDisabled = value.some((item) => !item.keyName.trim());
 

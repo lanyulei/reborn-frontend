@@ -1,3 +1,4 @@
+import type { Translate } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import {
   createId,
@@ -203,11 +204,12 @@ const isPortNumber = (value: unknown): value is number =>
  * 「服务端口 + 协议」不重复；NodePort 30000-32767 且不重复。
  */
 export const getServicePortsError = (
-  ports?: ServicePortItem[],
+  ports: ServicePortItem[] | undefined,
+  t: Translate,
 ): string | undefined => {
   const items = (ports || []).filter(Boolean);
   if (items.length === 0) {
-    return '请至少添加一个端口';
+    return t('pages.k8s.forms.service.validation.ports.required');
   }
 
   const names = new Set<string>();
@@ -215,42 +217,63 @@ export const getServicePortsError = (
   const nodePorts = new Set<string>();
 
   for (const [index, port] of items.entries()) {
-    const label = `端口 ${index + 1}`;
+    const label = t('pages.k8s.forms.service.validation.port.label', {
+      index: index + 1,
+    });
     const name = port.name?.trim();
     const protocol = getKubernetesProtocol(port.protocol || 'TCP');
 
     if (port.servicePort === undefined || port.servicePort === null) {
-      return `${label}：请输入服务端口`;
+      return t('pages.k8s.forms.service.validation.port.servicePortRequired', {
+        label,
+      });
     }
     if (!isPortNumber(port.servicePort)) {
-      return `${label}：服务端口范围为 1-65535`;
+      return t('pages.k8s.forms.service.validation.port.servicePortRange', {
+        label,
+      });
     }
     if (
       port.containerPort !== undefined &&
       port.containerPort !== null &&
       !isPortNumber(port.containerPort)
     ) {
-      return `${label}：容器端口范围为 1-65535`;
+      return t('pages.k8s.forms.service.validation.port.containerPortRange', {
+        label,
+      });
     }
     if (!name && items.length > 1) {
-      return `${label}：存在多个端口时必须填写端口名称`;
+      return t('pages.k8s.forms.service.validation.port.nameRequiredMultiple', {
+        label,
+      });
     }
     if (name) {
       if (name.length > PORT_NAME_MAX_LENGTH) {
-        return `${label}：端口名称最长 ${PORT_NAME_MAX_LENGTH} 个字符`;
+        return t('pages.k8s.forms.service.validation.port.nameMaxLength', {
+          label,
+          max: PORT_NAME_MAX_LENGTH,
+        });
       }
       if (!PORT_NAME_PATTERN.test(name)) {
-        return `${label}：端口名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾`;
+        return t('pages.k8s.forms.service.validation.port.namePattern', {
+          label,
+        });
       }
       if (names.has(name)) {
-        return `${label}：端口名称 ${name} 重复`;
+        return t('pages.k8s.forms.service.validation.port.nameDuplicate', {
+          label,
+          name,
+        });
       }
       names.add(name);
     }
 
     const servicePortKey = `${port.servicePort}/${protocol}`;
     if (servicePorts.has(servicePortKey)) {
-      return `${label}：服务端口 ${servicePortKey} 重复`;
+      return t('pages.k8s.forms.service.validation.port.servicePortDuplicate', {
+        label,
+        key: servicePortKey,
+      });
     }
     servicePorts.add(servicePortKey);
 
@@ -260,11 +283,18 @@ export const getServicePortsError = (
         port.nodePort < NODE_PORT_MIN ||
         port.nodePort > NODE_PORT_MAX
       ) {
-        return `${label}：节点端口范围为 ${NODE_PORT_MIN}-${NODE_PORT_MAX}`;
+        return t('pages.k8s.forms.service.validation.port.nodePortRange', {
+          label,
+          min: NODE_PORT_MIN,
+          max: NODE_PORT_MAX,
+        });
       }
       const nodePortKey = `${port.nodePort}/${protocol}`;
       if (nodePorts.has(nodePortKey)) {
-        return `${label}：节点端口 ${nodePortKey} 重复`;
+        return t('pages.k8s.forms.service.validation.port.nodePortDuplicate', {
+          label,
+          key: nodePortKey,
+        });
       }
       nodePorts.add(nodePortKey);
     }
@@ -276,17 +306,18 @@ export const getServicePortsError = (
 /** 整张表单的跨步骤校验（提交前兜底）：返回第一条错误信息 */
 export const getServiceFormError = (
   values: CreateServiceFormValues,
+  t: Translate,
 ): string | undefined => {
   if (!values.name?.trim() || !values.namespace?.trim()) {
-    return '请填写名称和命名空间';
+    return t('pages.k8s.forms.service.validation.nameNamespaceRequired');
   }
   if (Object.keys(toRecord(values.selectors)).length === 0) {
-    return '请添加至少一个工作负载选择器';
+    return t('pages.k8s.forms.service.validation.selectorRequired');
   }
   if (values.internalAccessMode === 'Headless' && values.enableExternalAccess) {
-    return '内部域名模式不支持同时开启外部访问';
+    return t('pages.k8s.forms.service.validation.headlessExternalAccess');
   }
-  return getServicePortsError(values.ports);
+  return getServicePortsError(values.ports, t);
 };
 
 const getServicePorts = (ports?: ServicePortItem[], withNodePort = true) =>

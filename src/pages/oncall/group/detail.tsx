@@ -504,7 +504,8 @@ const OncallGroupDetail: React.FC = () => {
           } else if (key === 'toggle') {
             // 停用会结束进行中的班次并清除未开始的班次：二次确认；启用直接执行
             if (!enabled) {
-              void toggle();
+              // 失败提示已由请求层给出，这里只兜住 rejection
+              toggle().catch(() => {});
               return;
             }
             modal.confirm({

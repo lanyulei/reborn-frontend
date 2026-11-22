@@ -64,6 +64,7 @@ export default {
   'pages.notify.channel.form.headers.add': '添加请求头',
   'pages.notify.channel.form.headers.key': '名称',
   'pages.notify.channel.form.headers.value': '值',
+  'pages.notify.channel.form.headers.value.editPlaceholder': '留空保留原值',
   'pages.notify.channel.form.timeout': '出站超时（秒）',
   'pages.notify.channel.form.timeout.tooltip': '1-10 秒；后端缺省 5',
   'pages.notify.channel.form.timeout.required': '请输入出站超时（1-10 秒）',

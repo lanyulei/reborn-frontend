@@ -11,7 +11,7 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import type { MenuProps } from 'antd';
-import { App, Col, Dropdown, Form, Tag } from 'antd';
+import { Alert, App, Button, Col, Dropdown, Form, Space, Tag } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DeptSelect, useDeptList } from '@/components/DeptSelect';
 import { UserDeptTags } from '@/components/DeptSelect/UserDeptTags';
@@ -30,10 +30,12 @@ import type {
   SystemUser,
   UserDept,
   UserDeptAssignment,
+  UserKind,
   UserStatus,
 } from '@/services/system/typings';
 import {
   bindUserRoles,
+  createMachineUser,
   createUser,
   deleteUser,
   getUser,
@@ -162,6 +164,7 @@ const UserList: React.FC = () => {
   const genderText = useEnumText(GENDER_META);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [machineOpen, setMachineOpen] = useState(false);
   const [editRow, setEditRow] = useState<SystemUser | null>(null);
   const [resetRow, setResetRow] = useState<SystemUser | null>(null);
   const [roleRow, setRoleRow] = useState<SystemUser | null>(null);
@@ -189,6 +192,8 @@ const UserList: React.FC = () => {
         name: row.nickname || row.username,
         status: target?.label ?? status,
       }),
+      // 停用 / 暂停 / 离职会让账号失去访问能力：确定按钮用危险色；恢复可用则不
+      okButtonProps: status === 1 ? undefined : { danger: true },
       onOk: async () => {
         await updateUserStatus(row.id, status);
         message.success(t('pages.system.user.statusChange.success'));
@@ -270,6 +275,22 @@ const UserList: React.FC = () => {
       ),
     },
     {
+      title: t('pages.system.user.column.kind'),
+      dataIndex: 'kind',
+      valueType: 'select',
+      width: 100,
+      valueEnum: {
+        1: { text: t('pages.system.user.kind.1') },
+        2: { text: t('pages.system.user.kind.2') },
+      },
+      render: (_, record) =>
+        record.kind === 2 ? (
+          <Tag color="geekblue">{t('pages.system.user.kind.2')}</Tag>
+        ) : (
+          <Tag>{t('pages.system.user.kind.1')}</Tag>
+        ),
+    },
+    {
       title: t('pages.system.user.column.isAdmin'),
       dataIndex: 'isAdmin',
       search: false,
@@ -302,7 +323,9 @@ const UserList: React.FC = () => {
       render: (_, record) => {
         // 元素权限显隐：无对应权限码的操作不渲染
         const items: MenuProps['items'] = [];
-        if (has('system.user.reset_password')) {
+        // 机器账号不能登录，也没有密码与可编辑的资料（后端同样拒绝）
+        const machine = record.kind === 2;
+        if (has('system.user.reset_password') && !machine) {
           items.push({
             key: 'resetPassword',
             label: t('pages.system.user.action.resetPassword'),
@@ -336,7 +359,7 @@ const UserList: React.FC = () => {
           });
         }
         const actions: React.ReactNode[] = [];
-        if (has('system.user.edit')) {
+        if (has('system.user.edit') && !machine) {
           actions.push(
             <a
               key="edit"
@@ -393,15 +416,22 @@ const UserList: React.FC = () => {
         <ProTable<SystemUser>
           cardBordered
           headerTitle={
-            has('system.user.create') && (
-              <CreateButton
-                onClick={() => {
-                  setCreateOpen(true);
-                }}
-              >
-                {t('pages.system.user.create.title')}
-              </CreateButton>
-            )
+            <Space>
+              {has('system.user.create') && (
+                <CreateButton
+                  onClick={() => {
+                    setCreateOpen(true);
+                  }}
+                >
+                  {t('pages.system.user.create.title')}
+                </CreateButton>
+              )}
+              {has('system.user.machine') && (
+                <Button onClick={() => setMachineOpen(true)}>
+                  {t('pages.system.user.machine.title')}
+                </Button>
+              )}
+            </Space>
           }
           rowKey="id"
           actionRef={actionRef}
@@ -416,11 +446,76 @@ const UserList: React.FC = () => {
               status: params.status as UserStatus | undefined,
               deptId: params.deptId || undefined,
               includeSubDepts: params.deptId ? true : undefined,
+              kind: params.kind ? (Number(params.kind) as UserKind) : undefined,
             });
             return toTableResult(result);
           }}
         />
       </PageContainer>
+
+      {/* 新建机器账号：没有口令、不绑内置角色，只绑指定角色（运维 Agent 等无人值守调用方用） */}
+      <ModalForm<{ username: string; nickname: string; roleIds: string[] }>
+        key="create-machine-user"
+        title={t('pages.system.user.machine.title')}
+        width={520}
+        open={machineOpen}
+        onOpenChange={setMachineOpen}
+        modalProps={{ destroyOnHidden: true }}
+        submitter={submitter.create}
+        onFinish={async (values) => {
+          await createMachineUser({
+            username: values.username,
+            nickname: values.nickname,
+            roleIds: values.roleIds,
+          });
+          message.success(t('pages.system.user.machine.created'));
+          reload();
+          return true;
+        }}
+      >
+        <Alert
+          type="info"
+          showIcon
+          title={t('pages.system.user.machine.hint')}
+          style={{ marginBottom: 16 }}
+        />
+        <ProFormText
+          name="username"
+          label={t('pages.system.user.column.username')}
+          placeholder={t('pages.system.user.form.username.rule')}
+          rules={[
+            rules.required(t('pages.system.user.column.username')),
+            {
+              pattern: /^[a-zA-Z0-9_-]{3,64}$/,
+              message: t('pages.system.user.form.username.rule'),
+            },
+          ]}
+        />
+        <ProFormText
+          name="nickname"
+          label={t('pages.system.user.column.nickname')}
+          rules={[
+            rules.required(t('pages.system.user.column.nickname')),
+            rules.maxChars(64),
+          ]}
+        />
+        <ProFormSelect
+          name="roleIds"
+          label={t('pages.system.user.machine.roles')}
+          tooltip={t('pages.system.user.machine.rolesHint')}
+          fieldProps={{ mode: 'multiple' }}
+          rules={[rules.select(t('pages.system.user.machine.roles'))]}
+          request={async () => {
+            const roles = await fetchAllPages((page, pageSize) =>
+              listRoles({ page, pageSize }),
+            );
+            return roles.map((role) => ({
+              label: `${role.name}（${role.code}）`,
+              value: role.id,
+            }));
+          }}
+        />
+      </ModalForm>
 
       {/* 新建用户：两列栅格布局（凭据 / 基本信息 / 联系方式 / 权限开关） */}
       <ModalForm
@@ -677,10 +772,14 @@ const UserList: React.FC = () => {
           }}
           onFinish={async (values) => {
             const selected: string[] = values.roleIds ?? [];
-            const merged = [
-              ...selected,
-              ...builtinRoleIds.filter((id) => !selected.includes(id)),
-            ];
+            // 机器账号不并入内置角色，按所选原样提交
+            const merged =
+              roleRow.kind === 2
+                ? selected
+                : [
+                    ...selected,
+                    ...builtinRoleIds.filter((id) => !selected.includes(id)),
+                  ];
             await bindUserRoles(roleRow.id, merged);
             message.success(t('pages.system.user.roles.success'));
             reload();
@@ -714,8 +813,8 @@ const UserList: React.FC = () => {
                       code: role.code,
                     }),
                 value: role.id,
-                // 禁用选项：下拉不可取消勾选，已选标签不渲染关闭图标
-                disabled: role.builtin === true,
+                // 禁用选项：下拉不可取消勾选，已选标签不渲染关闭图标（机器账号不锁定）
+                disabled: role.builtin === true && roleRow.kind !== 2,
               }));
             }}
           />

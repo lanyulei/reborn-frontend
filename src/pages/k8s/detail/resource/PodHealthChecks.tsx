@@ -13,6 +13,7 @@ import {
 import { Empty, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import SubTitle from '../shared/SubTitle';
 import type { ClusterNodePodContainerProbe, ClusterNodePodItem } from './types';
 
@@ -135,32 +136,35 @@ const useStyles = createStyles(({ token }) => ({
   },
 }));
 
+/** 探针类型与说明的 i18n 键；type 与 podHelpers 里生成的探针类型文案同源 */
 const PROBES: { type: string; description: string; icon: ReactNode }[] = [
   {
-    type: '就绪探针',
-    description: '通过后容器组才接收流量。',
+    type: 'pages.k8s.form.readiness',
+    description: 'pages.k8s.detail.probe.readiness.desc',
     icon: <SafetyCertificateOutlined />,
   },
   {
-    type: '存活探针',
-    description: '失败时重启容器。',
+    type: 'pages.k8s.form.liveness',
+    description: 'pages.k8s.detail.probe.liveness.desc',
     icon: <HeartOutlined />,
   },
   {
-    type: '启动探针',
-    description: '通过前不执行其它探针。',
+    type: 'pages.k8s.form.startup',
+    description: 'pages.k8s.detail.probe.startup.desc',
     icon: <RocketOutlined />,
   },
 ];
 
 const seconds = (value?: number) => (value === undefined ? '-' : `${value}s`);
-const times = (value?: number) => (value === undefined ? '-' : `${value} 次`);
+const times = (t: Translate, value?: number) =>
+  value === undefined ? '-' : t('pages.k8s.detail.probe.times', { value });
 
 type PodHealthChecksProps = {
   pod?: ClusterNodePodItem;
 };
 
 const PodHealthChecks = ({ pod }: PodHealthChecksProps) => {
+  const t = useT();
   const { styles, cx } = useStyles();
   const containers = pod?.containers ?? [];
 
@@ -172,7 +176,9 @@ const PodHealthChecks = ({ pod }: PodHealthChecksProps) => {
     item: (typeof PROBES)[number],
     probe?: ClusterNodePodContainerProbe,
   ) => {
-    const target = probe ? `${probe.handler} · ${probe.detail}` : '未配置';
+    const target = probe
+      ? `${probe.handler} · ${probe.detail}`
+      : t('pages.k8s.detail.probe.notConfigured');
     return (
       <div
         className={cx(styles.card, !probe && styles.cardMuted)}
@@ -183,10 +189,10 @@ const PodHealthChecks = ({ pod }: PodHealthChecksProps) => {
             {item.icon}
           </div>
           <div className={styles.content}>
-            <div className={styles.title}>{item.type}</div>
+            <div className={styles.title}>{t(item.type)}</div>
             <Tooltip
               placement="topLeft"
-              title={probe ? target : item.description}
+              title={probe ? target : t(item.description)}
             >
               <div className={styles.description}>{target}</div>
             </Tooltip>
@@ -195,11 +201,26 @@ const PodHealthChecks = ({ pod }: PodHealthChecksProps) => {
         {probe && (
           <div className={styles.params}>
             {[
-              ['初始延迟', seconds(probe.initial_delay_seconds ?? 0)],
-              ['超时', seconds(probe.timeout_seconds ?? 1)],
-              ['间隔', seconds(probe.period_seconds ?? 10)],
-              ['成功阈值', times(probe.success_threshold ?? 1)],
-              ['失败阈值', times(probe.failure_threshold ?? 3)],
+              [
+                t('pages.k8s.detail.probe.initialDelay'),
+                seconds(probe.initial_delay_seconds ?? 0),
+              ],
+              [
+                t('pages.k8s.detail.probe.timeout'),
+                seconds(probe.timeout_seconds ?? 1),
+              ],
+              [
+                t('pages.k8s.detail.probe.period'),
+                seconds(probe.period_seconds ?? 10),
+              ],
+              [
+                t('pages.k8s.form.probe.success'),
+                times(t, probe.success_threshold ?? 1),
+              ],
+              [
+                t('pages.k8s.form.probe.failure'),
+                times(t, probe.failure_threshold ?? 3),
+              ],
             ].map(([label, value]) => (
               <div key={label}>
                 <div className={styles.paramValue}>{value}</div>
@@ -219,22 +240,32 @@ const PodHealthChecks = ({ pod }: PodHealthChecksProps) => {
           <SubTitle>
             <span className={styles.containerTitle}>
               <ClusterOutlined />
-              容器：{container.name || '-'}
+              {t('pages.k8s.detail.containerName', {
+                name: container.name || '-',
+              })}
             </span>
           </SubTitle>
           <div className={styles.grid}>
             {PROBES.map((item) =>
               renderProbe(
                 item,
-                container.probes?.find((probe) => probe.type === item.type),
+                container.probes?.find((probe) => probe.type === t(item.type)),
               ),
             )}
           </div>
           <div className={styles.command}>
             {(
               [
-                ['启动命令', <CodeOutlined key="i" />, container.command],
-                ['启动参数', <ApiOutlined key="i" />, container.args],
+                [
+                  t('pages.k8s.form.command'),
+                  <CodeOutlined key="i" />,
+                  container.command,
+                ],
+                [
+                  t('pages.k8s.form.args'),
+                  <ApiOutlined key="i" />,
+                  container.args,
+                ],
               ] as const
             ).map(([label, icon, list]) => (
               <div className={styles.card} key={label}>
@@ -243,7 +274,11 @@ const PodHealthChecks = ({ pod }: PodHealthChecksProps) => {
                   <div className={styles.content}>
                     <div className={styles.title}>{label}</div>
                     <div className={styles.description}>
-                      {list?.length ? `${list.length} 项` : '使用镜像默认值'}
+                      {list?.length
+                        ? t('pages.k8s.detail.probe.items', {
+                            count: list.length,
+                          })
+                        : t('pages.k8s.detail.probe.imageDefault')}
                     </div>
                   </div>
                 </div>

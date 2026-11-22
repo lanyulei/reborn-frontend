@@ -92,12 +92,27 @@ const useStyles = createStyles(({ token, css }) => ({
   `,
 }));
 
-/** 容器尺寸（ResizeObserver，无第三方依赖） */
+/**
+ * 容器尺寸（ResizeObserver，无第三方依赖）。
+ * 返回的 ref 既可直接挂到元素上也能读 .current；元素晚挂载或被替换（如空态 ↔ 图表切换）时会重新观察。
+ */
 export const useSize = <T extends HTMLElement>() => {
-  const ref = useRef<T>(null);
+  const holder = useRef<T | null>(null);
+  const [el, setEl] = useState<T | null>(null);
+  const ref = useMemo<React.RefObject<T | null>>(
+    () => ({
+      get current() {
+        return holder.current;
+      },
+      set current(node: T | null) {
+        holder.current = node;
+        setEl(node);
+      },
+    }),
+    [],
+  );
   const [size, setSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
-    const el = ref.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
       const rect = entries[0].contentRect;
@@ -106,7 +121,7 @@ export const useSize = <T extends HTMLElement>() => {
     ro.observe(el);
     setSize({ width: el.clientWidth, height: el.clientHeight });
     return () => ro.disconnect();
-  }, []);
+  }, [el]);
   return [ref, size] as const;
 };
 

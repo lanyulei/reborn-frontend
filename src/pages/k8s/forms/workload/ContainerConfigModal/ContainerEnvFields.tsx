@@ -2,7 +2,8 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Link } from '@umijs/max';
 import { Button, Form, Input, Select } from 'antd';
 import { createStyles } from 'antd-style';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useT } from '@/utils/i18n';
 import CreatableSelect from '../CreatableSelect';
 import { useWizardScope } from '../context';
 import { createId } from '../helpers';
@@ -14,15 +15,6 @@ import type {
 } from '../types';
 
 const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
-
-const envSourceOptions: {
-  label: string;
-  value: ContainerEnvSourceType;
-}[] = [
-  { label: '自定义', value: 'custom' },
-  { label: '来自配置字典', value: 'configMap' },
-  { label: '来自保密字典', value: 'secret' },
-];
 
 const useStyles = createStyles(({ token }) => ({
   envs: {
@@ -143,6 +135,7 @@ const EnvReferenceFields = ({
   onChange,
 }: EnvReferenceFieldsProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { clusterId, namespace } = useWizardScope();
   const { keys, loading: keysLoading } = useConfigResourceKeys(
     clusterId,
@@ -155,14 +148,21 @@ const EnvReferenceFields = ({
     <>
       <Form.Item
         name={[fieldName, 'resourceName']}
-        rules={[{ required: true, message: '请选择资源' }]}
+        rules={[
+          {
+            required: true,
+            message: t(
+              'pages.k8s.forms.workload.container.env.resource.required',
+            ),
+          },
+        ]}
       >
         <CreatableSelect
           className={styles.control}
           disabled={!namespace}
           items={resourceNames}
           loading={resourcesLoading}
-          placeholder="资源"
+          placeholder={t('pages.k8s.forms.workload.container.env.resource')}
           onChange={(resourceName) =>
             onChange(fieldName, { resourceName, resourceKey: undefined })
           }
@@ -170,14 +170,21 @@ const EnvReferenceFields = ({
       </Form.Item>
       <Form.Item
         name={[fieldName, 'resourceKey']}
-        rules={[{ required: true, message: '请选择资源中的键' }]}
+        rules={[
+          {
+            required: true,
+            message: t(
+              'pages.k8s.forms.workload.container.env.resourceKey.required',
+            ),
+          },
+        ]}
       >
         <CreatableSelect
           className={styles.control}
           disabled={!item.resourceName}
           items={keys}
           loading={keysLoading}
-          placeholder="资源中的键"
+          placeholder={t('pages.k8s.forms.workload.container.env.resourceKey')}
           onChange={(resourceKey) =>
             onChange(fieldName, {
               resourceKey,
@@ -192,7 +199,27 @@ const EnvReferenceFields = ({
 
 const ContainerEnvFields = () => {
   const { styles } = useStyles();
+  const t = useT();
   const form = Form.useFormInstance();
+  const envSourceOptions = useMemo<
+    { label: string; value: ContainerEnvSourceType }[]
+  >(
+    () => [
+      {
+        label: t('pages.k8s.forms.workload.container.env.source.custom'),
+        value: 'custom',
+      },
+      {
+        label: t('pages.k8s.forms.workload.container.env.source.configMap'),
+        value: 'configMap',
+      },
+      {
+        label: t('pages.k8s.forms.workload.container.env.source.secret'),
+        value: 'secret',
+      },
+    ],
+    [t],
+  );
   // 命名空间来自向导表单（容器弹窗自己的表单里没有这个字段）
   const { clusterId, namespace } = useWizardScope();
   const envItems =
@@ -270,7 +297,9 @@ const ContainerEnvFields = () => {
                       <Select
                         className={styles.control}
                         options={envSourceOptions}
-                        placeholder="请选择来源"
+                        placeholder={t(
+                          'pages.k8s.forms.workload.container.env.source.required',
+                        )}
                         onChange={(nextSourceType) =>
                           updateEnvItem(field.name, {
                             sourceType: nextSourceType,
@@ -284,15 +313,22 @@ const ContainerEnvFields = () => {
                     <Form.Item
                       name={[field.name, 'keyName']}
                       rules={[
-                        { required: true, message: '请输入键' },
+                        {
+                          required: true,
+                          message: t('pages.k8s.forms.common.key.required'),
+                        },
                         {
                           pattern: ENV_NAME_PATTERN,
-                          message:
-                            '键只能包含字母、数字和下划线，且不能以数字开头',
+                          message: t(
+                            'pages.k8s.forms.workload.container.env.key.pattern',
+                          ),
                         },
                       ]}
                     >
-                      <Input className={styles.control} placeholder="键" />
+                      <Input
+                        className={styles.control}
+                        placeholder={t('pages.k8s.form.key')}
+                      />
                     </Form.Item>
                     {sourceType === 'configMap' || sourceType === 'secret' ? (
                       <EnvReferenceFields
@@ -307,11 +343,16 @@ const ContainerEnvFields = () => {
                       />
                     ) : (
                       <Form.Item name={[field.name, 'value']}>
-                        <Input className={styles.control} placeholder="值" />
+                        <Input
+                          className={styles.control}
+                          placeholder={t('pages.k8s.form.value')}
+                        />
                       </Form.Item>
                     )}
                     <Button
-                      aria-label="删除环境变量"
+                      aria-label={t(
+                        'pages.k8s.forms.workload.container.env.delete',
+                      )}
                       className={styles.deleteButton}
                       icon={<DeleteOutlined />}
                       type="text"
@@ -323,20 +364,24 @@ const ContainerEnvFields = () => {
             </div>
             <div className={styles.footer}>
               <div className={styles.helper}>
-                如果没有配置字典或保密字典满足要求，您可以{' '}
+                {t('pages.k8s.forms.workload.container.env.helper.prefix')}{' '}
                 <Link target="_blank" to="/k8s/config/config-maps">
-                  创建配置字典
+                  {t(
+                    'pages.k8s.forms.workload.container.env.helper.createConfigMap',
+                  )}
                 </Link>{' '}
-                或{' '}
+                {t('pages.k8s.forms.workload.container.env.helper.or')}{' '}
                 <Link target="_blank" to="/k8s/config/secrets">
-                  创建保密字典
+                  {t(
+                    'pages.k8s.forms.workload.container.env.helper.createSecret',
+                  )}
                 </Link>
-                。
+                {t('pages.k8s.forms.workload.container.env.helper.suffix')}
               </div>
               <div className={styles.actions}>
                 <Button disabled={addDisabled} onClick={() => addEnvItem(add)}>
                   <PlusOutlined />
-                  添加环境变量
+                  {t('pages.k8s.forms.workload.container.env.add')}
                 </Button>
               </div>
             </div>

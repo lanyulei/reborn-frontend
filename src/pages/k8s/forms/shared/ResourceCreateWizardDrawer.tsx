@@ -3,6 +3,7 @@ import type { StepsProps } from 'antd';
 import { Button, Drawer, Space, Steps, Switch } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
+import { useT } from '@/utils/i18n';
 import { YamlEditor } from '../../components/YamlEditor';
 
 export type ResourceCreateWizardStep = NonNullable<StepsProps['items']>[number];
@@ -120,7 +121,7 @@ const ResourceCreateWizardDrawer = ({
   loading = false,
   open,
   steps,
-  submitText = '创建',
+  submitText: submitTextProp,
   title,
   // 78vw 且 1000px 封顶：窄屏随视口，其余封顶 1000px，不随宽屏拉伸
   width = 'min(1000px, 78vw)',
@@ -134,6 +135,8 @@ const ResourceCreateWizardDrawer = ({
   onYamlChange,
   onYamlModeChange,
 }: ResourceCreateWizardDrawerProps) => {
+  const t = useT();
+  const submitText = submitTextProp ?? t('common.action.submitCreate');
   const { styles } = useStyles();
 
   /**
@@ -160,9 +163,9 @@ const ResourceCreateWizardDrawer = ({
       extra={
         <div className={styles.headerExtra}>
           <Space className={styles.yamlSwitch}>
-            <span>编辑 YAML</span>
+            <span>{t('pages.k8s.action.editYaml')}</span>
             <Switch
-              aria-label="切换 YAML 编辑模式"
+              aria-label={t('pages.k8s.forms.shared.toggleYamlMode')}
               checked={yamlMode}
               onChange={guard(onYamlModeChange)}
             />
@@ -173,13 +176,15 @@ const ResourceCreateWizardDrawer = ({
         <div className={styles.footer}>
           <span />
           <div className={styles.footerActions}>
-            <Button onClick={onCancel}>取消</Button>
+            <Button onClick={onCancel}>{t('common.action.cancel')}</Button>
             {!yamlMode && current > 0 && (
-              <Button onClick={onPrev}>上一步</Button>
+              <Button onClick={onPrev}>
+                {t('pages.k8s.forms.shared.prevStep')}
+              </Button>
             )}
             {!yamlMode && current < steps.length - 1 ? (
               <Button type="primary" onClick={guard(onNext)}>
-                下一步
+                {t('pages.k8s.forms.shared.nextStep')}
               </Button>
             ) : (
               <Button

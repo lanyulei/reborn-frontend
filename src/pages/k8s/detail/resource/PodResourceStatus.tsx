@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Empty, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
+import { type Translate, useT } from '@/utils/i18n';
 import { statusLabel } from '../../components/statusText';
 import SubTitle from '../shared/SubTitle';
 import { formatValue } from './helpers';
@@ -284,6 +285,7 @@ const getVolumeMounts = (pod: ClusterNodePodItem, volumeName?: string) =>
   );
 
 const getResourcePair = (
+  t: Translate,
   resources: ClusterNodePodContainerResources | undefined,
   resourceName: 'cpu' | 'memory',
 ) => {
@@ -294,7 +296,9 @@ const getResourcePair = (
     return '-';
   }
 
-  return `${request || '无预留'} / ${limit || '无上限'}`;
+  return `${request || t('pages.k8s.detail.noRequest')} / ${
+    limit || t('pages.k8s.detail.noLimit')
+  }`;
 };
 
 const pickSingleResource = (
@@ -324,6 +328,7 @@ const PodResourceStatus = ({
   onLog,
   onTerminal,
 }: PodResourceStatusProps) => {
+  const t = useT();
   const { styles } = useStyles();
 
   if (!pod) {
@@ -333,7 +338,7 @@ const PodResourceStatus = ({
   return (
     <div className={styles.resourceStatus}>
       <div>
-        <SubTitle>容器</SubTitle>
+        <SubTitle>{t('pages.k8s.detail.containers')}</SubTitle>
         {pod.containers && pod.containers.length > 0 ? (
           <div className={styles.list}>
             {pod.containers.map((container) => {
@@ -362,9 +367,13 @@ const PodResourceStatus = ({
                             </div>
                           </Tooltip>
                           {onLog && (
-                            <Tooltip title="容器日志">
+                            <Tooltip
+                              title={t('pages.k8s.detail.pod.containerLogs')}
+                            >
                               <Button
-                                aria-label="容器日志"
+                                aria-label={t(
+                                  'pages.k8s.detail.pod.containerLogs',
+                                )}
                                 className={[
                                   styles.trigger,
                                   styles.triggerButton,
@@ -376,9 +385,9 @@ const PodResourceStatus = ({
                             </Tooltip>
                           )}
                           {onTerminal && (
-                            <Tooltip title="终端">
+                            <Tooltip title={t('pages.k8s.action.terminal')}>
                               <Button
-                                aria-label="终端"
+                                aria-label={t('pages.k8s.action.terminal')}
                                 className={[
                                   styles.trigger,
                                   styles.triggerButton,
@@ -393,11 +402,13 @@ const PodResourceStatus = ({
                           <Tooltip
                             title={
                               resizeDisabledReason ||
-                              (onResize ? '调整容器资源' : '没有调整资源的权限')
+                              (onResize
+                                ? t('pages.k8s.detail.resize.action')
+                                : t('pages.k8s.detail.resize.noPermission'))
                             }
                           >
                             <Button
-                              aria-label="调整容器资源"
+                              aria-label={t('pages.k8s.detail.resize.action')}
                               className={[
                                 styles.trigger,
                                 styles.triggerButton,
@@ -411,7 +422,9 @@ const PodResourceStatus = ({
                         </div>
                         <Tooltip title={container.image || '-'}>
                           <div className={styles.image}>
-                            镜像：{container.image || '-'}
+                            {t('pages.k8s.detail.pod.image', {
+                              image: container.image || '-',
+                            })}
                           </div>
                         </Tooltip>
                       </div>
@@ -420,13 +433,17 @@ const PodResourceStatus = ({
                       <div className={styles.metricValue}>
                         {statusLabel(container.status) || '-'}
                       </div>
-                      <div className={styles.metricLabel}>状态</div>
+                      <div className={styles.metricLabel}>
+                        {t('common.column.status')}
+                      </div>
                     </div>
                     <div>
                       <div className={styles.metricValue}>
                         {container.restart_count || 0}
                       </div>
-                      <div className={styles.metricLabel}>重启次数</div>
+                      <div className={styles.metricLabel}>
+                        {t('pages.k8s.detail.restarts')}
+                      </div>
                     </div>
                     <div>
                       <Tooltip title={formatContainerPorts(container.ports)}>
@@ -434,7 +451,9 @@ const PodResourceStatus = ({
                           {formatContainerPorts(container.ports)}
                         </div>
                       </Tooltip>
-                      <div className={styles.metricLabel}>端口</div>
+                      <div className={styles.metricLabel}>
+                        {t('pages.k8s.detail.ports')}
+                      </div>
                     </div>
                   </div>
                   <div className={styles.resourceGrid}>
@@ -445,9 +464,11 @@ const PodResourceStatus = ({
                           cpuSynced ? '' : styles.resourceChanged,
                         ].join(' ')}
                       >
-                        {getResourcePair(container.resources, 'cpu')}
+                        {getResourcePair(t, container.resources, 'cpu')}
                       </div>
-                      <div className={styles.metricLabel}>期望 CPU</div>
+                      <div className={styles.metricLabel}>
+                        {t('pages.k8s.detail.pod.desiredCpu')}
+                      </div>
                     </div>
                     <div className={styles.resourceItem}>
                       <div
@@ -456,9 +477,11 @@ const PodResourceStatus = ({
                           cpuSynced ? '' : styles.resourceChanged,
                         ].join(' ')}
                       >
-                        {getResourcePair(container.status_resources, 'cpu')}
+                        {getResourcePair(t, container.status_resources, 'cpu')}
                       </div>
-                      <div className={styles.metricLabel}>实际 CPU</div>
+                      <div className={styles.metricLabel}>
+                        {t('pages.k8s.detail.pod.actualCpu')}
+                      </div>
                     </div>
                     <div className={styles.resourceItem}>
                       <div
@@ -467,9 +490,11 @@ const PodResourceStatus = ({
                           memorySynced ? '' : styles.resourceChanged,
                         ].join(' ')}
                       >
-                        {getResourcePair(container.resources, 'memory')}
+                        {getResourcePair(t, container.resources, 'memory')}
                       </div>
-                      <div className={styles.metricLabel}>期望内存</div>
+                      <div className={styles.metricLabel}>
+                        {t('pages.k8s.detail.pod.desiredMemory')}
+                      </div>
                     </div>
                     <div className={styles.resourceItem}>
                       <div
@@ -478,33 +503,47 @@ const PodResourceStatus = ({
                           memorySynced ? '' : styles.resourceChanged,
                         ].join(' ')}
                       >
-                        {getResourcePair(container.status_resources, 'memory')}
+                        {getResourcePair(
+                          t,
+                          container.status_resources,
+                          'memory',
+                        )}
                       </div>
-                      <div className={styles.metricLabel}>实际内存</div>
+                      <div className={styles.metricLabel}>
+                        {t('pages.k8s.detail.pod.actualMemory')}
+                      </div>
                     </div>
                     <div className={styles.resourceItem}>
                       <div className={styles.resourceValue}>
                         {container.allocated_resources?.cpu || '-'}
                       </div>
-                      <div className={styles.metricLabel}>分配 CPU</div>
+                      <div className={styles.metricLabel}>
+                        {t('pages.k8s.detail.pod.allocatedCpu')}
+                      </div>
                     </div>
                     <div className={styles.resourceItem}>
                       <div className={styles.resourceValue}>
                         {container.allocated_resources?.memory || '-'}
                       </div>
-                      <div className={styles.metricLabel}>分配内存</div>
+                      <div className={styles.metricLabel}>
+                        {t('pages.k8s.detail.pod.allocatedMemory')}
+                      </div>
                     </div>
                     <div className={styles.resourceItem}>
                       <div className={styles.resourceValue}>
                         {getResizePolicy(container, 'cpu') || '-'}
                       </div>
-                      <div className={styles.metricLabel}>CPU 策略</div>
+                      <div className={styles.metricLabel}>
+                        {t('pages.k8s.detail.pod.cpuPolicy')}
+                      </div>
                     </div>
                     <div className={styles.resourceItem}>
                       <div className={styles.resourceValue}>
                         {getResizePolicy(container, 'memory') || '-'}
                       </div>
-                      <div className={styles.metricLabel}>内存策略</div>
+                      <div className={styles.metricLabel}>
+                        {t('pages.k8s.detail.pod.memoryPolicy')}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -512,11 +551,14 @@ const PodResourceStatus = ({
             })}
           </div>
         ) : (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无容器" />
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={t('pages.k8s.detail.container.empty')}
+          />
         )}
       </div>
       <div>
-        <SubTitle>卷</SubTitle>
+        <SubTitle>{t('pages.k8s.detail.pod.volumes')}</SubTitle>
         {pod.volumes && pod.volumes.length > 0 ? (
           <div className={styles.list}>
             {pod.volumes.map((volume) => {
@@ -534,7 +576,9 @@ const PodResourceStatus = ({
                           </div>
                         </Tooltip>
                         <div className={styles.image}>
-                          卷类型：{formatValue(volume.type)}
+                          {t('pages.k8s.detail.container.volumeType', {
+                            type: formatValue(volume.type),
+                          })}
                         </div>
                       </div>
                     </div>
@@ -545,7 +589,9 @@ const PodResourceStatus = ({
                         </div>
                       </Tooltip>
                       <div className={styles.metricLabel}>
-                        {volume.source_path ? '路径' : '来源'}
+                        {volume.source_path
+                          ? t('pages.k8s.detail.pod.path')
+                          : t('pages.k8s.detail.source')}
                       </div>
                     </div>
                   </div>
@@ -563,7 +609,9 @@ const PodResourceStatus = ({
                           <Tooltip title={mount.mount_path || '-'}>
                             <span className={styles.mountPath}>
                               {mount.mount_path || '-'}
-                              {mount.read_only ? '（只读）' : ''}
+                              {mount.read_only
+                                ? t('pages.k8s.detail.container.readOnly')
+                                : ''}
                             </span>
                           </Tooltip>
                         </div>
@@ -575,7 +623,10 @@ const PodResourceStatus = ({
             })}
           </div>
         ) : (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无卷" />
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={t('pages.k8s.detail.pod.noVolumes')}
+          />
         )}
       </div>
     </div>

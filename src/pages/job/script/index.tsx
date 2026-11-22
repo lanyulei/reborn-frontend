@@ -80,9 +80,21 @@ const ScriptDrawer: React.FC<{
       }}
       drawerProps={{ destroyOnHidden: true, mask: { closable: false } }}
       request={async () => {
-        if (!row) return { name: '', interpreter: 'bash', content: '' };
+        const initial: ScriptFormValues = {
+          name: '',
+          interpreter: 'bash',
+          content: '',
+        };
+        if (!row) return initial;
         // 列表不含脚本内容：编辑时取详情
-        const { script } = await getJobScript(row.id);
+        let script: JobScript;
+        try {
+          ({ script } = await getJobScript(row.id));
+        } catch {
+          // 错误提示已由请求层给出：关闭抽屉，避免留下一张空白但可保存的表单
+          onClose();
+          return initial;
+        }
         setSaved(script);
         return {
           name: script.spec.name,
@@ -280,7 +292,8 @@ const ScriptList: React.FC = () => {
       hideInTable: !hasAnyAction,
       render: (_, record) => {
         const actions: React.ReactNode[] = [];
-        if (access.canJobAdhoc) {
+        // 与快速执行页一致：进页面要菜单权限，发起执行要 job.adhoc.run 元素权限
+        if (access.canJobAdhoc && has('job.adhoc.run')) {
           actions.push(
             <Link key="run" to={`/job/adhoc?scriptId=${record.id}`}>
               {t('pages.job.template.run')}

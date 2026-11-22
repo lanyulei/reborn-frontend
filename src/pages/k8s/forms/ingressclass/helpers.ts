@@ -1,4 +1,6 @@
 // 纯函数：不要在这里引入 React / antd（校验脚本会用 Node 直接加载本文件）
+// 校验文案通过参数 t（useT() 的返回值）翻译，本文件只持有 i18n 键
+import type { Translate } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import {
   getRecordValue,
@@ -106,14 +108,15 @@ const hasKeyValueContent = (items?: KeyValueEditorItem[]) =>
 
 const validateKeyValueItems = (
   items: KeyValueEditorItem[] | undefined,
-  label: string,
+  duplicateMessageId: string,
+  t: Translate,
 ) => {
   const keys = (items || [])
     .map((item) => trimValue(item.keyName))
     .filter(Boolean);
 
   if (new Set(keys).size !== keys.length) {
-    return `${label}键不能重复`;
+    return t(duplicateMessageId);
   }
 
   return undefined;
@@ -121,17 +124,18 @@ const validateKeyValueItems = (
 
 const validateIngressClassBasicInfo = (
   values: CreateIngressClassFormValues,
+  t: Translate,
 ) => {
   const name = trimValue(values.name);
 
   if (!name) {
-    return '请输入名称';
+    return t('pages.k8s.forms.common.name.required');
   }
   if (name.length > 63 || !NAME_PATTERN.test(name)) {
-    return '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾，最长 63 个字符';
+    return t('pages.k8s.forms.common.name.dnsLabel');
   }
   if (!trimValue(values.controller)) {
-    return '请输入控制器';
+    return t('pages.k8s.forms.ingressclass.controller.required');
   }
 
   return undefined;
@@ -139,57 +143,74 @@ const validateIngressClassBasicInfo = (
 
 const validateIngressClassParameters = (
   values: CreateIngressClassFormValues,
+  t: Translate,
 ) => {
   if (values.enableParameters !== 'true') {
     return undefined;
   }
 
   if (!trimValue(values.parameterKind)) {
-    return '参数引用必须填写类型';
+    return t('pages.k8s.forms.ingressclass.parameters.kindRequired');
   }
   if (!trimValue(values.parameterName)) {
-    return '参数引用必须填写名称';
+    return t('pages.k8s.forms.ingressclass.parameters.nameRequired');
   }
   if (
     values.parameterScope === 'Namespace' &&
     !trimValue(values.parameterNamespace)
   ) {
-    return '命名空间级参数引用必须填写命名空间';
+    return t('pages.k8s.forms.ingressclass.parameters.namespaceRequired');
   }
 
   return undefined;
 };
 
-const validateIngressClassMetadata = (values: CreateIngressClassFormValues) =>
-  validateKeyValueItems(values.labels, '标签') ||
-  validateKeyValueItems(values.annotations, '注解');
+const validateIngressClassMetadata = (
+  values: CreateIngressClassFormValues,
+  t: Translate,
+) =>
+  validateKeyValueItems(
+    values.labels,
+    'pages.k8s.forms.ingressclass.labelKeyDuplicate',
+    t,
+  ) ||
+  validateKeyValueItems(
+    values.annotations,
+    'pages.k8s.forms.ingressclass.annotationKeyDuplicate',
+    t,
+  );
 
 const validateIngressClassStep = (
   values: CreateIngressClassFormValues,
   step: number,
+  t: Translate,
 ) => {
   if (step === 0) {
-    return validateIngressClassBasicInfo(values);
+    return validateIngressClassBasicInfo(values, t);
   }
   if (step === 1) {
-    return validateIngressClassParameters(values);
+    return validateIngressClassParameters(values, t);
   }
   if (step === 2) {
-    return validateIngressClassMetadata(values);
+    return validateIngressClassMetadata(values, t);
   }
 
   return undefined;
 };
 
 /** 提交前对全部步骤的校验（当前未挂载的步骤也覆盖） */
-const validateIngressClassFormValues = (values: CreateIngressClassFormValues) =>
-  validateIngressClassBasicInfo(values) ||
-  validateIngressClassParameters(values) ||
-  validateIngressClassMetadata(values);
+const validateIngressClassFormValues = (
+  values: CreateIngressClassFormValues,
+  t: Translate,
+) =>
+  validateIngressClassBasicInfo(values, t) ||
+  validateIngressClassParameters(values, t) ||
+  validateIngressClassMetadata(values, t);
 
 /** 手写 YAML 的本地预检；最终以服务端预检为准 */
 const getIngressClassYamlValidationError = (
   resource: Record<string, unknown>,
+  t: Translate,
 ) => {
   const metadataRecord = getRecordValue(resource.metadata);
   const specRecord = getRecordValue(resource.spec);
@@ -217,19 +238,23 @@ const getIngressClassYamlValidationError = (
       : '';
 
   if (!name) {
-    return 'YAML 必须包含 metadata.name';
+    return t('pages.k8s.forms.common.yaml.nameRequired');
   }
   if (namespace) {
-    return 'Ingress 类是集群级资源，YAML 不应包含 metadata.namespace';
+    return t('pages.k8s.forms.ingressclass.yaml.noNamespace');
   }
   if (kind !== INGRESS_CLASS_KIND) {
-    return `YAML kind 必须为 ${INGRESS_CLASS_KIND}`;
+    return t('pages.k8s.forms.common.yaml.kindMismatch', {
+      kind: INGRESS_CLASS_KIND,
+    });
   }
   if (apiVersion !== INGRESS_CLASS_API_VERSION) {
-    return `YAML apiVersion 必须为 ${INGRESS_CLASS_API_VERSION}`;
+    return t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+      apiVersion: INGRESS_CLASS_API_VERSION,
+    });
   }
   if (!controller) {
-    return 'YAML 必须包含 spec.controller';
+    return t('pages.k8s.forms.ingressclass.yaml.controllerRequired');
   }
   if (
     parametersRecord &&
@@ -238,24 +263,26 @@ const getIngressClassYamlValidationError = (
       typeof parametersRecord.name !== 'string' ||
       !parametersRecord.name.trim())
   ) {
-    return 'YAML spec.parameters 必须包含 kind 和 name';
+    return t('pages.k8s.forms.ingressclass.yaml.parametersKindName');
   }
   if (
     parameterScope !== undefined &&
     parameterScope !== 'Cluster' &&
     parameterScope !== 'Namespace'
   ) {
-    return 'YAML spec.parameters.scope 必须为 Cluster 或 Namespace';
+    return t('pages.k8s.forms.ingressclass.yaml.parametersScope');
   }
   if (parameterScope === 'Namespace' && !parameterNamespace) {
-    return '命名空间级参数引用必须包含 namespace';
+    return t('pages.k8s.forms.ingressclass.yaml.parametersNamespaceRequired');
   }
   if (
     parametersRecord &&
     parameterScope !== 'Namespace' &&
     parameterNamespace
   ) {
-    return '只有 Namespace 作用域的参数引用可以包含 namespace';
+    return t(
+      'pages.k8s.forms.ingressclass.yaml.parametersNamespaceOnlyNamespaced',
+    );
   }
 
   return undefined;

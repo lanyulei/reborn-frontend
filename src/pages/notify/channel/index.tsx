@@ -263,10 +263,18 @@ const ChannelConfigFields: React.FC<{
                   rules.max(128),
                 ]}
               />
-              <ProFormText
+              {/* 请求头常放令牌：密文输入、后端只写不回显；编辑时留空 = 保留原值 */}
+              <ProFormText.Password
                 name="headerValue"
                 colProps={HALF}
                 label={t('pages.notify.channel.form.headers.value')}
+                placeholder={
+                  editing
+                    ? t(
+                        'pages.notify.channel.form.headers.value.editPlaceholder',
+                      )
+                    : undefined
+                }
                 rules={[rules.max(512)]}
               />
             </ProForm.Group>

@@ -1,5 +1,6 @@
 import { Empty } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import { LabelTags } from '../../components/cells';
 import KeyValueList from './KeyValueList';
 import SubTitle from './SubTitle';
@@ -25,9 +26,13 @@ const getEntries = (data?: Record<string, string>) =>
 const ClusterMetadata = ({
   labels,
   annotations,
-  labelTitle = '标签',
-  annotationTitle = '注解',
+  labelTitle: labelTitleProp,
+  annotationTitle: annotationTitleProp,
 }: ClusterMetadataProps) => {
+  const t = useT();
+  const labelTitle = labelTitleProp ?? t('pages.k8s.detail.labels');
+  const annotationTitle =
+    annotationTitleProp ?? t('pages.k8s.detail.annotations');
   const { styles } = useStyles();
   const labelEntries = getEntries(labels);
   const annotationEntries = getEntries(annotations);

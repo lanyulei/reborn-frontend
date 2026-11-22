@@ -553,4 +553,9 @@ export default {
   // 资源同步
   'pages.cmdb.sync.intro':
     '采集与对账由独立的数据面进程执行，本页维护采集源配置、手动触发同步并查看运行结果；凭据只写不读。',
+  'pages.cmdb.labelValue': '{label}：{value}',
+  'pages.cmdb.ci.option.label': '{name}（{model}）',
+  'pages.cmdb.detail.transition.cascade.failed':
+    '关联资源影响范围加载失败，请谨慎操作',
+  'pages.cmdb.modelDetail.loadFailed': '模型详情加载失败',
 };

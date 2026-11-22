@@ -1,3 +1,4 @@
+import type { Translate } from '@/utils/i18n';
 import { getArrayValue, getRecordValue } from '../shared/manifest';
 import type {
   CreateRoleFormValues,
@@ -159,11 +160,12 @@ const getCreateRoleStepFields = (
 /** 权限规则检查：每条规则须有动作，且配置（API 组 + 资源）或非资源 URL；通过返回 undefined */
 const getPolicyRulesError = (
   values: CreateRoleFormValues,
+  t: Translate,
 ): string | undefined => {
   const rules = values.rules || [];
 
   if (!rules.length) {
-    return '请至少添加一条权限规则';
+    return t('pages.k8s.forms.role.rules.required');
   }
 
   for (const [index, rule] of rules.entries()) {
@@ -173,22 +175,30 @@ const getPolicyRulesError = (
     const nonResourceURLs = normalizeStringList(rule.nonResourceURLs);
 
     if (!verbs.length) {
-      return `权限规则 ${index + 1} 需要选择动作`;
+      return t('pages.k8s.forms.role.rules.verbsRequired', {
+        index: index + 1,
+      });
     }
     if (rule.mode === 'nonResource') {
       if (values.type !== 'ClusterRole') {
-        return '非资源 URL 权限仅适用于 ClusterRole';
+        return t('pages.k8s.forms.role.rules.nonResourceClusterOnly');
       }
       if (!nonResourceURLs.length) {
-        return `权限规则 ${index + 1} 需要填写非资源 URL`;
+        return t('pages.k8s.forms.role.rules.nonResourceURLsRequired', {
+          index: index + 1,
+        });
       }
       continue;
     }
     if (!apiGroups.length) {
-      return `权限规则 ${index + 1} 需要选择 API 组`;
+      return t('pages.k8s.forms.role.rules.apiGroupsRequired', {
+        index: index + 1,
+      });
     }
     if (!resources.length) {
-      return `权限规则 ${index + 1} 需要选择资源`;
+      return t('pages.k8s.forms.role.rules.resourcesRequired', {
+        index: index + 1,
+      });
     }
   }
 
@@ -198,6 +208,7 @@ const getPolicyRulesError = (
 /** 聚合规则检查；通过返回 undefined */
 const getAggregationError = (
   values: CreateRoleFormValues,
+  t: Translate,
 ): string | undefined => {
   if (values.type !== 'ClusterRole' || !values.aggregationEnabled) {
     return undefined;
@@ -209,7 +220,7 @@ const getAggregationError = (
   );
 
   if (!hasLabels && !hasExpressions) {
-    return '请为聚合规则至少配置一个标签选择器';
+    return t('pages.k8s.forms.role.aggregation.selectorRequired');
   }
 
   const invalidExpressionIndex = (
@@ -228,7 +239,9 @@ const getAggregationError = (
   });
 
   if (invalidExpressionIndex >= 0) {
-    return `聚合匹配表达式 ${invalidExpressionIndex + 1} 需要选择操作符，In/NotIn 需要填写标签值`;
+    return t('pages.k8s.forms.role.aggregation.expressionInvalid', {
+      index: invalidExpressionIndex + 1,
+    });
   }
 
   return undefined;
@@ -240,6 +253,7 @@ const getAggregationError = (
  */
 const getRoleManifestError = (
   resource: Record<string, unknown>,
+  t: Translate,
   expectedKind?: CreateRoleType,
 ): string | undefined => {
   const metadata = getRecordValue(resource.metadata);
@@ -251,26 +265,30 @@ const getRoleManifestError = (
   const aggregated = Boolean(getRecordValue(resource.aggregationRule));
 
   if (expectedKind && kind !== expectedKind) {
-    return `YAML kind 必须为 ${expectedKind}`;
+    return t('pages.k8s.forms.common.yaml.kindMismatch', {
+      kind: expectedKind,
+    });
   }
   if (kind !== 'Role' && kind !== 'ClusterRole') {
-    return 'YAML kind 必须为 Role 或 ClusterRole';
+    return t('pages.k8s.forms.role.yaml.kind');
   }
   if (resource.apiVersion !== RBAC_API_VERSION) {
-    return `YAML apiVersion 必须为 ${RBAC_API_VERSION}`;
+    return t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+      apiVersion: RBAC_API_VERSION,
+    });
   }
   if (!name) {
-    return 'YAML 必须包含 metadata.name';
+    return t('pages.k8s.forms.common.yaml.nameRequired');
   }
   if (kind === 'Role' && !namespace) {
-    return 'Role YAML 必须包含 metadata.namespace';
+    return t('pages.k8s.forms.role.yaml.namespaceRequired');
   }
   if (kind === 'ClusterRole' && namespace) {
-    return 'ClusterRole YAML 不应包含 metadata.namespace';
+    return t('pages.k8s.forms.role.yaml.namespaceForbidden');
   }
   // 聚合 ClusterRole 的 rules 由控制面按选择器填充，可以不写
   if (!rules.length && !(kind === 'ClusterRole' && aggregated)) {
-    return 'YAML 必须至少包含一条 rules';
+    return t('pages.k8s.forms.role.yaml.rulesRequired');
   }
 
   const invalidRuleIndex = rules.findIndex((rule) => {
@@ -290,7 +308,9 @@ const getRoleManifestError = (
   });
 
   if (invalidRuleIndex >= 0) {
-    return `YAML rules[${invalidRuleIndex}] 需要包含 verbs；资源权限需要 apiGroups 和 resources；resources 与 nonResourceURLs 不能同时或同时不配置（nonResourceURLs 仅适用于 ClusterRole）`;
+    return t('pages.k8s.forms.role.yaml.ruleInvalid', {
+      index: invalidRuleIndex,
+    });
   }
 
   return undefined;

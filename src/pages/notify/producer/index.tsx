@@ -201,6 +201,7 @@ const ProducerList: React.FC = () => {
           actions.push(
             <ConfirmLink
               key="rotate"
+              danger
               title={t('pages.notify.producer.rotate.title')}
               description={t('pages.notify.producer.rotate.description')}
               onConfirm={async () => {

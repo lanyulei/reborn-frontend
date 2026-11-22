@@ -3,6 +3,7 @@ import type { FormInstance } from 'antd';
 import { App, Button, Form, InputNumber } from 'antd';
 import { createStyles } from 'antd-style';
 import { useState } from 'react';
+import { useT } from '@/utils/i18n';
 import ContainerConfigModal from './ContainerConfigModal';
 import type { ContainerSummaryItem } from './ContainerSummaryList';
 import ContainerSummaryList from './ContainerSummaryList';
@@ -87,6 +88,7 @@ const WorkloadContainerEditor = ({
 }: WorkloadContainerEditorProps) => {
   const { styles } = useStyles();
   const { modal } = App.useApp();
+  const t = useT();
   const [containerForm] = Form.useForm<CreateWorkloadContainerValues>();
   const [containerModalOpen, setContainerModalOpen] = useState(false);
   const [editingContainerIndex, setEditingContainerIndex] = useState<
@@ -167,11 +169,14 @@ const WorkloadContainerEditor = ({
     const target = containers[index];
 
     modal.confirm({
-      title: '删除容器',
-      content: `确定删除容器「${target?.containerName || '新容器'}」吗？该容器的配置和存储挂载设置将一并移除。`,
-      okText: '删除',
+      title: t('pages.k8s.forms.workload.container.delete'),
+      content: t('pages.k8s.forms.workload.container.delete.content', {
+        name:
+          target?.containerName || t('pages.k8s.forms.workload.container.new'),
+      }),
+      okText: t('common.action.delete'),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: t('common.action.cancel'),
       onOk: () => {
         const currentContainers = (form.getFieldValue('containers') ||
           []) as CreateWorkloadContainerValues[];
@@ -187,10 +192,14 @@ const WorkloadContainerEditor = ({
     <>
       {showReplicaPanel && type !== 'DaemonSet' && (
         <div className={styles.replicaPanel}>
-          <div className={styles.replicaLabel}>容器组副本数量</div>
+          <div className={styles.replicaLabel}>
+            {t('pages.k8s.forms.workload.container.replicas')}
+          </div>
           <div className={styles.replicaControl}>
             <Button
-              aria-label="减少容器组副本数量"
+              aria-label={t(
+                'pages.k8s.forms.workload.container.replicas.decrease',
+              )}
               className={styles.stepButton}
               disabled={replicas <= 0}
               icon={<MinusOutlined />}
@@ -199,7 +208,14 @@ const WorkloadContainerEditor = ({
             />
             <Form.Item
               name="replicas"
-              rules={[{ required: true, message: '请输入副本数' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t(
+                    'pages.k8s.forms.workload.container.replicas.required',
+                  ),
+                },
+              ]}
               style={{ marginBottom: 0 }}
             >
               <InputNumber
@@ -210,7 +226,9 @@ const WorkloadContainerEditor = ({
               />
             </Form.Item>
             <Button
-              aria-label="增加容器组副本数量"
+              aria-label={t(
+                'pages.k8s.forms.workload.container.replicas.increase',
+              )}
               className={styles.stepButton}
               icon={<PlusOutlined />}
               type="text"
@@ -220,7 +238,11 @@ const WorkloadContainerEditor = ({
         </div>
       )}
 
-      {showTitle && <div className={styles.containerTitle}>容器</div>}
+      {showTitle && (
+        <div className={styles.containerTitle}>
+          {t('pages.k8s.forms.common.container')}
+        </div>
+      )}
       <ContainerSummaryList
         items={containerItems}
         onAdd={() => openContainerModal(true)}

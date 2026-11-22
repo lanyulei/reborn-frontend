@@ -6,10 +6,7 @@
 import {
   createDomainRequest,
   type DomainRequestOptions,
-  getErrorReason,
 } from '@/services/system/domainRequest';
-import { getErrorMessage } from '@/services/system/request';
-import { t } from '@/utils/i18n';
 
 /** 作业中心域错误码（后端 job.v1.ErrorReason，仅列出前端需要分支处理的） */
 export type JobErrorReason =
@@ -26,6 +23,8 @@ export type JobErrorReason =
   | 'JOB_EXECUTION_FINISHED'
   | 'JOB_RISK_BLOCKED'
   | 'JOB_APPROVAL_UNAVAILABLE'
+  | 'JOB_SCHEDULE_INVALID'
+  | 'JOB_TRIGGER_INVALID'
   | 'JOB_TRIGGER_DISABLED';
 
 /** 有固定本地化文案的错误码 → i18n 键；其余错误码的具体原因以后端 message 为准 */
@@ -41,18 +40,37 @@ const REASON_TEXT_ID: Partial<Record<JobErrorReason, string>> = {
   JOB_EXECUTION_FINISHED: 'pages.job.error.executionFinished',
   JOB_RISK_BLOCKED: 'pages.job.error.riskBlocked',
   JOB_APPROVAL_UNAVAILABLE: 'pages.job.error.approvalUnavailable',
+  JOB_SCHEDULE_INVALID: 'pages.job.error.scheduleInvalid',
+  JOB_TRIGGER_INVALID: 'pages.job.error.triggerInvalid',
 };
 
-export { getErrorReason, getErrorStatus } from '@/services/system/domainRequest';
+/** 文案之后附后端 message 的错误码：不合法的具体原因（Cron、模板版本已变等）只有后端知道 */
+const REASONS_WITH_DETAIL: ReadonlySet<JobErrorReason> = new Set([
+  'JOB_SCHEDULE_INVALID',
+  'JOB_TRIGGER_INVALID',
+]);
+
+const domain = createDomainRequest({
+  reasonPrefix: 'pages.job.error',
+  // 作业中心的文案键是驼峰短名（见 REASON_TEXT_ID），不按 reason 命名；
+  // 仅 REASONS_WITH_DETAIL 里的错误码附后端 message
+  reasonsWithDetail: Object.fromEntries(
+    Object.keys(REASON_TEXT_ID).map((reason) => [
+      reason,
+      REASONS_WITH_DETAIL.has(reason as JobErrorReason),
+    ]),
+  ),
+  textIds: REASON_TEXT_ID,
+});
+
+export {
+  getErrorReason,
+  getErrorStatus,
+} from '@/services/system/domainRequest';
 
 /** 错误 → 展示文案：有固定文案的错误码用本地化文案，否则用后端 message */
-export const getJobErrorMessage = (error: unknown): string => {
-  const textId = REASON_TEXT_ID[getErrorReason(error) as JobErrorReason];
-  return textId ? t(textId) : getErrorMessage(error);
-};
+export const getJobErrorMessage = domain.getErrorMessage;
 
 export type JobRequestOptions = DomainRequestOptions;
 
-export const jobRequest = createDomainRequest({
-  errorMessage: getJobErrorMessage,
-});
+export const jobRequest = domain.request;

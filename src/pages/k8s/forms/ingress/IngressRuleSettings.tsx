@@ -17,6 +17,7 @@ import {
 } from 'antd';
 import { createStyles } from 'antd-style';
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import KubernetesCompatibilityNotice from '../shared/KubernetesCompatibilityNotice';
 import {
   createIngressRuleItem,
@@ -247,11 +248,11 @@ const useStyles = createStyles(({ token }) => ({
 }));
 
 const REWRITE_EXAMPLES = [
-  ['匹配所有路径', '.*'],
-  ['匹配 /api开头', '^/api.*'],
-  ['匹配 /html结尾', '.*\\.html$'],
-  ['匹配 /user/{id}', '^/user/(\\d+)$'],
-  ['匹配 /old 为 /new', '^/old(.*) → /new$1'],
+  ['pages.k8s.forms.ingress.rewrite.example.all', '.*'],
+  ['pages.k8s.forms.ingress.rewrite.example.apiPrefix', '^/api.*'],
+  ['pages.k8s.forms.ingress.rewrite.example.htmlSuffix', '.*\\.html$'],
+  ['pages.k8s.forms.ingress.rewrite.example.userId', '^/user/(\\d+)$'],
+  ['pages.k8s.forms.ingress.rewrite.example.oldToNew', '^/old(.*) → /new$1'],
 ];
 
 const filterByValue = (input: string, option?: { value?: unknown }) =>
@@ -274,6 +275,7 @@ const IngressRuleSettings = ({
   tlsSecretNames,
   onServiceSelect,
 }: IngressRuleSettingsProps) => {
+  const t = useT();
   const { styles } = useStyles();
   const { message } = App.useApp();
   const [ruleForm] = Form.useForm<IngressRouteRuleItem>();
@@ -301,21 +303,24 @@ const IngressRuleSettings = ({
   const rewriteTooltip = (
     <div className={styles.rewriteTooltip}>
       <div className={styles.tooltipIntro}>
-        用于重写客户端请求的路径，支持静态路径（如 /new-path）、动态路径（如
-        /$1、/$2等），组合路径（如 /v1/$1）和正则表达式
+        {t('pages.k8s.forms.ingress.rewrite.tooltip.intro')}
       </div>
       <div className={styles.tooltipTable}>
-        <div className={styles.tooltipHeader}>用途示例</div>
-        <div className={styles.tooltipHeader}>正则表达式</div>
-        {REWRITE_EXAMPLES.map(([label, value]) => (
-          <Fragment key={label}>
-            <div className={styles.tooltipCell}>{label}</div>
+        <div className={styles.tooltipHeader}>
+          {t('pages.k8s.forms.ingress.rewrite.tooltip.usage')}
+        </div>
+        <div className={styles.tooltipHeader}>
+          {t('pages.k8s.forms.ingress.rewrite.tooltip.regex')}
+        </div>
+        {REWRITE_EXAMPLES.map(([labelId, value]) => (
+          <Fragment key={labelId}>
+            <div className={styles.tooltipCell}>{t(labelId)}</div>
             <div className={styles.tooltipCell}>{value}</div>
           </Fragment>
         ))}
       </div>
       <div className={styles.tooltipNote}>
-        注：正则表达式需要于 path 字段的正则表达式匹配
+        {t('pages.k8s.forms.ingress.rewrite.tooltip.note')}
       </div>
     </div>
   );
@@ -374,19 +379,21 @@ const IngressRuleSettings = ({
   return (
     <div className={styles.stack}>
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>路由规则</div>
+        <div className={styles.sectionTitle}>
+          {t('pages.k8s.forms.ingress.rules')}
+        </div>
         <KubernetesCompatibilityNotice
-          message="Kubernetes 1.35+ 路由建议"
+          message={t('pages.k8s.forms.ingress.notice.title')}
           items={[
-            'Ingress 资源仍可使用；新建复杂流量治理能力时建议评估 Gateway API。',
-            'HTTPS 路由建议显式指定 TLS Secret，后端端口支持端口号或命名端口。',
+            t('pages.k8s.forms.ingress.notice.gatewayApi'),
+            t('pages.k8s.forms.ingress.notice.tls'),
           ]}
         />
         <div className={styles.ingressOptions}>
           <Form.Item
             label="Ingress Class"
             name="ingressClassName"
-            tooltip="指定处理该 Ingress 的控制器类。"
+            tooltip={t('pages.k8s.forms.ingress.ingressClass.tooltip')}
           >
             <AutoComplete
               allowClear
@@ -394,14 +401,16 @@ const IngressRuleSettings = ({
                 label: item,
                 value: item,
               }))}
-              placeholder="例如 nginx、alb、traefik"
+              placeholder={t(
+                'pages.k8s.forms.ingress.ingressClass.placeholder',
+              )}
               showSearch={{ filterOption: filterByValue }}
             />
           </Form.Item>
           <Form.Item
             label="TLS Secret"
             name="tlsSecretName"
-            tooltip="HTTPS 路由使用的 TLS Secret，需包含 tls.crt 与 tls.key。"
+            tooltip={t('pages.k8s.forms.ingress.tlsSecret.tooltip')}
           >
             <AutoComplete
               allowClear
@@ -409,7 +418,7 @@ const IngressRuleSettings = ({
                 label: item,
                 value: item,
               }))}
-              placeholder="例如 example-com-tls"
+              placeholder={t('pages.k8s.forms.ingress.tlsSecret.placeholder')}
               showSearch={{ filterOption: filterByValue }}
             />
           </Form.Item>
@@ -423,7 +432,7 @@ const IngressRuleSettings = ({
                 if ((value || []).some(isValidIngressRule)) {
                   return;
                 }
-                throw new Error('请添加至少一个路由规则');
+                throw new Error(t('pages.k8s.forms.ingress.rules.required'));
               },
             },
           ]}
@@ -431,16 +440,17 @@ const IngressRuleSettings = ({
           <div className={styles.list}>
             {validRules.map(({ index, rule }) => {
               const paths = (rule.paths || []).filter(isValidIngressPath);
+              const separator = t('pages.k8s.forms.ingress.summary.separator');
               const pathSummary = paths
                 .map((path) => path.path || '-')
-                .join('、');
+                .join(separator);
               const serviceSummary = paths
                 .map((path) =>
                   path.backend
-                    ? '自定义后端'
+                    ? t('pages.k8s.forms.ingress.customBackend')
                     : `${path.serviceName || '-'}:${path.servicePort || '-'}`,
                 )
-                .join('、');
+                .join(separator);
 
               return (
                 <div className={styles.card} key={rule.id}>
@@ -448,25 +458,27 @@ const IngressRuleSettings = ({
                     <GlobalOutlined className={styles.icon} />
                     <div>
                       <div className={styles.title}>
-                        {rule.host || '所有域名'}
+                        {rule.host || t('pages.k8s.forms.ingress.allHosts')}
                       </div>
                       <div className={styles.protocol}>
-                        协议： {rule.protocol}
+                        {t('pages.k8s.forms.ingress.summary.protocol', {
+                          protocol: rule.protocol,
+                        })}
                       </div>
                     </div>
                     <div className={styles.actions}>
-                      <Tooltip title="删除路由规则">
+                      <Tooltip title={t('pages.k8s.forms.ingress.rule.delete')}>
                         <Button
-                          aria-label="删除路由规则"
+                          aria-label={t('pages.k8s.forms.ingress.rule.delete')}
                           className={styles.actionButton}
                           icon={<DeleteOutlined />}
                           type="text"
                           onClick={() => deleteRule(index)}
                         />
                       </Tooltip>
-                      <Tooltip title="编辑路由规则">
+                      <Tooltip title={t('pages.k8s.forms.ingress.rule.edit')}>
                         <Button
-                          aria-label="编辑路由规则"
+                          aria-label={t('pages.k8s.forms.ingress.rule.edit')}
                           className={styles.actionButton}
                           icon={<EditOutlined />}
                           type="text"
@@ -477,13 +489,19 @@ const IngressRuleSettings = ({
                   </div>
                   <div className={styles.summary}>
                     <span className={styles.summaryItem}>
-                      路径： {pathSummary || '-'}
+                      {t('pages.k8s.forms.ingress.summary.paths', {
+                        paths: pathSummary || '-',
+                      })}
                     </span>
                     <span className={styles.summaryItem}>
-                      服务： {serviceSummary || '-'}
+                      {t('pages.k8s.forms.ingress.summary.services', {
+                        services: serviceSummary || '-',
+                      })}
                     </span>
                     <span className={styles.summaryItem}>
-                      数量： {paths.length}
+                      {t('pages.k8s.forms.ingress.summary.count', {
+                        count: paths.length,
+                      })}
                     </span>
                   </div>
                 </div>
@@ -496,9 +514,11 @@ const IngressRuleSettings = ({
             >
               <PlusOutlined />
               <span className={styles.addText}>
-                <span className={styles.addTitle}>添加路由规则</span>
+                <span className={styles.addTitle}>
+                  {t('pages.k8s.forms.ingress.rule.add')}
+                </span>
                 <span className={styles.addDescription}>
-                  添加一个路由规则将域名路径映射至服务。
+                  {t('pages.k8s.forms.ingress.rule.addDescription')}
                 </span>
               </span>
             </button>
@@ -507,7 +527,9 @@ const IngressRuleSettings = ({
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>路径重写</div>
+        <div className={styles.sectionTitle}>
+          {t('pages.k8s.forms.ingress.rewrite')}
+        </div>
         <div className={styles.rewrite}>
           <div className={styles.rewriteHeader}>
             <Form.Item
@@ -515,26 +537,35 @@ const IngressRuleSettings = ({
               name="enablePathRewrite"
               valuePropName="checked"
             >
-              <Checkbox aria-label="路径重写" />
+              <Checkbox aria-label={t('pages.k8s.forms.ingress.rewrite')} />
             </Form.Item>
             <span>
-              <div className={styles.rewriteTitle}>路径重写</div>
+              <div className={styles.rewriteTitle}>
+                {t('pages.k8s.forms.ingress.rewrite')}
+              </div>
               <div className={styles.rewriteDescription}>
-                通过正则表达式去配置应用在当前路由规则的重写路径
+                {t('pages.k8s.forms.ingress.rewrite.description')}
               </div>
             </span>
           </div>
           {enablePathRewrite && (
             <div className={styles.rewriteBody}>
               <div className={styles.rewriteFieldLabel}>
-                重写路径
+                {t('pages.k8s.forms.ingress.rewriteTarget')}
                 <Tooltip placement="right" title={rewriteTooltip}>
                   <QuestionCircleOutlined className={styles.helpIcon} />
                 </Tooltip>
               </div>
               <Form.Item
                 name="rewriteTarget"
-                rules={[{ required: true, message: '请输入重写路径' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t(
+                      'pages.k8s.forms.ingress.rewriteTarget.required',
+                    ),
+                  },
+                ]}
               >
                 <Input.TextArea
                   autoSize={{ minRows: 2, maxRows: 4 }}
@@ -551,11 +582,15 @@ const IngressRuleSettings = ({
         form={ruleForm}
         open={modalOpen}
         serviceOptions={serviceOptions}
-        title={editingIndex === undefined ? '添加路由规则' : '编辑路由规则'}
+        title={
+          editingIndex === undefined
+            ? t('pages.k8s.forms.ingress.rule.add')
+            : t('pages.k8s.forms.ingress.rule.edit')
+        }
         onCancel={() => setModalOpen(false)}
         onOk={() => {
           handleModalOk().catch(() => {
-            message.warning('请完善路由规则配置');
+            message.warning(t('pages.k8s.forms.ingress.rule.incomplete'));
           });
         }}
         onServiceSelect={onServiceSelect}

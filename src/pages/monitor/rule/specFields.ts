@@ -56,6 +56,15 @@ export const specFields = (
     labelEntries(record)
       .map(([key, value]) => `${key} = ${value}`)
       .join('\n');
+  // 枚举值前端未收录（旧快照 / 新版本后端）时回退显示原始值，不对空键取文案
+  const scopeText = (scope: RuleSpec['datasourceScope']) => {
+    const meta = DATASOURCE_SCOPE_META[scope];
+    return meta ? t(meta.textId) : String(scope);
+  };
+  const severityText = (severity: RuleSpec['queries'][number]['severity']) => {
+    const meta = NOTIFY_SEVERITY_META[severity];
+    return meta ? t(meta.textId) : String(severity);
+  };
 
   return [
     {
@@ -86,7 +95,7 @@ export const specFields = (
     {
       key: 'datasourceScope',
       label: t('pages.monitor.rule.form.datasourceScope'),
-      value: t(DATASOURCE_SCOPE_META[spec.datasourceScope]?.textId ?? ''),
+      value: scopeText(spec.datasourceScope),
     },
     {
       key: 'datasourceIds',
@@ -97,10 +106,7 @@ export const specFields = (
       key: 'queries',
       label: t('pages.monitor.rule.form.queries'),
       value: (spec.queries ?? [])
-        .map(
-          (q) =>
-            `[${t(NOTIFY_SEVERITY_META[q.severity]?.textId ?? '')}] ${q.expr}`,
-        )
+        .map((q) => `[${severityText(q.severity)}] ${q.expr}`)
         .join('\n'),
       code: true,
     },

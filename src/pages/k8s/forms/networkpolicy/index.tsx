@@ -7,6 +7,7 @@ import {
 } from '@ant-design/icons';
 import { App, Col, Form, Input, Row, Select } from 'antd';
 import { useMemo, useState } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import { parseObject, toYaml, useNamespaceOptions } from '../shared/kube';
 import type { ResourceCreateWizardStep } from '../shared/ResourceCreateWizardDrawer';
 import ResourceCreateWizardDrawer from '../shared/ResourceCreateWizardDrawer';
@@ -30,31 +31,6 @@ import NetworkPolicyRuleSettings from './NetworkPolicyRuleSettings';
 import NetworkPolicySelectorSettings from './NetworkPolicySelectorSettings';
 import type { CreateNetworkPolicyFormValues } from './types';
 
-const TITLE = '创建网络策略';
-
-const STEPS: ResourceCreateWizardStep[] = [
-  {
-    title: '基本信息',
-    icon: <AppstoreOutlined />,
-  },
-  {
-    title: 'Pod 选择器',
-    icon: <AimOutlined />,
-  },
-  {
-    title: '入站规则',
-    icon: <LoginOutlined />,
-  },
-  {
-    title: '出站规则',
-    icon: <LogoutOutlined />,
-  },
-  {
-    title: '高级设置',
-    icon: <SlidersOutlined />,
-  },
-];
-
 const buildYaml = (values: CreateNetworkPolicyFormValues) =>
   toYaml(buildCreateNetworkPolicyManifest(values));
 
@@ -62,30 +38,35 @@ const getStepStatusText = (
   current: number,
   index: number,
   values: CreateNetworkPolicyFormValues,
+  t: Translate,
 ) => {
   if (current === index) {
-    return '当前';
+    return t('pages.k8s.forms.common.current');
   }
   if (index === 0 && values.name && values.namespace) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (
     index === 1 &&
     (hasSelectorContent(values.podSelector) || values.policyTypes?.length)
   ) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 2 && values.policyTypes?.includes('Ingress')) {
     // 选了方向却没有规则 = 拒绝该方向的全部流量
-    return hasRulesContent(values.ingress) ? '已设置' : '全部拒绝';
+    return hasRulesContent(values.ingress)
+      ? t('pages.k8s.forms.common.set')
+      : t('pages.k8s.forms.networkpolicy.denyAll');
   }
   if (index === 3 && values.policyTypes?.includes('Egress')) {
-    return hasRulesContent(values.egress) ? '已设置' : '全部拒绝';
+    return hasRulesContent(values.egress)
+      ? t('pages.k8s.forms.common.set')
+      : t('pages.k8s.forms.networkpolicy.denyAll');
   }
   if (index === 4 && hasMetadataContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
-  return '未设置';
+  return t('pages.k8s.forms.common.unset');
 };
 
 const CreateNetworkPolicyForm = ({
@@ -94,8 +75,35 @@ const CreateNetworkPolicyForm = ({
   onClose,
   onDone,
 }: CreateFormProps) => {
+  const t = useT();
   const { message } = App.useApp();
   const [form] = Form.useForm<CreateNetworkPolicyFormValues>();
+  const title = t('pages.k8s.forms.networkpolicy.title');
+  const steps = useMemo<ResourceCreateWizardStep[]>(
+    () => [
+      {
+        title: t('pages.k8s.form.section.basic'),
+        icon: <AppstoreOutlined />,
+      },
+      {
+        title: t('pages.k8s.forms.common.podSelector'),
+        icon: <AimOutlined />,
+      },
+      {
+        title: t('pages.k8s.forms.networkpolicy.ingress'),
+        icon: <LoginOutlined />,
+      },
+      {
+        title: t('pages.k8s.forms.networkpolicy.egress'),
+        icon: <LogoutOutlined />,
+      },
+      {
+        title: t('pages.k8s.forms.common.advanced'),
+        icon: <SlidersOutlined />,
+      },
+    ],
+    [t],
+  );
   const [initialValues] = useState(() =>
     getInitialCreateNetworkPolicyValues(defaultNamespace || undefined),
   );
@@ -130,7 +138,11 @@ const CreateNetworkPolicyForm = ({
       // 表单项就地显示校验错误
       return false;
     }
-    const warning = validateNetworkPolicyStep(form.getFieldsValue(true), step);
+    const warning = validateNetworkPolicyStep(
+      form.getFieldsValue(true),
+      step,
+      t,
+    );
 
     if (warning) {
       message.warning(warning);
@@ -144,7 +156,7 @@ const CreateNetworkPolicyForm = ({
     if (!(await validateCurrentStep(current))) {
       return;
     }
-    setCurrent((step) => Math.min(step + 1, STEPS.length - 1));
+    setCurrent((step) => Math.min(step + 1, steps.length - 1));
   };
 
   const handleSubmit = async () => {
@@ -153,12 +165,12 @@ const CreateNetworkPolicyForm = ({
       try {
         resource = parseObject(yamlValue);
       } catch {
-        message.error('YAML 格式不正确或不是有效的资源对象，请检查后重试');
+        message.error(t('pages.k8s.forms.common.yaml.invalid'));
         return;
       }
 
       // 本地预检只拦明显的错误；最终以服务端预检为准
-      const validationError = getNetworkPolicyYamlValidationError(resource);
+      const validationError = getNetworkPolicyYamlValidationError(resource, t);
       if (validationError) {
         message.error(validationError);
         return;
@@ -176,7 +188,7 @@ const CreateNetworkPolicyForm = ({
     }
     // 只挂载了当前步骤的表单项：取全量值，而不是 validateFields 的返回值
     const formValues: CreateNetworkPolicyFormValues = form.getFieldsValue(true);
-    const warning = validateNetworkPolicyFormValues(formValues);
+    const warning = validateNetworkPolicyFormValues(formValues, t);
     if (warning) {
       message.warning(warning);
       return;
@@ -192,31 +204,41 @@ const CreateNetworkPolicyForm = ({
     <Row gutter={16}>
       <Col span={12}>
         <Form.Item
-          label="名称"
+          label={t('pages.k8s.forms.common.name')}
           name="name"
           rules={[
-            { required: true, message: '请输入名称' },
-            { max: 63, message: '名称最长 63 个字符' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.name.required'),
+            },
+            { max: 63, message: t('pages.k8s.forms.common.name.maxLength') },
             {
               pattern: NAME_PATTERN,
-              message:
-                '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+              message: t('pages.k8s.forms.common.name.pattern'),
             },
           ]}
         >
-          <Input autoFocus placeholder="请输入名称" />
+          <Input
+            autoFocus
+            placeholder={t('pages.k8s.forms.common.name.required')}
+          />
         </Form.Item>
       </Col>
       <Col span={12}>
         <Form.Item
-          label="命名空间"
+          label={t('pages.k8s.forms.common.namespace')}
           name="namespace"
-          rules={[{ required: true, message: '请选择命名空间' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.namespace.required'),
+            },
+          ]}
         >
           <Select
             loading={namespacesLoading}
             options={namespaceOptions}
-            placeholder="请选择命名空间"
+            placeholder={t('pages.k8s.forms.common.namespace.required')}
             showSearch={{ optionFilterProp: 'label' }}
           />
         </Form.Item>
@@ -237,11 +259,11 @@ const CreateNetworkPolicyForm = ({
       <ResourceCreateWizardDrawer
         current={current}
         getStepDescription={(_, index) =>
-          getStepStatusText(current, index, values)
+          getStepStatusText(current, index, values, t)
         }
         open
-        steps={STEPS}
-        title={TITLE}
+        steps={steps}
+        title={title}
         yamlMode={yamlMode}
         yamlValue={yamlValue}
         onCancel={onClose}
@@ -283,7 +305,7 @@ const CreateNetworkPolicyForm = ({
           clusterId={clusterId}
           yaml={manifest.yaml}
           namespace={manifest.namespace}
-          title={TITLE}
+          title={title}
           onBack={() => setManifest(undefined)}
           onClose={onClose}
           onDone={onDone}

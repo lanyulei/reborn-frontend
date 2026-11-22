@@ -573,4 +573,9 @@ export default {
   // resource sync
   'pages.cmdb.sync.intro':
     'Discovery and reconciliation run in a separate data-plane process; this page maintains sources, triggers runs and shows results. Credentials are write-only.',
+  'pages.cmdb.labelValue': '{label}: {value}',
+  'pages.cmdb.ci.option.label': '{name} ({model})',
+  'pages.cmdb.detail.transition.cascade.failed':
+    'Failed to load the affected related resources; proceed with care',
+  'pages.cmdb.modelDetail.loadFailed': 'Failed to load model details',
 };

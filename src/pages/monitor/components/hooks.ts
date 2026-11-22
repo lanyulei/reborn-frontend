@@ -33,6 +33,7 @@ export const useRuleGroups = (enabled = true) => {
       setIsAdmin(result.isAdmin === true);
     } catch {
       setGroups([]);
+      setIsAdmin(false);
     } finally {
       setLoading(false);
     }

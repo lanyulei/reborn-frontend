@@ -4,7 +4,6 @@
  */
 import { App, Button, Empty, Flex, Input } from 'antd';
 import { createStyles } from 'antd-style';
-import dayjs from 'dayjs';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getErrorMessage } from '@/services/system/request';
@@ -14,11 +13,10 @@ import {
   TICKET_COMMENT_RATE_LIMITED,
 } from '@/services/ticket';
 import type { TicketComment } from '@/services/ticket/typings';
-import { DATE_TIME_SECONDS_FORMAT } from '@/utils/format';
+import { formatTime } from '@/utils/format';
 import { useT } from '@/utils/i18n';
 
 const COMMENT_MAX = 2000;
-const TIME_FORMAT = DATE_TIME_SECONDS_FORMAT;
 
 const useStyles = createStyles(({ token, css }) => ({
   // 字数统计显示在输入框下方，按钮让出这一行
@@ -134,9 +132,6 @@ export const TicketComments: React.FC<{
     }
     return map;
   }, [comments]);
-
-  const formatTime = (time?: string) =>
-    time ? dayjs(time).format(TIME_FORMAT) : '';
 
   const commentItem = (comment: TicketComment) => (
     <div key={comment.id} className={styles.comment}>

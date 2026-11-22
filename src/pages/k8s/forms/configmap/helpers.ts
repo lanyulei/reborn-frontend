@@ -2,6 +2,7 @@
  * 配置字典表单 ⇄ 清单的纯逻辑（不依赖 React / antd，可单独用 Node 运行）。
  * 表单只维护 data、标签与注解；binaryData 等其余字段在写回已有对象时原样保留。
  */
+import type { Translate } from '@/utils/i18n';
 import { validLabelKey } from '../../components/workloadForm';
 import {
   createId,
@@ -63,7 +64,8 @@ const hasConfigMapDataContent = (values: CreateConfigMapFormValues) =>
 
 /** binaryData 里已有的键不能再出现在 data 里（集群会拒绝） */
 const validateConfigMapDataItems = (
-  items?: ConfigMapDataItem[],
+  items: ConfigMapDataItem[] | undefined,
+  t: Translate,
   binaryKeys: string[] = [],
 ) => {
   const keys = new Set<string>();
@@ -73,22 +75,22 @@ const validateConfigMapDataItems = (
     const value = item.value ?? '';
 
     if (!keyName && value.trim()) {
-      return '请填写数据键';
+      return t('pages.k8s.forms.configmap.data.keyRequired');
     }
     if (!keyName) {
       continue;
     }
     if (keyName.length > 253) {
-      return '键最长 253 个字符';
+      return t('pages.k8s.forms.common.key.maxLength');
     }
     if (!CONFIG_MAP_KEY_PATTERN.test(keyName)) {
-      return '键只能包含字母、数字、点（.）、下划线（_）和连字符（-）';
+      return t('pages.k8s.forms.common.key.pattern');
     }
     if (keys.has(keyName)) {
-      return '数据键不能重复';
+      return t('pages.k8s.forms.common.dataKeyDuplicate');
     }
     if (binaryKeys.includes(keyName)) {
-      return `键 ${keyName} 已被二进制数据占用`;
+      return t('pages.k8s.forms.configmap.data.keyUsedByBinary', { keyName });
     }
 
     keys.add(keyName);
@@ -100,6 +102,7 @@ const validateConfigMapDataItems = (
 const validateConfigMapMetadataItems = (
   items: ConfigMapMetadataItem[] | undefined,
   title: string,
+  t: Translate,
 ) => {
   const keys = new Set<string>();
 
@@ -107,13 +110,16 @@ const validateConfigMapMetadataItems = (
     const keyName = normalizeText(item.keyName);
 
     if (!keyName && normalizeText(item.value)) {
-      return `请填写${title}的键`;
+      return t('pages.k8s.forms.secret.metadata.keyRequired', { title });
     }
     if (keyName && !validLabelKey(keyName)) {
-      return `${title}的键「${keyName}」不合法`;
+      return t('pages.k8s.forms.secret.metadata.keyInvalid', {
+        title,
+        keyName,
+      });
     }
     if (keys.has(keyName)) {
-      return `${title}的键不能重复`;
+      return t('pages.k8s.forms.secret.metadata.keyDuplicate', { title });
     }
     if (keyName) {
       keys.add(keyName);
@@ -127,26 +133,37 @@ const validateConfigMapMetadataItems = (
  * 整份表单值的校验（返回第一条错误）。向导每次只挂载当前步骤，form.validateFields 只覆盖
  * 已挂载的表单项，提交前用它对全量值（form.getFieldsValue(true)）再检查一遍。
  */
-const getConfigMapFormError = (values: CreateConfigMapFormValues) => {
+const getConfigMapFormError = (
+  values: CreateConfigMapFormValues,
+  t: Translate,
+) => {
   const name = normalizeText(values.name);
 
   if (!name) {
-    return '请输入名称';
+    return t('pages.k8s.forms.common.name.required');
   }
   if (name.length > 63) {
-    return '名称最长 63 个字符';
+    return t('pages.k8s.forms.common.name.maxLength');
   }
   if (!CONFIG_MAP_NAME_PATTERN.test(name)) {
-    return '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾';
+    return t('pages.k8s.forms.common.name.pattern');
   }
   if (!normalizeText(values.namespace)) {
-    return '请选择命名空间';
+    return t('pages.k8s.forms.common.namespace.required');
   }
 
   return (
-    validateConfigMapMetadataItems(values.labels, '标签') ||
-    validateConfigMapMetadataItems(values.annotations, '注解') ||
-    validateConfigMapDataItems(values.dataItems)
+    validateConfigMapMetadataItems(
+      values.labels,
+      t('pages.k8s.forms.common.labels'),
+      t,
+    ) ||
+    validateConfigMapMetadataItems(
+      values.annotations,
+      t('pages.k8s.forms.common.annotations'),
+      t,
+    ) ||
+    validateConfigMapDataItems(values.dataItems, t)
   );
 };
 

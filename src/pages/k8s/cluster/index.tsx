@@ -22,7 +22,7 @@ import {
   Typography,
 } from 'antd';
 import type React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import SectionTitle from '@/components/SectionTitle';
 import {
   ConfirmLink,
@@ -40,6 +40,7 @@ import type { AgentInstall, Cluster } from '@/services/k8s/typings';
 import { usePermissions } from '@/services/system/permissions';
 import { useT } from '@/utils/i18n';
 import { toTableResult } from '@/utils/table';
+import { usePageVisible } from '@/utils/usePageVisible';
 import {
   ChangeSettingsButton,
   NamespaceRequestButton,
@@ -108,6 +109,7 @@ const ClusterList: React.FC = () => {
   const has = usePermissions();
   const { message } = App.useApp();
   const actionRef = useRef<ActionType>(null);
+  const pageVisible = usePageVisible(() => actionRef.current?.reload());
   // undefined = 抽屉关闭；null = 接入；对象 = 编辑
   const [formRow, setFormRow] = useState<Cluster | null | undefined>(undefined);
   const [agent, setAgent] = useState<{ name: string; info: AgentInstall }>();
@@ -353,8 +355,8 @@ const ClusterList: React.FC = () => {
         search={{ labelWidth: 'auto' }}
         columns={columns}
         scroll={{ x: 'max-content' }}
-        // 状态由数据面探活维护：定时刷新
-        polling={15_000}
+        // 状态由数据面探活维护：定时刷新（后台标签页不刷，恢复可见时刷新一次）
+        polling={pageVisible ? 15_000 : undefined}
         headerTitle={
           (has('k8s.cluster.create') || has('k8s.cluster.edit')) && (
             <Space>
@@ -639,13 +641,14 @@ const Namespaces: React.FC = () => {
   const [quotas, setQuotas] = useState<Record<string, NamespaceQuota>>({});
   const settings = useChangeSettings();
 
-  // 配额用量是列表之外的附加信息：取不到（无权限等）不影响列表
-  useEffect(() => {
+  // 配额用量是列表之外的附加信息：取不到（无权限等）不影响列表；随列表每次加载一起刷新
+  const quotaSeq = useRef(0);
+  const loadQuotas = useCallback(() => {
     if (!scope.clusterId) return;
-    let cancelled = false;
+    const id = ++quotaSeq.current;
     listNamespaceQuotas(scope.clusterId, undefined, { silent: true })
       .then((res) => {
-        if (cancelled) return;
+        if (id !== quotaSeq.current) return;
         setQuotas(
           Object.fromEntries(
             (res.items ?? []).map((item) => [item.namespace, item]),
@@ -653,10 +656,13 @@ const Namespaces: React.FC = () => {
         );
       })
       .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
   }, [scope.clusterId]);
+  useEffect(
+    () => () => {
+      quotaSeq.current += 1;
+    },
+    [],
+  );
 
   const extraColumns = useMemo(
     () => [
@@ -666,9 +672,10 @@ const Namespaces: React.FC = () => {
         render: (row: { name: string }) => (
           <QuotaCell quota={quotas[row.name]} />
         ),
+        onLoaded: loadQuotas,
       },
     ],
-    [quotas, t],
+    [quotas, t, loadQuotas],
   );
   return (
     <ResourceView

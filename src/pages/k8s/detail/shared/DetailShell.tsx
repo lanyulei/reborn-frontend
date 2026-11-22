@@ -2,6 +2,7 @@ import { Alert, Card, Empty, Spin, Tabs } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 import SectionTitle from '@/components/SectionTitle';
+import { useT } from '@/utils/i18n';
 
 export type DetailTabItem = {
   key: string;
@@ -48,13 +49,14 @@ const DetailShell = ({
   loading,
   error,
   ready,
-  emptyText = '暂无资源详情',
+  emptyText,
   basicInfo,
   tabs,
   activeTab,
   onTabChange,
   children,
 }: DetailShellProps) => {
+  const t = useT();
   const { styles } = useStyles();
 
   return (
@@ -67,13 +69,21 @@ const DetailShell = ({
           title={error}
         />
       )}
-      <SectionTitle style={{ marginTop: 0 }}>基本信息</SectionTitle>
+      <SectionTitle style={{ marginTop: 0 }}>
+        {t('pages.k8s.detail.basicInfo')}
+      </SectionTitle>
       <div className={styles.content}>
         <Spin spinning={loading}>
           {ready ? (
             <div className={styles.basicInfoContent}>{basicInfo}</div>
           ) : (
-            <Empty description={loading ? '加载中' : emptyText} />
+            <Empty
+              description={
+                loading
+                  ? t('pages.k8s.detail.loading')
+                  : (emptyText ?? t('pages.k8s.detail.shell.empty'))
+              }
+            />
           )}
         </Spin>
       </div>

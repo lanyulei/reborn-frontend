@@ -8,6 +8,8 @@ import {
 import type { FormInstance } from 'antd';
 import { Form } from 'antd';
 import { useMemo, useState } from 'react';
+import type { Translate } from '@/utils/i18n';
+import { useT } from '@/utils/i18n';
 import JobPodSettings from '../job/JobPodSettings';
 import JobStrategySettings from '../job/JobStrategySettings';
 import { hasKeyValueContent } from '../shared/manifest';
@@ -28,12 +30,19 @@ import {
 } from './helpers';
 import type { CreateCronJobFormValues } from './types';
 
-const STEPS = [
-  { title: '基本信息', icon: <AppstoreOutlined /> },
-  { title: '策略设置', icon: <SettingOutlined /> },
-  { title: '容器组设置', icon: <DockerOutlined /> },
-  { title: '存储设置', icon: <HddOutlined /> },
-  { title: '高级设置', icon: <SlidersOutlined /> },
+const STEP_ICONS = [
+  <AppstoreOutlined key="basic" />,
+  <SettingOutlined key="strategy" />,
+  <DockerOutlined key="pod" />,
+  <HddOutlined key="storage" />,
+  <SlidersOutlined key="advanced" />,
+];
+const STEP_TITLE_IDS = [
+  'pages.k8s.form.section.basic',
+  'pages.k8s.forms.job.step.strategy',
+  'pages.k8s.forms.workload.step.pod',
+  'pages.k8s.forms.common.storage',
+  'pages.k8s.forms.common.advanced',
 ];
 
 const hasPolicySettingsContent = (values: CreateCronJobFormValues) =>
@@ -57,26 +66,27 @@ const getStepStatusText = (
   current: number,
   index: number,
   values: CreateCronJobFormValues,
+  t: Translate,
 ) => {
   if (current === index) {
-    return '当前';
+    return t('pages.k8s.forms.common.current');
   }
   if (index === 0 && values.name && values.namespace && values.schedule) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 1 && hasPolicySettingsContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 2 && values.containers && values.containers.length > 0) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 3 && values.storageItems && values.storageItems.length > 0) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 4 && hasAdvancedSettingsContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
-  return '未设置';
+  return t('pages.k8s.forms.common.unset');
 };
 
 const CreateCronJobForm = ({
@@ -86,6 +96,8 @@ const CreateCronJobForm = ({
   onDone,
 }: CreateFormProps) => {
   const [form] = Form.useForm<CreateCronJobFormValues>();
+  const t = useT();
+  const title = t('pages.k8s.forms.cronjob.title');
   const [initialValues] = useState(() =>
     getInitialCreateCronJobValues(namespace),
   );
@@ -98,14 +110,22 @@ const CreateCronJobForm = ({
     initialValues,
     kind: CRON_JOB_KIND,
     namespace,
-    stepCount: STEPS.length,
-    title: '创建定时任务',
+    stepCount: STEP_TITLE_IDS.length,
+    title,
     onClose,
     onDone,
   });
   const scope = useMemo(
     () => ({ clusterId, namespace: values.namespace }),
     [clusterId, values.namespace],
+  );
+  const steps = useMemo(
+    () =>
+      STEP_TITLE_IDS.map((id, index) => ({
+        title: t(id),
+        icon: STEP_ICONS[index],
+      })),
+    [t],
   );
   const workloadForm =
     form as unknown as FormInstance<CreateWorkloadFormValues>;
@@ -139,10 +159,10 @@ const CreateCronJobForm = ({
       <ResourceCreateWizardDrawer
         {...drawerProps}
         getStepDescription={(_, index) =>
-          getStepStatusText(drawerProps.current, index, values)
+          getStepStatusText(drawerProps.current, index, values, t)
         }
-        steps={STEPS}
-        title="创建定时任务"
+        steps={steps}
+        title={title}
       >
         <Form {...formProps}>{renderStepContent()}</Form>
       </ResourceCreateWizardDrawer>

@@ -1,6 +1,7 @@
 /**
  * 持久卷声明「扩容」「克隆」的纯逻辑（不依赖 React / antd，可单独用 Node 运行）。
  */
+import type { Translate } from '@/utils/i18n';
 import { formatQuantity, parseQuantity } from '../../pvc/helpers';
 import type { StorageUnit } from '../../pvc/types';
 import { getRecordValue, getStringValue } from '../../shared/manifest';
@@ -80,22 +81,35 @@ const getPvcStorageSize = (manifest?: Manifest): StorageSize => {
   };
 };
 
-/** 新容量不能小于当前容量；通过返回 undefined，否则返回提示语 */
-const getPvcSizeError = (
+/** 新容量不能小于当前容量；通过返回 undefined，否则返回提示语的 i18n 键（含插值） */
+const getPvcSizeErrorId = (
   manifest: Manifest | undefined,
   quantity: string,
-): string | undefined => {
+): { id: string; values?: { current?: string } } | undefined => {
   const next = parseStorageBytes(quantity);
   if (next === undefined || next <= 0) {
-    return '请输入容量';
+    return { id: 'pages.k8s.forms.common.capacity.required' };
   }
 
   const request = getPvcStorageRequest(manifest);
   const current = parseStorageBytes(request);
 
   return current !== undefined && next < current
-    ? `容量不能小于当前容量 ${request}`
+    ? {
+        id: 'pages.k8s.forms.edit.pvc.size.belowCurrent',
+        values: { current: request },
+      }
     : undefined;
+};
+
+/** 新容量不能小于当前容量；通过返回 undefined，否则返回翻译后的提示语 */
+const getPvcSizeError = (
+  manifest: Manifest | undefined,
+  quantity: string,
+  t: Translate,
+): string | undefined => {
+  const error = getPvcSizeErrorId(manifest, quantity);
+  return error ? t(error.id, error.values) : undefined;
 };
 
 const formatPvcQuantity = (size: number, unit: StorageUnit) =>
@@ -106,9 +120,9 @@ const formatPvcQuantity = (size: number, unit: StorageUnit) =>
  * 新容量小于当前容量时抛错；与当前容量相等时保持原写法（对象不变）。
  */
 const applyPvcExpand = (manifest: Manifest, quantity: string): Manifest => {
-  const error = getPvcSizeError(manifest, quantity);
+  const error = getPvcSizeErrorId(manifest, quantity);
   if (error) {
-    throw new Error(error);
+    throw new Error(error.id);
   }
 
   const next = cloneManifest(manifest);
@@ -142,9 +156,9 @@ const buildPvcCloneManifest = (
   name: string,
   quantity: string,
 ): Manifest => {
-  const error = getPvcSizeError(manifest, quantity);
+  const error = getPvcSizeErrorId(manifest, quantity);
   if (error) {
-    throw new Error(error);
+    throw new Error(error.id);
   }
 
   const source = cloneManifest(manifest);

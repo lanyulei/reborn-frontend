@@ -122,7 +122,10 @@ export const TargetFields: React.FC = () => {
   const modelOptions = useMemo(() => {
     const options = models.map((model) => ({
       value: model.code,
-      label: `${model.name}（${model.code}）`,
+      label: t('pages.job.common.withCode', {
+        name: model.name,
+        code: model.code,
+      }),
     }));
     // 资源类型不在当前用户可见范围内：按编码回显
     if (modelCode && !models.some((model) => model.code === modelCode)) {
@@ -139,7 +142,10 @@ export const TargetFields: React.FC = () => {
         .filter((field) => !field.sensitive && !field.deprecated)
         .map((field) => ({
           value: field.code,
-          label: `${field.name}（${field.code}）`,
+          label: t('pages.job.common.withCode', {
+            name: field.name,
+            code: field.code,
+          }),
         })),
     ],
     [fields, t],

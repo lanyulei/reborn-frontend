@@ -151,6 +151,7 @@ export const ShareLinks: React.FC<{
               </a>,
               <ConfirmLink
                 key="reset"
+                danger
                 title={t('pages.oncall.share.reset.title')}
                 description={t('pages.oncall.share.reset.description')}
                 onConfirm={async () => {

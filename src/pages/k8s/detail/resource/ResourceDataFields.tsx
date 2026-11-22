@@ -1,5 +1,6 @@
 import { Empty, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import ClusterLink from '../shared/ClusterLink';
 
 const useStyles = createStyles(({ token }) => ({
@@ -49,13 +50,14 @@ type ResourceDataFieldsProps = {
 };
 
 const ResourceDataFields = ({
-  emptyText = '暂无数据',
+  emptyText,
   items = [],
 }: ResourceDataFieldsProps) => {
+  const t = useT();
   const { styles } = useStyles();
 
   if (items.length === 0) {
-    return <Empty description={emptyText} />;
+    return <Empty description={emptyText ?? t('pages.k8s.metrics.noData')} />;
   }
 
   return (

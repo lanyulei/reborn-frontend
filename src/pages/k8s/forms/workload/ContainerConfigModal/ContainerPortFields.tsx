@@ -6,17 +6,9 @@ import {
 import { Button, Form, Input, InputNumber, Select, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
+import { useT } from '@/utils/i18n';
 import { PORT_NAME_PATTERN } from '../../shared/manifest';
 import type { ContainerPortItem } from '../types';
-
-const PORT_NUMBER_RULES = [
-  {
-    type: 'number' as const,
-    min: 1,
-    max: 65535,
-    message: '端口范围为 1-65535',
-  },
-];
 
 const protocolOptions = [
   { label: 'HTTP', value: 'HTTP' },
@@ -139,7 +131,16 @@ const CompactField = ({
 
 const ContainerPortFields = () => {
   const { styles } = useStyles();
+  const t = useT();
   const form = Form.useFormInstance();
+  const portNumberRules = [
+    {
+      type: 'number' as const,
+      min: 1,
+      max: 65535,
+      message: t('pages.k8s.forms.common.port.range'),
+    },
+  ];
   const containerPorts =
     (Form.useWatch('containerPorts', {
       form,
@@ -163,8 +164,12 @@ const ContainerPortFields = () => {
                       compactFieldClassName={styles.compactField}
                       label={
                         <span className={styles.inputPrefix}>
-                          协议
-                          <Tooltip title="HTTP/HTTPS 会在提交时按 TCP 容器端口协议生成。">
+                          {t('pages.k8s.forms.workload.container.protocol')}
+                          <Tooltip
+                            title={t(
+                              'pages.k8s.forms.workload.container.ports.protocolHint',
+                            )}
+                          >
                             <QuestionCircleOutlined
                               className={styles.helpIcon}
                             />
@@ -175,7 +180,9 @@ const ContainerPortFields = () => {
                       <Form.Item name={[field.name, 'protocol']} noStyle>
                         <Select
                           options={protocolOptions}
-                          placeholder="请选择协议"
+                          placeholder={t(
+                            'pages.k8s.forms.common.protocol.required',
+                          )}
                           style={{ width: '100%' }}
                           variant="borderless"
                         />
@@ -186,21 +193,32 @@ const ContainerPortFields = () => {
                     <CompactField
                       addonClassName={styles.addon}
                       compactFieldClassName={styles.compactField}
-                      label="名称"
+                      label={t('pages.k8s.forms.common.name')}
                     >
                       <Form.Item
                         name={[field.name, 'name']}
                         noStyle
                         rules={[
-                          { max: 15, message: '端口名称最长 15 个字符' },
+                          {
+                            max: 15,
+                            message: t(
+                              'pages.k8s.forms.workload.container.ports.name.maxLength',
+                            ),
+                          },
                           {
                             pattern: PORT_NAME_PATTERN,
-                            message:
-                              '端口名称只能包含小写字母、数字和连字符（-）',
+                            message: t(
+                              'pages.k8s.forms.workload.container.ports.name.pattern',
+                            ),
                           },
                         ]}
                       >
-                        <Input placeholder="例如 http-0" variant="borderless" />
+                        <Input
+                          placeholder={t(
+                            'pages.k8s.forms.workload.container.ports.name.placeholder',
+                          )}
+                          variant="borderless"
+                        />
                       </Form.Item>
                     </CompactField>
                   </Form.Item>
@@ -208,20 +226,29 @@ const ContainerPortFields = () => {
                     <CompactField
                       addonClassName={styles.addon}
                       compactFieldClassName={styles.compactField}
-                      label="容器端口"
+                      label={t(
+                        'pages.k8s.forms.workload.container.ports.containerPort',
+                      )}
                     >
                       <Form.Item
                         name={[field.name, 'containerPort']}
                         noStyle
                         rules={[
-                          { required: true, message: '请输入容器端口' },
-                          ...PORT_NUMBER_RULES,
+                          {
+                            required: true,
+                            message: t(
+                              'pages.k8s.forms.workload.container.ports.containerPort.required',
+                            ),
+                          },
+                          ...portNumberRules,
                         ]}
                       >
                         <InputNumber
                           min={1}
                           max={65535}
-                          placeholder="必填"
+                          placeholder={t(
+                            'pages.k8s.forms.workload.container.required',
+                          )}
                           precision={0}
                           style={{ width: '100%' }}
                           variant="borderless"
@@ -230,7 +257,7 @@ const ContainerPortFields = () => {
                     </CompactField>
                   </Form.Item>
                   <Button
-                    aria-label="删除端口"
+                    aria-label={t('pages.k8s.forms.common.deletePort')}
                     className={styles.deleteButton}
                     icon={<DeleteOutlined />}
                     type="text"
@@ -258,7 +285,7 @@ const ContainerPortFields = () => {
                   }
                 }}
               >
-                添加端口
+                {t('pages.k8s.forms.workload.container.ports.add')}
               </Button>
             </div>
           </>

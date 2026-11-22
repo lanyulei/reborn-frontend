@@ -229,20 +229,26 @@ export const TemplateDrawer: React.FC<{
         if (TARGET_FIELDS.some((field) => field in changed)) setPreview(null);
       }}
       request={async () => {
-        if (!row) {
-          return {
-            name: '',
-            enabled: true,
-            playbook: '',
-            ...TARGET_INITIAL,
-            params: [],
-            forks: JOB_LIMITS.forks.default,
-            timeoutS: JOB_LIMITS.timeoutS.default,
-            port: JOB_LIMITS.port.default,
-            verbosity: 0,
-          };
+        const initial: TemplateFormValues = {
+          name: '',
+          enabled: true,
+          playbook: '',
+          ...TARGET_INITIAL,
+          params: [],
+          forks: JOB_LIMITS.forks.default,
+          timeoutS: JOB_LIMITS.timeoutS.default,
+          port: JOB_LIMITS.port.default,
+          verbosity: 0,
+        };
+        if (!row) return initial;
+        let template: JobTemplate;
+        try {
+          ({ template } = await getJobTemplate(row.id));
+        } catch {
+          // 错误提示已由请求层给出：关闭抽屉，避免留下一张空白但可保存的表单
+          onClose();
+          return initial;
         }
-        const { template } = await getJobTemplate(row.id);
         setSaved(template);
         return specToValues(template.spec);
       }}

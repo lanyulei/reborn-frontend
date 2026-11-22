@@ -8,7 +8,8 @@ import type { FormInstance } from 'antd';
 import { App, Col, Form, Input, Row, Select } from 'antd';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useT } from '@/utils/i18n';
 import KeyValueEditor from '../shared/KeyValueEditor';
 import ResourceFormSection from '../shared/ResourceFormSection';
 import type { StringListEditorItem } from '../shared/StringListEditor';
@@ -103,22 +104,6 @@ type PersistentVolumeSourceSettingsProps = {
   nodeNames: string[];
 };
 
-const booleanOptions = [
-  { label: '是', value: 'true' },
-  { label: '否', value: 'false' },
-];
-
-const hostPathTypeOptions = [
-  { label: '不指定', value: '' },
-  { label: 'DirectoryOrCreate', value: 'DirectoryOrCreate' },
-  { label: 'Directory', value: 'Directory' },
-  { label: 'FileOrCreate', value: 'FileOrCreate' },
-  { label: 'File', value: 'File' },
-  { label: 'Socket', value: 'Socket' },
-  { label: 'CharDevice', value: 'CharDevice' },
-  { label: 'BlockDevice', value: 'BlockDevice' },
-];
-
 const nodeAffinityOperatorOptions = [
   { label: 'In', value: 'In' },
   { label: 'NotIn', value: 'NotIn' },
@@ -126,33 +111,6 @@ const nodeAffinityOperatorOptions = [
   { label: 'DoesNotExist', value: 'DoesNotExist' },
   { label: 'Gt', value: 'Gt' },
   { label: 'Lt', value: 'Lt' },
-];
-
-const sourceOptions: VolumeSourceOption[] = [
-  {
-    description: '使用节点本地路径，适合开发或单节点场景。',
-    icon: <HddOutlined />,
-    label: 'HostPath',
-    value: 'hostPath',
-  },
-  {
-    description: '使用节点本地磁盘，需配置节点亲和性。',
-    icon: <DatabaseOutlined />,
-    label: 'Local',
-    value: 'local',
-  },
-  {
-    description: '使用 NFS 服务器导出的目录。',
-    icon: <CloudServerOutlined />,
-    label: 'NFS',
-    value: 'nfs',
-  },
-  {
-    description: '使用 CSI 驱动提供的卷。',
-    icon: <ApiOutlined />,
-    label: 'CSI',
-    value: 'csi',
-  },
 ];
 
 const operatorsWithValues: PersistentVolumeNodeSelectorOperator[] = [
@@ -185,7 +143,57 @@ const PersistentVolumeSourceSettings = ({
   nodeNames,
 }: PersistentVolumeSourceSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
+  const booleanOptions = useMemo(
+    () => [
+      { label: t('pages.k8s.forms.common.yes'), value: 'true' },
+      { label: t('pages.k8s.forms.common.no'), value: 'false' },
+    ],
+    [t],
+  );
+  const hostPathTypeOptions = useMemo(
+    () => [
+      { label: t('pages.k8s.forms.pv.hostPathType.unspecified'), value: '' },
+      { label: 'DirectoryOrCreate', value: 'DirectoryOrCreate' },
+      { label: 'Directory', value: 'Directory' },
+      { label: 'FileOrCreate', value: 'FileOrCreate' },
+      { label: 'File', value: 'File' },
+      { label: 'Socket', value: 'Socket' },
+      { label: 'CharDevice', value: 'CharDevice' },
+      { label: 'BlockDevice', value: 'BlockDevice' },
+    ],
+    [t],
+  );
+  const sourceOptions = useMemo<VolumeSourceOption[]>(
+    () => [
+      {
+        description: t('pages.k8s.forms.pv.source.hostPath.desc'),
+        icon: <HddOutlined />,
+        label: 'HostPath',
+        value: 'hostPath',
+      },
+      {
+        description: t('pages.k8s.forms.pv.source.local.desc'),
+        icon: <DatabaseOutlined />,
+        label: 'Local',
+        value: 'local',
+      },
+      {
+        description: t('pages.k8s.forms.pv.source.nfs.desc'),
+        icon: <CloudServerOutlined />,
+        label: 'NFS',
+        value: 'nfs',
+      },
+      {
+        description: t('pages.k8s.forms.pv.source.csi.desc'),
+        icon: <ApiOutlined />,
+        label: 'CSI',
+        value: 'csi',
+      },
+    ],
+    [t],
+  );
   const sourceType = Form.useWatch('volumeSourceType', form) || 'hostPath';
   const nodeAffinityOperator =
     Form.useWatch('nodeAffinityOperator', form) || 'In';
@@ -270,27 +278,47 @@ const PersistentVolumeSourceSettings = ({
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="服务器"
+                label={t('pages.k8s.forms.pv.nfs.server')}
                 name="nfsServer"
-                rules={[{ required: true, message: '请输入 NFS 服务器' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.pv.nfs.server.required'),
+                  },
+                ]}
               >
-                <Input placeholder="例如 10.0.0.10" />
+                <Input
+                  placeholder={t('pages.k8s.forms.pv.nfs.server.placeholder')}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="导出路径"
+                label={t('pages.k8s.forms.pv.nfs.path')}
                 name="nfsPath"
-                rules={[{ required: true, message: '请输入 NFS 导出路径' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.pv.nfs.path.required'),
+                  },
+                ]}
               >
-                <Input placeholder="例如 /exports/data" />
+                <Input
+                  placeholder={t('pages.k8s.forms.pv.nfs.path.placeholder')}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="只读" name="nfsReadOnly">
-                <Select options={booleanOptions} placeholder="请选择" />
+              <Form.Item
+                label={t('pages.k8s.form.readOnly')}
+                name="nfsReadOnly"
+              >
+                <Select
+                  options={booleanOptions}
+                  placeholder={t('pages.k8s.forms.common.select')}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -304,45 +332,78 @@ const PersistentVolumeSourceSettings = ({
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="驱动"
+                label={t('pages.k8s.forms.pv.csi.driver')}
                 name="csiDriver"
-                rules={[{ required: true, message: '请输入 CSI 驱动' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.pv.csi.driver.required'),
+                  },
+                ]}
               >
-                <Input placeholder="例如 ebs.csi.aws.com" />
+                <Input
+                  placeholder={t('pages.k8s.forms.pv.csi.driver.placeholder')}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="卷句柄"
+                label={t('pages.k8s.forms.pv.csi.volumeHandle')}
                 name="csiVolumeHandle"
-                rules={[{ required: true, message: '请输入卷句柄' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.pv.csi.volumeHandle.required'),
+                  },
+                ]}
               >
-                <Input placeholder="请输入 volumeHandle" />
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.pv.csi.volumeHandle.placeholder',
+                  )}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="文件系统" name="csiFsType">
-                <Input placeholder="例如 ext4" />
+              <Form.Item
+                label={t('pages.k8s.forms.pv.fsType')}
+                name="csiFsType"
+              >
+                <Input
+                  placeholder={t('pages.k8s.forms.pv.fsType.placeholder')}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="只读" name="csiReadOnly">
-                <Select options={booleanOptions} placeholder="请选择" />
+              <Form.Item
+                label={t('pages.k8s.form.readOnly')}
+                name="csiReadOnly"
+              >
+                <Select
+                  options={booleanOptions}
+                  placeholder={t('pages.k8s.forms.common.select')}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item
-            extra="按 CSI 驱动要求填写 volumeAttributes。"
-            label="卷属性"
+            extra={t('pages.k8s.forms.pv.csi.volumeAttributes.extra')}
+            label={t('pages.k8s.forms.pv.csi.volumeAttributes')}
             name="csiVolumeAttributes"
           >
             <KeyValueEditor
-              addText="添加"
-              deleteAriaLabel="删除卷属性"
+              addText={t('pages.k8s.form.add')}
+              deleteAriaLabel={t(
+                'pages.k8s.forms.pv.csi.volumeAttributes.delete',
+              )}
               minRows={1}
-              onAddBlocked={() => message.warning('请先填写已有属性的键。')}
+              onAddBlocked={() =>
+                message.warning(
+                  t('pages.k8s.forms.pv.csi.volumeAttributes.keyFirst'),
+                )
+              }
               onCreateItem={createKeyValueItem}
             />
           </Form.Item>
@@ -356,43 +417,75 @@ const PersistentVolumeSourceSettings = ({
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="本地路径"
+                label={t('pages.k8s.forms.pv.local.path')}
                 name="localPath"
-                rules={[{ required: true, message: '请输入本地路径' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.pv.local.path.required'),
+                  },
+                ]}
               >
-                <Input placeholder="例如 /mnt/disks/ssd1" />
+                <Input
+                  placeholder={t('pages.k8s.forms.pv.local.path.placeholder')}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="文件系统" name="localFsType">
-                <Input placeholder="例如 ext4" />
+              <Form.Item
+                label={t('pages.k8s.forms.pv.fsType')}
+                name="localFsType"
+              >
+                <Input
+                  placeholder={t('pages.k8s.forms.pv.fsType.placeholder')}
+                />
               </Form.Item>
             </Col>
           </Row>
           <ResourceFormSection
-            description="Local 持久卷必须约束到实际存在该磁盘的节点。"
-            title="节点亲和性"
+            description={t('pages.k8s.forms.pv.nodeAffinity.desc')}
+            title={t('pages.k8s.forms.pv.nodeAffinity')}
           >
             <div className={styles.sectionBody}>
               <Row gutter={16}>
                 <Col span={12}>
                   <Form.Item
-                    label="标签键"
+                    label={t('pages.k8s.forms.common.labelKey')}
                     name="nodeAffinityKey"
-                    rules={[{ required: true, message: '请输入标签键' }]}
+                    rules={[
+                      {
+                        required: true,
+                        message: t(
+                          'pages.k8s.forms.pv.nodeAffinity.key.required',
+                        ),
+                      },
+                    ]}
                   >
-                    <Input placeholder="例如 kubernetes.io/hostname" />
+                    <Input
+                      placeholder={t(
+                        'pages.k8s.forms.pv.nodeAffinity.key.placeholder',
+                      )}
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
                   <Form.Item
-                    label="操作符"
+                    label={t('pages.k8s.forms.pv.nodeAffinity.operator')}
                     name="nodeAffinityOperator"
-                    rules={[{ required: true, message: '请选择操作符' }]}
+                    rules={[
+                      {
+                        required: true,
+                        message: t(
+                          'pages.k8s.forms.pv.nodeAffinity.operator.required',
+                        ),
+                      },
+                    ]}
                   >
                     <Select
                       options={nodeAffinityOperatorOptions}
-                      placeholder="请选择操作符"
+                      placeholder={t(
+                        'pages.k8s.forms.pv.nodeAffinity.operator.required',
+                      )}
                       onChange={handleNodeAffinityOperatorChange}
                     />
                   </Form.Item>
@@ -400,15 +493,17 @@ const PersistentVolumeSourceSettings = ({
               </Row>
               {showNodeAffinityValues && nodeNames.length > 0 && (
                 <Form.Item
-                  extra="选择节点会把节点名加入下方匹配值（标签键为 kubernetes.io/hostname 时适用）。"
-                  label="从集群节点中选择"
+                  extra={t('pages.k8s.forms.pv.nodeAffinity.selectNode.extra')}
+                  label={t('pages.k8s.forms.pv.nodeAffinity.selectNode')}
                 >
                   <Select
                     options={nodeNames.map((item) => ({
                       label: item,
                       value: item,
                     }))}
-                    placeholder="请选择节点"
+                    placeholder={t(
+                      'pages.k8s.forms.pv.nodeAffinity.selectNode.placeholder',
+                    )}
                     showSearch
                     value={null}
                     onChange={addNodeAffinityValue}
@@ -417,17 +512,25 @@ const PersistentVolumeSourceSettings = ({
               )}
               {showNodeAffinityValues && (
                 <Form.Item
-                  extra="In/NotIn 可填写多个值；Gt/Lt 仅支持一个数字值。"
-                  label="匹配值"
+                  extra={t('pages.k8s.forms.pv.nodeAffinity.values.extra')}
+                  label={t('pages.k8s.forms.pv.nodeAffinity.values')}
                   name="nodeAffinityValues"
                 >
                   <StringListEditor
-                    addText="添加"
-                    deleteAriaLabel="删除匹配值"
+                    addText={t('pages.k8s.form.add')}
+                    deleteAriaLabel={t(
+                      'pages.k8s.forms.pv.nodeAffinity.values.delete',
+                    )}
                     minRows={1}
-                    placeholder="请输入匹配值"
+                    placeholder={t(
+                      'pages.k8s.forms.pv.nodeAffinity.values.placeholder',
+                    )}
                     surface
-                    onAddBlocked={() => message.warning('请先填写已有匹配值。')}
+                    onAddBlocked={() =>
+                      message.warning(
+                        t('pages.k8s.forms.pv.nodeAffinity.values.first'),
+                      )
+                    }
                     onCreateItem={createStringItem}
                   />
                 </Form.Item>
@@ -443,17 +546,30 @@ const PersistentVolumeSourceSettings = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
-              extra="HostPath 适合开发或单节点场景，生产环境建议优先使用 CSI/NFS/Local。"
-              label="主机路径"
+              extra={t('pages.k8s.forms.pv.hostPath.extra')}
+              label={t('pages.k8s.forms.pv.hostPath')}
               name="hostPath"
-              rules={[{ required: true, message: '请输入主机路径' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.pv.hostPath.required'),
+                },
+              ]}
             >
-              <Input placeholder="例如 /tmp/example-pv" />
+              <Input
+                placeholder={t('pages.k8s.forms.pv.hostPath.placeholder')}
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label="路径类型" name="hostPathType">
-              <Select options={hostPathTypeOptions} placeholder="请选择" />
+            <Form.Item
+              label={t('pages.k8s.forms.pv.hostPathType')}
+              name="hostPathType"
+            >
+              <Select
+                options={hostPathTypeOptions}
+                placeholder={t('pages.k8s.forms.common.select')}
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -465,9 +581,14 @@ const PersistentVolumeSourceSettings = ({
     <div className={styles.settings}>
       <Form.Item
         className={styles.compactField}
-        label="卷来源"
+        label={t('pages.k8s.forms.pv.volumeSource')}
         name="volumeSourceType"
-        rules={[{ required: true, message: '请选择卷来源' }]}
+        rules={[
+          {
+            required: true,
+            message: t('pages.k8s.forms.pv.volumeSource.required'),
+          },
+        ]}
       >
         <Select
           labelRender={({ value }) => {

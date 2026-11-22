@@ -4,7 +4,7 @@ import type { MenuProps } from 'antd';
 import { App, Spin } from 'antd';
 import React, { startTransition } from 'react';
 import { logout } from '@/services/system/auth';
-import { clearTokens } from '@/utils/auth';
+import { redirectToLogin } from '@/services/system/request';
 import { useT } from '@/utils/i18n';
 import HeaderDropdown from '../HeaderDropdown';
 
@@ -19,19 +19,8 @@ const loginOut = async () => {
   } catch {
     // ignore
   }
-  clearTokens();
-  const { search, pathname } = window.location;
-  const urlParams = new URL(window.location.href).searchParams;
-  const searchParams = new URLSearchParams({
-    redirect: pathname + search,
-  });
-  const redirect = urlParams.get('redirect');
-  if (window.location.pathname !== '/user/login' && !redirect) {
-    history.replace({
-      pathname: '/user/login',
-      search: searchParams.toString(),
-    });
-  }
+  // 与请求层 401 处理同一套：清令牌并带 redirect 回到登录页
+  redirectToLogin();
 };
 
 export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({

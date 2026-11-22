@@ -1,4 +1,6 @@
 // 纯函数：不要在这里引入 React / antd（校验脚本会用 Node 直接加载本文件）
+// 校验文案通过参数 t（useT() 的返回值）翻译，本文件只持有 i18n 键
+import type { Translate } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import {
   createId,
@@ -397,19 +399,25 @@ export const hasMetadataContent = (values: CreateNetworkPolicyFormValues) =>
 const validateSelectorExpressions = (
   selector: NetworkPolicyLabelSelectorValues | undefined,
   label: string,
+  t: Translate,
 ) => {
   for (const expression of selector?.matchExpressions || []) {
     const keyName = trimValue(expression.keyName);
     const values = getCleanExpressionValues(expression.values);
 
     if (!keyName) {
-      return `${label}的表达式必须填写键`;
+      return t('pages.k8s.forms.networkpolicy.selector.expressionKeyRequired', {
+        label,
+      });
     }
     if (
       selectorOperatorNeedsValues(expression.operator) &&
       values.length === 0
     ) {
-      return `${label}的 ${expression.operator} 表达式必须至少填写一个值`;
+      return t(
+        'pages.k8s.forms.networkpolicy.selector.expressionValuesRequired',
+        { label, operator: expression.operator },
+      );
     }
   }
 
@@ -419,16 +427,22 @@ const validateSelectorExpressions = (
 /** ipBlock.except 的错误：每一项须为合法 CIDR，且是 cidr 的真子集 */
 export const getIpBlockExceptError = (
   peer: Pick<NetworkPolicyPeerItem, 'ipBlockCidr' | 'ipBlockExcept'>,
+  t: Translate,
 ) => {
   const cidr = parseCidr(peer.ipBlockCidr);
 
   for (const item of getCleanExpressionValues(peer.ipBlockExcept)) {
     const except = parseCidr(item);
     if (!except) {
-      return `排除网段 ${item} 不是合法的 CIDR`;
+      return t('pages.k8s.forms.networkpolicy.ipBlock.exceptInvalid', {
+        item,
+      });
     }
     if (cidr && !isStrictSubsetCidr(cidr, except)) {
-      return `排除网段 ${item} 必须是 ${trimValue(peer.ipBlockCidr)} 的真子集`;
+      return t('pages.k8s.forms.networkpolicy.ipBlock.exceptNotSubset', {
+        item,
+        cidr: trimValue(peer.ipBlockCidr),
+      });
     }
   }
 
@@ -438,19 +452,22 @@ export const getIpBlockExceptError = (
 /** 端口行的错误：端口须为 1-65535 的数字或合法端口名；结束端口要求端口为数字且不小于端口 */
 export const getPortError = (
   port: Pick<NetworkPolicyPortItem, 'endPort' | 'port'>,
+  t: Translate,
 ): { field: 'endPort' | 'port'; message: string } | undefined => {
   const portValue = trimValue(port.port);
   const portNumber = getPortNumber(port.port);
 
   if (portNumber !== undefined) {
     if (portNumber < 1 || portNumber > 65535) {
-      return { field: 'port', message: '端口号必须在 1-65535 之间' };
+      return {
+        field: 'port',
+        message: t('pages.k8s.forms.networkpolicy.port.range'),
+      };
     }
   } else if (portValue && !isValidPortName(portValue)) {
     return {
       field: 'port',
-      message:
-        '端口名称最长 15 个字符，只能包含小写字母、数字和连字符（-），且至少包含一个字母',
+      message: t('pages.k8s.forms.networkpolicy.port.namePattern'),
     };
   }
 
@@ -458,17 +475,26 @@ export const getPortError = (
     return undefined;
   }
   if (portNumber === undefined) {
-    return { field: 'endPort', message: '设置结束端口时，端口必须填写数字' };
+    return {
+      field: 'endPort',
+      message: t('pages.k8s.forms.networkpolicy.endPort.portMustBeNumber'),
+    };
   }
   if (
     !Number.isInteger(port.endPort) ||
     port.endPort < 1 ||
     port.endPort > 65535
   ) {
-    return { field: 'endPort', message: '结束端口必须在 1-65535 之间' };
+    return {
+      field: 'endPort',
+      message: t('pages.k8s.forms.networkpolicy.endPort.range'),
+    };
   }
   if (port.endPort < portNumber) {
-    return { field: 'endPort', message: '结束端口不能小于起始端口' };
+    return {
+      field: 'endPort',
+      message: t('pages.k8s.forms.networkpolicy.endPort.lessThanPort'),
+    };
   }
 
   return undefined;
@@ -478,17 +504,31 @@ const validatePeer = (
   peer: NetworkPolicyPeerItem,
   peerLabel: string,
   ruleIndex: number,
+  t: Translate,
 ) => {
+  const index = ruleIndex + 1;
+
   if (peer.type === 'ipBlock') {
     if (!trimValue(peer.ipBlockCidr)) {
-      return `${peerLabel} ${ruleIndex + 1} 的 IP 网段必须填写 CIDR`;
+      return t('pages.k8s.forms.networkpolicy.peer.cidrRequired', {
+        peer: peerLabel,
+        index,
+      });
     }
     if (!isValidCidr(peer.ipBlockCidr)) {
-      return `${peerLabel} ${ruleIndex + 1} 的 CIDR ${trimValue(peer.ipBlockCidr)} 格式不正确`;
+      return t('pages.k8s.forms.networkpolicy.peer.cidrInvalid', {
+        peer: peerLabel,
+        index,
+        cidr: trimValue(peer.ipBlockCidr),
+      });
     }
-    const exceptMessage = getIpBlockExceptError(peer);
+    const exceptMessage = getIpBlockExceptError(peer, t);
     if (exceptMessage) {
-      return `${peerLabel} ${ruleIndex + 1} 的${exceptMessage}`;
+      return t('pages.k8s.forms.networkpolicy.peer.prefix', {
+        peer: peerLabel,
+        index,
+        message: exceptMessage,
+      });
     }
   }
 
@@ -496,7 +536,11 @@ const validatePeer = (
     peer.type === 'podSelector' || peer.type === 'podAndNamespaceSelector'
       ? validateSelectorExpressions(
           peer.podSelector,
-          `${peerLabel} ${ruleIndex + 1} 的 Pod 选择器`,
+          t('pages.k8s.forms.networkpolicy.peer.podSelectorOf', {
+            peer: peerLabel,
+            index,
+          }),
+          t,
         )
       : undefined;
   if (podSelectorMessage) {
@@ -507,7 +551,11 @@ const validatePeer = (
     peer.type === 'namespaceSelector' || peer.type === 'podAndNamespaceSelector'
       ? validateSelectorExpressions(
           peer.namespaceSelector,
-          `${peerLabel} ${ruleIndex + 1} 的命名空间选择器`,
+          t('pages.k8s.forms.networkpolicy.peer.namespaceSelectorOf', {
+            peer: peerLabel,
+            index,
+          }),
+          t,
         )
       : undefined;
   if (namespaceSelectorMessage) {
@@ -521,27 +569,35 @@ const validatePort = (
   port: NetworkPolicyPortItem,
   ruleLabel: string,
   ruleIndex: number,
+  t: Translate,
 ) => {
-  const error = getPortError(port);
+  const error = getPortError(port, t);
 
-  return error ? `${ruleLabel} ${ruleIndex + 1}：${error.message}` : undefined;
+  return error
+    ? t('pages.k8s.forms.networkpolicy.rule.prefix', {
+        rule: ruleLabel,
+        index: ruleIndex + 1,
+        message: error.message,
+      })
+    : undefined;
 };
 
 const validateRules = (
   rules: NetworkPolicyRuleItem[] | undefined,
   ruleLabel: string,
   peerLabel: string,
+  t: Translate,
 ) => {
   for (const [ruleIndex, rule] of (rules || []).entries()) {
     for (const peer of rule.peers || []) {
-      const peerMessage = validatePeer(peer, peerLabel, ruleIndex);
+      const peerMessage = validatePeer(peer, peerLabel, ruleIndex, t);
       if (peerMessage) {
         return peerMessage;
       }
     }
 
     for (const port of rule.ports || []) {
-      const portMessage = validatePort(port, ruleLabel, ruleIndex);
+      const portMessage = validatePort(port, ruleLabel, ruleIndex, t);
       if (portMessage) {
         return portMessage;
       }
@@ -551,17 +607,20 @@ const validateRules = (
   return undefined;
 };
 
-const validateBasicInfo = (values: CreateNetworkPolicyFormValues) => {
+const validateBasicInfo = (
+  values: CreateNetworkPolicyFormValues,
+  t: Translate,
+) => {
   const name = trimValue(values.name);
 
   if (!name) {
-    return '请输入名称';
+    return t('pages.k8s.forms.common.name.required');
   }
   if (name.length > 63 || !NAME_PATTERN.test(name)) {
-    return '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾，最长 63 个字符';
+    return t('pages.k8s.forms.common.name.dnsLabel');
   }
   if (!trimValue(values.namespace)) {
-    return '请选择命名空间';
+    return t('pages.k8s.forms.common.namespace.required');
   }
 
   return undefined;
@@ -570,21 +629,36 @@ const validateBasicInfo = (values: CreateNetworkPolicyFormValues) => {
 export const validateNetworkPolicyStep = (
   values: CreateNetworkPolicyFormValues,
   step: number,
+  t: Translate,
 ) => {
   if (step === 0) {
-    return validateBasicInfo(values);
+    return validateBasicInfo(values, t);
   }
   if (step === 1) {
     if (!values.policyTypes?.length) {
-      return '请至少选择一种策略类型';
+      return t('pages.k8s.forms.networkpolicy.policyTypes.required');
     }
-    return validateSelectorExpressions(values.podSelector, 'Pod 选择器');
+    return validateSelectorExpressions(
+      values.podSelector,
+      t('pages.k8s.forms.common.podSelector'),
+      t,
+    );
   }
   if (step === 2 && values.policyTypes?.includes('Ingress')) {
-    return validateRules(values.ingress, '入站规则', '来源');
+    return validateRules(
+      values.ingress,
+      t('pages.k8s.forms.networkpolicy.ingress'),
+      t('pages.k8s.forms.networkpolicy.source'),
+      t,
+    );
   }
   if (step === 3 && values.policyTypes?.includes('Egress')) {
-    return validateRules(values.egress, '出站规则', '目标');
+    return validateRules(
+      values.egress,
+      t('pages.k8s.forms.networkpolicy.egress'),
+      t('pages.k8s.forms.networkpolicy.destination'),
+      t,
+    );
   }
 
   return undefined;
@@ -592,9 +666,10 @@ export const validateNetworkPolicyStep = (
 
 export const validateNetworkPolicyFormValues = (
   values: CreateNetworkPolicyFormValues,
+  t: Translate,
 ) => {
   for (const step of [0, 1, 2, 3]) {
-    const message = validateNetworkPolicyStep(values, step);
+    const message = validateNetworkPolicyStep(values, step, t);
     if (message) {
       return message;
     }
@@ -625,6 +700,7 @@ export const getManifestNamespace = (resource: Record<string, unknown>) => {
 /** 手写 YAML 的本地预检；最终以服务端预检为准 */
 export const getNetworkPolicyYamlValidationError = (
   resource: Record<string, unknown>,
+  t: Translate,
 ) => {
   const name = getRecordValue(resource.metadata)?.name;
 
@@ -633,13 +709,17 @@ export const getNetworkPolicyYamlValidationError = (
     !name.trim() ||
     !getManifestNamespace(resource)
   ) {
-    return 'YAML 必须包含 metadata.name 和 metadata.namespace';
+    return t('pages.k8s.forms.common.yaml.nameNamespaceRequired');
   }
   if (resource.kind !== NETWORK_POLICY_KIND) {
-    return `YAML kind 必须为 ${NETWORK_POLICY_KIND}`;
+    return t('pages.k8s.forms.common.yaml.kindMismatch', {
+      kind: NETWORK_POLICY_KIND,
+    });
   }
   if (resource.apiVersion !== NETWORK_POLICY_API_VERSION) {
-    return `YAML apiVersion 必须为 ${NETWORK_POLICY_API_VERSION}`;
+    return t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+      apiVersion: NETWORK_POLICY_API_VERSION,
+    });
   }
 
   return undefined;

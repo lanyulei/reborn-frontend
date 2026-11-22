@@ -17,6 +17,7 @@ import {
 } from 'antd';
 import { createStyles } from 'antd-style';
 import { useState } from 'react';
+import { useT } from '@/utils/i18n';
 import ResourceMetadataFields from '../shared/ResourceMetadataFields';
 import { createHpaScalingPolicyItem } from './helpers';
 import type {
@@ -34,12 +35,6 @@ const SELECT_POLICY_OPTIONS: {
   { label: 'Min', value: 'Min' },
   { label: 'Disabled', value: 'Disabled' },
 ];
-
-const SCALING_POLICY_OPTIONS: { label: string; value: HpaScalingPolicyType }[] =
-  [
-    { label: 'Pod 数量', value: 'Pods' },
-    { label: '百分比', value: 'Percent' },
-  ];
 
 const useStyles = createStyles(({ token }) => ({
   stack: {
@@ -180,37 +175,43 @@ type ScalingRuleConfig = {
   description: string;
 };
 
-const POLICY_NUMBER_RULES = [
-  {
-    required: true,
-    message: '请输入策略值',
-  },
-  {
-    type: 'number' as const,
-    min: 1,
-    message: '策略值不能小于 1',
-  },
-];
-
-const PERIOD_NUMBER_RULES = [
-  {
-    required: true,
-    message: '请输入周期秒数',
-  },
-  {
-    type: 'number' as const,
-    min: 1,
-    max: 1800,
-    message: '周期范围为 1-1800 秒',
-  },
-];
-
 const ScalingPolicyList = ({
   name,
 }: {
   name: keyof CreateHorizontalPodAutoscalerFormValues;
 }) => {
+  const t = useT();
   const { styles } = useStyles();
+  const scalingPolicyOptions: {
+    label: string;
+    value: HpaScalingPolicyType;
+  }[] = [
+    { label: t('pages.k8s.namespace.pods'), value: 'Pods' },
+    { label: t('pages.k8s.forms.hpa.policy.percent'), value: 'Percent' },
+  ];
+  const policyNumberRules = [
+    {
+      required: true,
+      message: t('pages.k8s.forms.hpa.policy.value.required'),
+    },
+    {
+      type: 'number' as const,
+      min: 1,
+      message: t('pages.k8s.forms.hpa.policy.value.min'),
+    },
+  ];
+  const periodNumberRules = [
+    {
+      required: true,
+      message: t('pages.k8s.forms.hpa.policy.period.required'),
+    },
+    {
+      type: 'number' as const,
+      min: 1,
+      max: 1800,
+      message: t('pages.k8s.forms.hpa.policy.period.range'),
+    },
+  ];
 
   return (
     <Form.List
@@ -221,7 +222,7 @@ const ScalingPolicyList = ({
             if (value?.length) {
               return;
             }
-            throw new Error('请至少添加一条伸缩策略');
+            throw new Error(t('pages.k8s.forms.hpa.policy.required'));
           },
         },
       ]}
@@ -234,21 +235,26 @@ const ScalingPolicyList = ({
                 <Form.Item
                   className={styles.policyItem}
                   name={[field.name, 'type']}
-                  rules={[{ required: true, message: '请选择策略类型' }]}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('pages.k8s.forms.hpa.policy.type.required'),
+                    },
+                  ]}
                 >
                   <Select
-                    options={SCALING_POLICY_OPTIONS}
-                    placeholder="策略类型"
+                    options={scalingPolicyOptions}
+                    placeholder={t('pages.k8s.forms.hpa.policy.type')}
                   />
                 </Form.Item>
                 <Form.Item
                   className={styles.policyItem}
                   name={[field.name, 'value']}
-                  rules={POLICY_NUMBER_RULES}
+                  rules={policyNumberRules}
                 >
                   <InputNumber
                     min={1}
-                    placeholder="策略值"
+                    placeholder={t('pages.k8s.forms.hpa.policy.value')}
                     precision={0}
                     style={{ width: '100%' }}
                   />
@@ -256,18 +262,18 @@ const ScalingPolicyList = ({
                 <Form.Item
                   className={styles.policyItem}
                   name={[field.name, 'periodSeconds']}
-                  rules={PERIOD_NUMBER_RULES}
+                  rules={periodNumberRules}
                 >
                   <InputNumber
                     min={1}
                     max={1800}
-                    placeholder="周期秒数"
+                    placeholder={t('pages.k8s.forms.hpa.policy.period')}
                     precision={0}
                     style={{ width: '100%' }}
                   />
                 </Form.Item>
                 <Button
-                  aria-label="删除伸缩策略"
+                  aria-label={t('pages.k8s.forms.hpa.policy.delete')}
                   className={styles.deleteButton}
                   disabled={fields.length <= 1}
                   icon={<DeleteOutlined />}
@@ -281,7 +287,7 @@ const ScalingPolicyList = ({
           <div className={styles.footer}>
             <Button onClick={() => add(createHpaScalingPolicyItem())}>
               <PlusOutlined />
-              添加策略
+              {t('pages.k8s.forms.hpa.policy.add')}
             </Button>
           </div>
         </>
@@ -297,6 +303,7 @@ const ScalingRuleFields = ({
   config: ScalingRuleConfig;
   enabled?: boolean;
 }) => {
+  const t = useT();
   const { styles } = useStyles();
 
   return (
@@ -317,30 +324,37 @@ const ScalingRuleFields = ({
       {enabled && (
         <div className={styles.body}>
           <div>
-            <div className={styles.fieldLabel}>伸缩参数</div>
+            <div className={styles.fieldLabel}>
+              {t('pages.k8s.forms.hpa.behavior.params')}
+            </div>
             <Row gutter={16}>
               <Col span={8}>
-                <Form.Item label="策略选择" name={config.selectPolicyName}>
+                <Form.Item
+                  label={t('pages.k8s.forms.hpa.behavior.selectPolicy')}
+                  name={config.selectPolicyName}
+                >
                   <Select options={SELECT_POLICY_OPTIONS} />
                 </Form.Item>
               </Col>
               <Col span={8}>
                 <Form.Item
-                  label="稳定窗口"
+                  label={t('pages.k8s.forms.hpa.behavior.stabilizationWindow')}
                   name={config.stabilizationWindowSecondsName}
                   rules={[
                     {
                       type: 'number',
                       min: 0,
                       max: 3600,
-                      message: '稳定窗口范围为 0-3600 秒',
+                      message: t(
+                        'pages.k8s.forms.hpa.behavior.stabilizationWindow.range',
+                      ),
                     },
                   ]}
                 >
                   <InputNumber
                     min={0}
                     max={3600}
-                    placeholder="秒"
+                    placeholder={t('pages.k8s.forms.hpa.behavior.seconds')}
                     precision={0}
                     style={{ width: '100%' }}
                   />
@@ -348,17 +362,23 @@ const ScalingRuleFields = ({
               </Col>
               <Col span={8}>
                 <Form.Item
-                  label="容忍阈值"
+                  label={t('pages.k8s.forms.hpa.behavior.tolerance')}
                   name={config.toleranceName}
-                  tooltip="写入 behavior.scaleUp/scaleDown.tolerance，可填写如 0.1。"
+                  tooltip={t('pages.k8s.forms.hpa.behavior.tolerance.tooltip')}
                 >
-                  <Input placeholder="可选，如 0.1" />
+                  <Input
+                    placeholder={t(
+                      'pages.k8s.forms.hpa.behavior.tolerance.placeholder',
+                    )}
+                  />
                 </Form.Item>
               </Col>
             </Row>
           </div>
           <div>
-            <div className={styles.fieldLabel}>伸缩策略</div>
+            <div className={styles.fieldLabel}>
+              {t('pages.k8s.forms.hpa.behavior.policies')}
+            </div>
             <ScalingPolicyList name={config.policiesName} />
           </div>
         </div>
@@ -368,6 +388,7 @@ const ScalingRuleFields = ({
 };
 
 const BehaviorSettings = ({ form }: BehaviorSettingsProps) => {
+  const t = useT();
   const { styles } = useStyles();
   const [metadataOpen, setMetadataOpen] = useState(true);
   const enableScaleUpBehavior = Form.useWatch('enableScaleUpBehavior', form);
@@ -379,7 +400,9 @@ const BehaviorSettings = ({ form }: BehaviorSettingsProps) => {
   return (
     <div className={styles.stack}>
       <div>
-        <div className={styles.sectionTitle}>伸缩行为</div>
+        <div className={styles.sectionTitle}>
+          {t('pages.k8s.forms.hpa.behavior')}
+        </div>
         <div className={styles.stack}>
           <ScalingRuleFields
             config={{
@@ -389,8 +412,8 @@ const BehaviorSettings = ({ form }: BehaviorSettingsProps) => {
               stabilizationWindowSecondsName:
                 'scaleUpStabilizationWindowSeconds',
               toleranceName: 'scaleUpTolerance',
-              title: '扩容策略',
-              description: '控制副本数上升时的选择策略、稳定窗口和变化速率。',
+              title: t('pages.k8s.forms.hpa.scaleUp'),
+              description: t('pages.k8s.forms.hpa.scaleUp.description'),
             }}
             enabled={enableScaleUpBehavior}
           />
@@ -402,8 +425,8 @@ const BehaviorSettings = ({ form }: BehaviorSettingsProps) => {
               stabilizationWindowSecondsName:
                 'scaleDownStabilizationWindowSeconds',
               toleranceName: 'scaleDownTolerance',
-              title: '缩容策略',
-              description: '控制副本数下降时的选择策略、稳定窗口和变化速率。',
+              title: t('pages.k8s.forms.hpa.scaleDown'),
+              description: t('pages.k8s.forms.hpa.scaleDown.description'),
             }}
             enabled={enableScaleDownBehavior}
           />
@@ -411,7 +434,9 @@ const BehaviorSettings = ({ form }: BehaviorSettingsProps) => {
       </div>
 
       <div>
-        <div className={styles.sectionTitle}>元数据</div>
+        <div className={styles.sectionTitle}>
+          {t('pages.k8s.forms.common.metadata')}
+        </div>
         <div className={styles.option}>
           <button
             aria-expanded={metadataOpen}
@@ -423,8 +448,12 @@ const BehaviorSettings = ({ form }: BehaviorSettingsProps) => {
               {metadataOpen ? <UpOutlined /> : <DownOutlined />}
             </span>
             <span>
-              <div className={styles.title}>添加元数据</div>
-              <div className={styles.description}>为水平伸缩资源添加元数据</div>
+              <div className={styles.title}>
+                {t('pages.k8s.forms.common.addMetadata')}
+              </div>
+              <div className={styles.description}>
+                {t('pages.k8s.forms.hpa.metadata.description')}
+              </div>
             </span>
           </button>
           {metadataOpen && (

@@ -8,7 +8,9 @@ import type {
   PagedResult,
   SystemRole,
   SystemUser,
+  CreateMachineUserParams,
   UserDeptAssignment,
+  UserKind,
   UserStatus,
 } from './typings';
 import { authRequest } from './request';
@@ -20,6 +22,8 @@ export interface ListUsersParams extends PageQuery {
   deptId?: string;
   /** 与 deptId 同用：是否包含其全部下级部门的用户 */
   includeSubDepts?: boolean;
+  /** 账号类型过滤：1=人 2=机器 */
+  kind?: UserKind;
 }
 
 export interface CreateUserParams {
@@ -70,6 +74,16 @@ export async function createUser(
   body: CreateUserParams,
 ): Promise<{ user: SystemUser }> {
   return authRequest<{ user: SystemUser }>('/api/v1/system/user', {
+    method: 'POST',
+    data: body,
+  });
+}
+
+/** CreateMachineUser 新建机器账号：没有口令、不能登录，只绑指定角色 */
+export async function createMachineUser(
+  body: CreateMachineUserParams,
+): Promise<{ user: SystemUser }> {
+  return authRequest<{ user: SystemUser }>('/api/v1/system/user:machine', {
     method: 'POST',
     data: body,
   });

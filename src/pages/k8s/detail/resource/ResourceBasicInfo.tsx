@@ -1,6 +1,7 @@
 import type { ProDescriptionsItemProps } from '@ant-design/pro-components';
 import { ProDescriptions } from '@ant-design/pro-components';
 import { createContext, useContext } from 'react';
+import { useT } from '@/utils/i18n';
 
 /** 当前详情页的资源名称：基本信息的第一项（页面没有页头，名称在这里给出） */
 export const ResourceNameContext = createContext<string | undefined>(undefined);
@@ -18,6 +19,7 @@ const ResourceBasicInfo = <T extends Record<string, unknown>>({
   columns,
   dataSource,
 }: ResourceBasicInfoProps<T>) => {
+  const t = useT();
   const name = useContext(ResourceNameContext);
   return (
     <ProDescriptions<T>
@@ -28,7 +30,7 @@ const ResourceBasicInfo = <T extends Record<string, unknown>>({
         name
           ? [
               {
-                title: '名称',
+                title: t('pages.k8s.column.name'),
                 key: '__name',
                 copyable: true,
                 renderText: () => name,

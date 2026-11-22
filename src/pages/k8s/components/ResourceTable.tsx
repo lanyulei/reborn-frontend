@@ -27,6 +27,7 @@ import type {
   ListRow,
 } from '@/services/k8s/typings';
 import { useT } from '@/utils/i18n';
+import { usePageVisible } from '@/utils/usePageVisible';
 import { AgeText, renderCell, StateBadge } from './cells';
 import { gvrKey, STATE_META, STATE_ORDER } from './meta';
 import { keepStream } from './stream';
@@ -104,6 +105,8 @@ export interface ExtraColumn {
   title: string;
   width?: number;
   render: (row: ListRow) => React.ReactNode;
+  /** 列表每次加载成功后调用（含自动刷新 / 行操作后的刷新）：附加列自己的数据随列表一起刷新 */
+  onLoaded?: () => void;
 }
 
 export interface ResourceTableProps {
@@ -181,6 +184,8 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
   const batchNodes = batchActions?.(selected, clearSelected) ?? [];
   /** 请求序号：只采纳最后一次请求的结果 */
   const seq = useRef(0);
+  const extraColumnsRef = useRef(extraColumns);
+  extraColumnsRef.current = extraColumns;
 
   const resource = gvrKey(gvr);
   const fixedKey = JSON.stringify(fixed ?? {});
@@ -234,6 +239,7 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
         setNext(res.continue ?? '');
         setPartial(res.partialNamespaces);
         setError(undefined);
+        for (const extra of extraColumnsRef.current ?? []) extra.onLoaded?.();
       } catch (err) {
         if (id !== seq.current) return;
         // 自动刷新失败时保留已有数据，只更新错误提示
@@ -264,15 +270,7 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
   const [watchStopped, setWatchStopped] = useState(false);
   const [watchTick, setWatchTick] = useState(0);
   // 页面不可见时关闭订阅（不占用连接），恢复可见后重新订阅并刷新一次
-  const [pageVisible, setPageVisible] = useState(
-    () => document.visibilityState === 'visible',
-  );
-  useEffect(() => {
-    const onVisibility = () =>
-      setPageVisible(document.visibilityState === 'visible');
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, []);
+  const pageVisible = usePageVisible();
   const wasHidden = useRef(false);
   useEffect(() => {
     if (!watchable) return;

@@ -1,6 +1,7 @@
 import type { FormInstance } from 'antd';
 import { Form, Select } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import { WorkloadContainerEditor } from '../workload/ContainerSettings';
 import type { CreateWorkloadFormValues } from '../workload/types';
 import { WORKLOAD_FORM_TYPE } from './helpers';
@@ -15,11 +16,11 @@ const useStyles = createStyles(({ token }) => ({
 
 const restartPolicyOptions = [
   {
-    label: '重新创建容器组',
+    labelId: 'pages.k8s.forms.job.restartPolicy.never',
     value: 'Never',
   },
   {
-    label: '重启容器',
+    labelId: 'pages.k8s.forms.job.restartPolicy.onFailure',
     value: 'OnFailure',
   },
 ];
@@ -30,6 +31,7 @@ type JobPodSettingsProps = {
 
 const JobPodSettings = ({ form }: JobPodSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const workloadForm =
     form as unknown as FormInstance<CreateWorkloadFormValues>;
 
@@ -37,11 +39,22 @@ const JobPodSettings = ({ form }: JobPodSettingsProps) => {
     <>
       <Form.Item
         className={styles.restartPolicy}
-        label="重启策略"
+        label={t('pages.k8s.forms.job.restartPolicy')}
         name="restartPolicy"
-        rules={[{ required: true, message: '请选择重启策略' }]}
+        rules={[
+          {
+            required: true,
+            message: t('pages.k8s.forms.job.restartPolicy.required'),
+          },
+        ]}
       >
-        <Select options={restartPolicyOptions} placeholder="请选择重启策略" />
+        <Select
+          options={restartPolicyOptions.map((option) => ({
+            label: t(option.labelId),
+            value: option.value,
+          }))}
+          placeholder={t('pages.k8s.forms.job.restartPolicy.required')}
+        />
       </Form.Item>
       <WorkloadContainerEditor
         form={workloadForm}

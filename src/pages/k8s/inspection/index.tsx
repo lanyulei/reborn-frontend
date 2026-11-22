@@ -20,7 +20,7 @@ import {
 } from 'antd';
 import { createStyles } from 'antd-style';
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getInspectionRun,
   type InspectionFinding,
@@ -30,6 +30,7 @@ import {
 } from '@/services/k8s/governance';
 import { usePermissions } from '@/services/system/permissions';
 import { useT } from '@/utils/i18n';
+import { usePageVisible } from '@/utils/usePageVisible';
 import { formatTime } from '../components/cells';
 import { OPS_TABS } from '../components/groups';
 import { kindPath, useKindName } from '../components/meta';
@@ -155,18 +156,22 @@ const Inspection: React.FC = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const selected = params.get('run') ?? '';
 
+  /** 请求序号：只采纳最后一次请求的结果（切换集群 / 卸载后丢弃在途结果） */
+  const seq = useRef(0);
   const loadRuns = useCallback(
     async (silent?: boolean) => {
+      const id = ++seq.current;
       try {
         const res = await listInspectionRuns(
           { clusterId, page: 1, pageSize: 30 },
           { silent },
         );
+        if (id !== seq.current) return;
         setRuns(res.items ?? []);
       } catch {
         // 失败已由请求层提示
       } finally {
-        setLoading(false);
+        if (id === seq.current) setLoading(false);
       }
     },
     [clusterId],
@@ -174,15 +179,21 @@ const Inspection: React.FC = () => {
   useEffect(() => {
     setLoading(true);
     void loadRuns();
+    return () => {
+      seq.current += 1;
+    };
   }, [loadRuns]);
 
-  // 有待执行 / 执行中的巡检时轮询，直到结束
+  // 有待执行 / 执行中的巡检时轮询，直到结束；后台标签页不轮询，恢复可见时刷新一次
   const busy = runs.some((r) => RUNNING.has(r.status ?? 0));
+  const pageVisible = usePageVisible(() => {
+    if (busy) void loadRuns(true);
+  });
   useEffect(() => {
-    if (!busy) return;
+    if (!busy || !pageVisible) return;
     const timer = setInterval(() => void loadRuns(true), 4000);
     return () => clearInterval(timer);
-  }, [busy, loadRuns]);
+  }, [busy, pageVisible, loadRuns]);
 
   const current = useMemo(
     () =>

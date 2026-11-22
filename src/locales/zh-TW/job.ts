@@ -802,4 +802,15 @@ export default {
   'pages.job.stats.topTemplates': '執行最多的作業範本',
   'pages.job.stats.count': '執行次數',
   'pages.job.stats.failed': '失敗次數',
+
+  // 通用拼接與執行主機欄
+  'pages.job.common.separator': '；',
+  'pages.job.common.withCode': '{name}（{code}）',
+  'pages.job.execution.hostCol.ok': '成功',
+  'pages.job.execution.hostCol.changed': '有變更',
+  'pages.job.execution.hostCol.failed': '失敗',
+  'pages.job.execution.hostCol.unreachable': '不可達',
+  'pages.job.execution.hostCol.skipped': '已跳過',
+  'pages.job.error.scheduleInvalid': '定時作業設定無效',
+  'pages.job.error.triggerInvalid': '觸發器設定無效',
 };

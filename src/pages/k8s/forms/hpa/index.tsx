@@ -6,6 +6,8 @@ import {
 } from '@ant-design/icons';
 import { App, AutoComplete, Col, Form, Input, Row } from 'antd';
 import { useMemo, useState } from 'react';
+import type { Translate } from '@/utils/i18n';
+import { useT } from '@/utils/i18n';
 import { parseObject, toYaml, useNamespaceOptions } from '../shared/kube';
 import { getRecordValue, hasKeyValueContent } from '../shared/manifest';
 import ResourceCreateWizardDrawer from '../shared/ResourceCreateWizardDrawer';
@@ -39,23 +41,24 @@ const getStepStatusText = (
   current: number,
   index: number,
   values: CreateHorizontalPodAutoscalerFormValues,
+  t: Translate,
 ) => {
   if (current === index) {
-    return '当前';
+    return t('pages.k8s.forms.common.current');
   }
   if (index === 0 && values.name && values.namespace) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 1 && values.targetKind && values.targetName) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 2 && hasMetricsContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 3 && hasBehaviorContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
-  return '未设置';
+  return t('pages.k8s.forms.common.unset');
 };
 
 const buildYaml = (values: CreateHorizontalPodAutoscalerFormValues) =>
@@ -67,6 +70,7 @@ const CreateHorizontalPodAutoscalerForm = ({
   onClose,
   onDone,
 }: CreateFormProps) => {
+  const t = useT();
   const { message } = App.useApp();
   const [form] = Form.useForm<CreateHorizontalPodAutoscalerFormValues>();
   const [initialValues] = useState(() => getInitialCreateHpaValues(namespace));
@@ -83,23 +87,23 @@ const CreateHorizontalPodAutoscalerForm = ({
   const steps = useMemo(
     () => [
       {
-        title: '基本信息',
+        title: t('pages.k8s.form.section.basic'),
         icon: <AppstoreOutlined />,
       },
       {
-        title: '伸缩目标',
+        title: t('pages.k8s.forms.hpa.step.target'),
         icon: <DeploymentUnitOutlined />,
       },
       {
-        title: '伸缩指标',
+        title: t('pages.k8s.forms.hpa.step.metrics'),
         icon: <LineChartOutlined />,
       },
       {
-        title: '行为策略',
+        title: t('pages.k8s.forms.hpa.step.behavior'),
         icon: <SlidersOutlined />,
       },
     ],
-    [],
+    [t],
   );
 
   // 只挂载当前步骤的字段：取值一律读完整的表单存储，而不是 validateFields 的返回值
@@ -137,7 +141,7 @@ const CreateHorizontalPodAutoscalerForm = ({
       try {
         resource = parseObject(yamlValue);
       } catch {
-        message.error('YAML 格式不正确，或内容不是有效的资源对象');
+        message.error(t('pages.k8s.forms.common.yaml.invalidObject'));
         return;
       }
 
@@ -150,15 +154,21 @@ const CreateHorizontalPodAutoscalerForm = ({
           : '';
 
       if (!name || !namespaceValue) {
-        message.error('YAML 必须包含 metadata.name 和 metadata.namespace');
+        message.error(t('pages.k8s.forms.common.yaml.nameNamespaceRequired'));
         return;
       }
       if (resource.kind !== HPA_KIND) {
-        message.error(`YAML kind 必须为 ${HPA_KIND}`);
+        message.error(
+          t('pages.k8s.forms.common.yaml.kindMismatch', { kind: HPA_KIND }),
+        );
         return;
       }
       if (resource.apiVersion !== HPA_API_VERSION) {
-        message.error(`YAML apiVersion 必须为 ${HPA_API_VERSION}`);
+        message.error(
+          t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+            apiVersion: HPA_API_VERSION,
+          }),
+        );
         return;
       }
 
@@ -170,7 +180,7 @@ const CreateHorizontalPodAutoscalerForm = ({
       return;
     }
     const formValues = getFormValues();
-    const error = getHpaFormError(formValues);
+    const error = getHpaFormError(formValues, t);
     if (error) {
       message.error(error);
       return;
@@ -185,33 +195,44 @@ const CreateHorizontalPodAutoscalerForm = ({
     <Row gutter={16}>
       <Col span={12}>
         <Form.Item
-          label="名称"
+          label={t('pages.k8s.forms.common.name')}
           name="name"
           rules={[
-            { required: true, message: '请输入名称' },
-            { max: 63, message: '名称最长 63 个字符' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.name.required'),
+            },
+            { max: 63, message: t('pages.k8s.forms.common.name.maxLength') },
             {
               pattern: NAME_PATTERN,
-              message:
-                '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+              message: t('pages.k8s.forms.common.name.pattern'),
             },
           ]}
         >
-          <Input autoFocus placeholder="请输入名称" />
+          <Input
+            autoFocus
+            placeholder={t('pages.k8s.forms.common.name.required')}
+          />
         </Form.Item>
       </Col>
       <Col span={12}>
         <Form.Item
-          label="命名空间"
+          label={t('pages.k8s.forms.common.namespace')}
           name="namespace"
           rules={[
-            { required: true, message: '请选择命名空间' },
-            { pattern: NAME_PATTERN, message: '命名空间名称不合法' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.namespace.required'),
+            },
+            {
+              pattern: NAME_PATTERN,
+              message: t('pages.k8s.roleScope.rule.namespace'),
+            },
           ]}
         >
           <AutoComplete
             options={namespaces.map((item) => ({ label: item, value: item }))}
-            placeholder="请选择命名空间"
+            placeholder={t('pages.k8s.forms.common.namespace.required')}
             showSearch={{
               filterOption: (input, option) =>
                 String(option?.value ?? '')
@@ -236,11 +257,11 @@ const CreateHorizontalPodAutoscalerForm = ({
       <ResourceCreateWizardDrawer
         current={current}
         getStepDescription={(_, index) =>
-          getStepStatusText(current, index, values)
+          getStepStatusText(current, index, values, t)
         }
         open
         steps={steps}
-        title="创建水平伸缩"
+        title={t('pages.k8s.forms.hpa.title')}
         yamlMode={yamlMode}
         yamlValue={yamlValue}
         onCancel={onClose}
@@ -276,7 +297,7 @@ const CreateHorizontalPodAutoscalerForm = ({
           clusterId={clusterId}
           yaml={submission.yaml}
           namespace={submission.namespace}
-          title="创建水平伸缩"
+          title={t('pages.k8s.forms.hpa.title')}
           onBack={() => setSubmission(undefined)}
           onClose={onClose}
           onDone={onDone}

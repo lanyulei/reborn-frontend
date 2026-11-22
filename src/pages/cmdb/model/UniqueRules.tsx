@@ -173,7 +173,7 @@ const RuleFormModal: React.FC<{
   const sampleNames =
     check.status === 'done'
       ? (check.result.samples ?? [])
-          .map((s) => (s.names ?? []).join('、'))
+          .map((s) => (s.names ?? []).join(t('pages.cmdb.diff.summary.sep')))
           .filter(Boolean)
       : [];
 

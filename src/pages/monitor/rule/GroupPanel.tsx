@@ -14,7 +14,7 @@ import {
 import type { MenuProps } from 'antd';
 import { App, Button, Dropdown, Empty, Spin, Tooltip, Tree, theme } from 'antd';
 import type React from 'react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   createRuleGroup,
   deleteRuleGroup,
@@ -72,6 +72,10 @@ export const GroupPanel: React.FC<{
   const [form, setForm] = useState<GroupFormState>();
   const [scopeGroup, setScopeGroup] = useState<RuleGroup>();
 
+  // 右键菜单的回调随 treeData 一起缓存：选中项与父组件回调经 ref 读取最新值，避免闭包过期
+  const latest = useRef({ selectedId, onSelect, onChanged });
+  latest.current = { selectedId, onSelect, onChanged };
+
   const remove = (group: RuleGroup) =>
     modal.confirm({
       title: t('pages.monitor.group.delete.title', { name: group.name }),
@@ -85,8 +89,9 @@ export const GroupPanel: React.FC<{
           return;
         }
         message.success(t('common.msg.deleted'));
-        if (selectedId === group.id) onSelect(undefined);
-        await onChanged();
+        const current = latest.current;
+        if (current.selectedId === group.id) current.onSelect(undefined);
+        await current.onChanged();
       },
     });
 
@@ -172,7 +177,7 @@ export const GroupPanel: React.FC<{
       };
     };
     return buildTree(groups).map(toNode);
-  }, [groups, canMaintain, canGrant, styles, cx, t, selectedId]);
+  }, [groups, canMaintain, canGrant, styles, cx, t]);
 
   const editing = form?.mode === 'edit' ? form.group : undefined;
   /** 可访问分组（level ≥ 1）的规则总数：分组上的 ruleCount 不含下级，求和即全部规则数 */

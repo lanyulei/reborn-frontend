@@ -1,3 +1,4 @@
+import { t } from '@/utils/i18n';
 import { getArrayValue, getRecordValue, getStringValue } from './helpers';
 import type {
   ClusterNodePodContainer,
@@ -321,24 +322,24 @@ const getPodResizeDisabledReason = (
   container?: ClusterNodePodContainer,
 ) => {
   if (!pod || !container?.name) {
-    return '容器数据不存在，请刷新后重试';
+    return t('pages.k8s.detail.resize.noContainer');
   }
   if (pod.os_name === 'windows') {
-    return 'Windows 容器组暂不支持原地调整资源';
+    return t('pages.k8s.detail.resize.windows');
   }
   if (pod.status === 'Terminating') {
-    return '容器组正在删除，不能调整资源';
+    return t('pages.k8s.detail.resize.terminating');
   }
   if (pod.phase === 'Succeeded' || pod.phase === 'Failed') {
-    return '已结束的容器组不能调整资源';
+    return t('pages.k8s.detail.resize.finished');
   }
   if (container.type && container.type !== 'container') {
-    return '初始化容器和临时容器不支持原地调整资源';
+    return t('pages.k8s.detail.resize.notMainContainer');
   }
   if (
     (pod.qos_class || getPodQosClass(pod.containers || [])) === 'BestEffort'
   ) {
-    return 'BestEffort 容器组未声明资源，原地调整新增资源会改变 QoS 等级，请通过上层工作负载模板调整后重建 Pod';
+    return t('pages.k8s.detail.resize.bestEffort');
   }
 
   return undefined;
@@ -356,7 +357,7 @@ const validatePodResizeValues = (
   ) {
     return {
       name: 'cpuRequest' as const,
-      message: 'CPU 预留不能大于 CPU 限制',
+      message: t('pages.k8s.detail.resize.cpuExceeds'),
     };
   }
   if (
@@ -366,7 +367,7 @@ const validatePodResizeValues = (
   ) {
     return {
       name: 'memoryRequest' as const,
-      message: '内存预留不能大于内存限制',
+      message: t('pages.k8s.detail.resize.memoryExceeds'),
     };
   }
 
@@ -381,7 +382,10 @@ const validatePodResizeValues = (
   if (currentQosClass && nextQosClass !== currentQosClass) {
     return {
       name: 'cpuRequest' as const,
-      message: `原地调整不能改变 QoS 等级，当前为 ${currentQosClass}，调整后将变为 ${nextQosClass}`,
+      message: t('pages.k8s.detail.resize.qosChange', {
+        current: currentQosClass,
+        next: nextQosClass,
+      }),
     };
   }
 

@@ -33,8 +33,12 @@ export const CreateButton: React.FC<{
 interface ConfirmLinkProps {
   title: React.ReactNode;
   description?: React.ReactNode;
-  /** 确认后执行；返回的 Promise 未完成前确定按钮保持加载，失败（reject）时弹窗不关闭 */
+  /**
+   * 确认后执行；返回的 Promise 未完成前确定按钮保持加载。
+   * 失败（reject）不会再抛给弹窗：错误提示由请求层统一给出，这里只记日志并关闭弹窗。
+   */
   onConfirm: () => void | Promise<void>;
+  disabled?: boolean;
   children?: React.ReactNode;
 }
 
@@ -44,21 +48,35 @@ export const ConfirmLink: React.FC<ConfirmLinkProps & { danger?: boolean }> = ({
   description,
   onConfirm,
   danger,
+  disabled,
   children,
 }) => {
   const { modal } = App.useApp();
   const { token } = theme.useToken();
+  const style: React.CSSProperties | undefined = disabled
+    ? { color: token.colorTextDisabled, cursor: 'not-allowed' }
+    : danger
+      ? { color: token.colorError }
+      : undefined;
   return (
     <a
-      style={danger ? { color: token.colorError } : undefined}
-      onClick={() =>
+      aria-disabled={disabled || undefined}
+      style={style}
+      onClick={() => {
+        if (disabled) return;
         modal.confirm({
           title,
           content: description,
           okButtonProps: danger ? { danger: true } : undefined,
-          onOk: onConfirm,
-        })
-      }
+          onOk: async () => {
+            try {
+              await onConfirm();
+            } catch (err) {
+              console.error(err);
+            }
+          },
+        });
+      }}
     >
       {children}
     </a>

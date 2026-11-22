@@ -2,6 +2,8 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 import { Button, Form, Input, InputNumber, Select } from 'antd';
 import { createStyles } from 'antd-style';
+import { useMemo } from 'react';
+import { useT } from '@/utils/i18n';
 import ResourceFormSection from '../shared/ResourceFormSection';
 import { createEndpointSlicePortItem, PORT_NAME_PATTERN } from './helpers';
 import type {
@@ -65,11 +67,6 @@ const PROTOCOL_OPTIONS: { label: string; value: EndpointSliceProtocol }[] = [
   { label: 'SCTP', value: 'SCTP' },
 ];
 
-const PORT_NUMBER_RULES = [
-  { type: 'number' as const, min: 1, message: '端口号不能小于 1' },
-  { type: 'number' as const, max: 65535, message: '端口号不能大于 65535' },
-];
-
 type EndpointSlicePortSettingsProps = {
   form: FormInstance<CreateEndpointSliceFormValues>;
 };
@@ -78,6 +75,22 @@ const EndpointSlicePortSettings = ({
   form,
 }: EndpointSlicePortSettingsProps) => {
   const { styles } = useStyles();
+  const t = useT();
+  const portNumberRules = useMemo(
+    () => [
+      {
+        type: 'number' as const,
+        min: 1,
+        message: t('pages.k8s.forms.endpointslice.port.min'),
+      },
+      {
+        type: 'number' as const,
+        max: 65535,
+        message: t('pages.k8s.forms.endpointslice.port.max'),
+      },
+    ],
+    [t],
+  );
   const ports = (Form.useWatch('ports', form) as EndpointSlicePortItem[]) || [];
   const addDisabled = ports.some(
     (item) => !item.name && !item.port && !item.appProtocol,
@@ -86,8 +99,8 @@ const EndpointSlicePortSettings = ({
   return (
     <ResourceFormSection
       bordered={false}
-      description="端口可选；填写后会输出 ports 数组，端口名称应在当前端点切片内保持唯一。"
-      title="端口"
+      description={t('pages.k8s.forms.endpointslice.ports.description')}
+      title={t('pages.k8s.form.port')}
     >
       <div className={styles.unframedContent}>
         <Form.List name="ports">
@@ -98,55 +111,89 @@ const EndpointSlicePortSettings = ({
                   <div className={styles.row} key={field.key}>
                     <Form.Item
                       className={styles.formItem}
-                      label="名称"
+                      label={t('pages.k8s.forms.common.name')}
                       name={[field.name, 'name']}
                       rules={[
-                        { max: 15, message: '端口名称最长 15 个字符' },
+                        {
+                          max: 15,
+                          message: t(
+                            'pages.k8s.forms.endpointslice.port.name.maxLength',
+                          ),
+                        },
                         {
                           pattern: PORT_NAME_PATTERN,
-                          message:
-                            '端口名称只能包含小写字母、数字和连字符（-）',
+                          message: t(
+                            'pages.k8s.forms.endpointslice.port.name.pattern',
+                          ),
                         },
                       ]}
                     >
-                      <Input className={styles.input} placeholder="例如 http" />
+                      <Input
+                        className={styles.input}
+                        placeholder={t(
+                          'pages.k8s.forms.endpointslice.example',
+                          { value: 'http' },
+                        )}
+                      />
                     </Form.Item>
                     <Form.Item
                       className={styles.formItem}
-                      label="端口"
+                      label={t('pages.k8s.form.port')}
                       name={[field.name, 'port']}
-                      rules={PORT_NUMBER_RULES}
+                      rules={portNumberRules}
                     >
                       <InputNumber
                         className={styles.input}
                         max={65535}
                         min={1}
-                        placeholder="例如 80"
+                        placeholder={t(
+                          'pages.k8s.forms.endpointslice.example',
+                          { value: '80' },
+                        )}
                         precision={0}
                       />
                     </Form.Item>
                     <Form.Item
                       className={styles.formItem}
-                      label="协议"
+                      label={t('pages.k8s.forms.endpointslice.port.protocol')}
                       name={[field.name, 'protocol']}
                     >
                       <Select
                         className={styles.input}
                         options={PROTOCOL_OPTIONS}
-                        placeholder="请选择协议"
+                        placeholder={t(
+                          'pages.k8s.forms.common.protocol.required',
+                        )}
                       />
                     </Form.Item>
                     <Form.Item
                       className={styles.formItem}
-                      tooltip="例如 http、kubernetes.io/h2c 或自定义前缀协议。"
-                      label="应用协议"
+                      tooltip={t(
+                        'pages.k8s.forms.endpointslice.port.appProtocol.tooltip',
+                      )}
+                      label={t(
+                        'pages.k8s.forms.endpointslice.port.appProtocol',
+                      )}
                       name={[field.name, 'appProtocol']}
-                      rules={[{ max: 250, message: '应用协议最长 250 个字符' }]}
+                      rules={[
+                        {
+                          max: 250,
+                          message: t(
+                            'pages.k8s.forms.endpointslice.port.appProtocol.maxLength',
+                          ),
+                        },
+                      ]}
                     >
-                      <Input className={styles.input} placeholder="例如 http" />
+                      <Input
+                        className={styles.input}
+                        placeholder={t(
+                          'pages.k8s.forms.endpointslice.example',
+                          { value: 'http' },
+                        )}
+                      />
                     </Form.Item>
                     <Button
-                      aria-label="删除端口"
+                      aria-label={t('pages.k8s.forms.common.deletePort')}
                       className={styles.deleteButton}
                       icon={<DeleteOutlined />}
                       type="text"
@@ -168,7 +215,7 @@ const EndpointSlicePortSettings = ({
                     }
                   }}
                 >
-                  添加端口
+                  {t('pages.k8s.forms.endpointslice.port.add')}
                 </Button>
               </div>
             </>

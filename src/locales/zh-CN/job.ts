@@ -824,4 +824,15 @@ export default {
   'pages.job.stats.topTemplates': '执行最多的作业模板',
   'pages.job.stats.count': '执行次数',
   'pages.job.stats.failed': '失败次数',
+
+  // 通用拼接与执行主机列
+  'pages.job.common.separator': '；',
+  'pages.job.common.withCode': '{name}（{code}）',
+  'pages.job.execution.hostCol.ok': '成功',
+  'pages.job.execution.hostCol.changed': '有变更',
+  'pages.job.execution.hostCol.failed': '失败',
+  'pages.job.execution.hostCol.unreachable': '不可达',
+  'pages.job.execution.hostCol.skipped': '已跳过',
+  'pages.job.error.scheduleInvalid': '定时作业配置无效',
+  'pages.job.error.triggerInvalid': '触发器配置无效',
 };

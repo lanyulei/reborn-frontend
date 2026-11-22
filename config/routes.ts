@@ -780,6 +780,199 @@ export default [
     ],
   },
   {
+    // 故障管理：故障列表（活跃 / 我参与 / 全部 / 候选）、复盘看板、故障统计、故障配置（触发规则 / 预案 /
+    // 业务字典 / 接入与 Webhook / 设置，页头页签切换）；详情页隐藏于菜单
+    path: '/incident',
+    name: 'incident',
+    icon: 'fire',
+    access: 'canIncident',
+    routes: [
+      {
+        // 按权限落到第一个可访问的子页（见 src/pages/incident/index.tsx）
+        path: '/incident',
+        hideInMenu: true,
+        component: './incident',
+      },
+      {
+        path: '/incident/list',
+        name: 'list',
+        component: './incident/list',
+        access: 'canIncidentList',
+      },
+      {
+        // 故障详情：通知里的「查看详情」指向这里
+        path: '/incident/detail/:id',
+        name: 'detail',
+        hideInMenu: true,
+        parentKeys: ['/incident/list'],
+        component: './incident/detail',
+        access: 'canIncidentList',
+      },
+      {
+        path: '/incident/review',
+        name: 'review',
+        component: './incident/review',
+        access: 'canIncidentReview',
+      },
+      {
+        path: '/incident/stats',
+        name: 'stats',
+        component: './incident/stats',
+        access: 'canIncidentStats',
+      },
+      {
+        // 故障配置分组入口：落到第一个有权限的页签
+        path: '/incident/config',
+        name: 'config',
+        component: './incident/config',
+        access: 'canIncidentConfig',
+      },
+      {
+        path: '/incident/rule',
+        name: 'rule',
+        hideInMenu: true,
+        parentKeys: ['/incident/config'],
+        component: './incident/rule',
+        access: 'canIncidentRule',
+      },
+      {
+        path: '/incident/playbook',
+        name: 'playbook',
+        hideInMenu: true,
+        parentKeys: ['/incident/config'],
+        component: './incident/playbook',
+        access: 'canIncidentPlaybook',
+      },
+      {
+        path: '/incident/business',
+        name: 'business',
+        hideInMenu: true,
+        parentKeys: ['/incident/config'],
+        component: './incident/business',
+        access: 'canIncidentBusiness',
+      },
+      {
+        path: '/incident/source',
+        name: 'source',
+        hideInMenu: true,
+        parentKeys: ['/incident/config'],
+        component: './incident/source',
+        access: 'canIncidentSource',
+      },
+      {
+        path: '/incident/setting',
+        name: 'setting',
+        hideInMenu: true,
+        parentKeys: ['/incident/config'],
+        component: './incident/setting',
+        access: 'canIncidentSetting',
+      },
+    ],
+  },
+  {
+    // 运维 Agent：运行记录（任务 / 运行详情）、Profile 配置、统计；故障详情的「AI 诊断」页签复用这些接口
+    path: '/agent',
+    name: 'agent',
+    icon: 'robot',
+    access: 'canAgent',
+    routes: [
+      {
+        path: '/agent',
+        hideInMenu: true,
+        component: './agent',
+      },
+      {
+        path: '/agent/task',
+        name: 'task',
+        component: './agent/task',
+        access: 'canAgentTask',
+      },
+      {
+        path: '/agent/profile',
+        name: 'profile',
+        component: './agent/profile',
+        access: 'canAgentProfile',
+      },
+      {
+        path: '/agent/stats',
+        name: 'stats',
+        component: './agent/stats',
+        access: 'canAgentStats',
+      },
+    ],
+  },
+  {
+    // 知识库：首页（检索入口 + 概览）、检索结果、知识空间与文档、导入任务、管理；文档详情 / 编辑隐藏于菜单
+    path: '/knowledge',
+    name: 'knowledge',
+    icon: 'book',
+    access: 'canKnowledge',
+    routes: [
+      {
+        path: '/knowledge',
+        redirect: '/knowledge/home',
+      },
+      {
+        path: '/knowledge/home',
+        name: 'home',
+        component: './knowledge',
+        access: 'canKnowledge',
+      },
+      {
+        path: '/knowledge/search',
+        name: 'search',
+        component: './knowledge/search',
+        access: 'canKnowledge',
+      },
+      {
+        path: '/knowledge/space',
+        name: 'space',
+        component: './knowledge/space',
+        access: 'canKnowledge',
+      },
+      {
+        path: '/knowledge/space/:id',
+        name: 'space-detail',
+        hideInMenu: true,
+        component: './knowledge/space/detail',
+        access: 'canKnowledge',
+      },
+      {
+        path: '/knowledge/doc/new',
+        name: 'doc-new',
+        hideInMenu: true,
+        component: './knowledge/doc/edit',
+        access: 'canKnowledge',
+      },
+      {
+        path: '/knowledge/doc/:id',
+        name: 'doc',
+        hideInMenu: true,
+        component: './knowledge/doc/detail',
+        access: 'canKnowledge',
+      },
+      {
+        path: '/knowledge/doc/:id/edit',
+        name: 'doc-edit',
+        hideInMenu: true,
+        component: './knowledge/doc/edit',
+        access: 'canKnowledge',
+      },
+      {
+        path: '/knowledge/ingest',
+        name: 'ingest',
+        component: './knowledge/ingest',
+        access: 'canKnowledge',
+      },
+      {
+        path: '/knowledge/admin',
+        name: 'admin',
+        component: './knowledge/admin',
+        access: 'canKnowledgeAdmin',
+      },
+    ],
+  },
+  {
     // 值班管理：值班日历 / 值班分组；分组详情与值班表配置隐藏于菜单
     path: '/oncall',
     name: 'oncall',
@@ -982,6 +1175,12 @@ export default [
     path: '/public/oncall/:token',
     layout: false,
     component: './public/oncall',
+  },
+  {
+    // 故障匿名状态页：凭分享令牌只读公告与状态（免登录、无主布局）
+    path: '/public/incident/:token',
+    layout: false,
+    component: './public/incident',
   },
   {
     path: '/',

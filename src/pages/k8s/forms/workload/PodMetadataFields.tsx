@@ -1,5 +1,6 @@
 import { App, Form } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import KeyValueEditor from '../shared/KeyValueEditor';
 import { createId } from './helpers';
@@ -58,24 +59,30 @@ const createKeyValueItem = (): KeyValueEditorItem => ({
 const PodMetadataFields = () => {
   const { styles } = useStyles();
   const { message } = App.useApp();
-  const metadataTip = '为容器组副本添加元数据。';
+  const t = useT();
+  const metadataTip = t('pages.k8s.forms.workload.podMetadata.tip');
 
   return (
     <div className={styles.metadataWrapper}>
       <div className={styles.metadataLabel}>
-        <span>元数据</span>
+        <span>{t('pages.k8s.forms.common.metadata')}</span>
       </div>
       <div className={styles.metadata}>
         <div className={styles.description}>{metadataTip}</div>
         <div className={styles.content}>
-          <Form.Item label="注解" name="podAnnotations">
+          <Form.Item
+            label={t('pages.k8s.forms.common.annotations')}
+            name="podAnnotations"
+          >
             <KeyValueEditor
               addIcon={false}
-              addText="添加"
-              deleteAriaLabel="删除注解"
+              addText={t('pages.k8s.form.add')}
+              deleteAriaLabel={t('pages.k8s.forms.common.deleteAnnotation')}
               footerJustify="flex-end"
               minRows={1}
-              onAddBlocked={() => message.warning('请先填写已有注解的键。')}
+              onAddBlocked={() =>
+                message.warning(t('pages.k8s.forms.common.annotationKeyFirst'))
+              }
               onCreateItem={createKeyValueItem}
             />
           </Form.Item>

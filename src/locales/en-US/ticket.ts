@@ -238,4 +238,5 @@ export default {
   'pages.ticket.stats.byStatus': 'By status',
   'pages.ticket.stats.byPriority': 'By priority',
   'pages.ticket.stats.byTemplate': 'Top 10 services',
+  'pages.ticket.separator': ', ',
 };

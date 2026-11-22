@@ -1,3 +1,4 @@
+import { t } from '@/utils/i18n';
 import {
   formatValue,
   getArrayValue,
@@ -71,13 +72,13 @@ export const getCronJobStatus = (manifest?: Record<string, unknown>) => {
 
 export const getConcurrencyPolicyLabel = (policy?: unknown) => {
   if (policy === 'Allow') {
-    return '允许并发运行';
+    return t('pages.k8s.detail.cronjob.concurrency.allow');
   }
   if (policy === 'Forbid') {
-    return '跳过新任务';
+    return t('pages.k8s.detail.cronjob.concurrency.forbid');
   }
   if (policy === 'Replace') {
-    return '替换旧任务';
+    return t('pages.k8s.detail.cronjob.concurrency.replace');
   }
   return formatValue(policy);
 };

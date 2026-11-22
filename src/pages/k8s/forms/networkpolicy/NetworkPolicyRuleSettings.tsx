@@ -1,6 +1,7 @@
 import type { FormInstance } from 'antd';
 import { Alert, Form } from 'antd';
 import { createStyles } from 'antd-style';
+import { type Translate, useT } from '@/utils/i18n';
 import ResourceFormSection from '../shared/ResourceFormSection';
 import NetworkPolicyRuleEditor from './NetworkPolicyRuleEditor';
 import type {
@@ -23,36 +24,35 @@ type NetworkPolicyRuleSettingsProps = {
   form: FormInstance<CreateNetworkPolicyFormValues>;
 };
 
-const getDirectionMeta = (direction: NetworkPolicyRuleDirection) =>
+const getDirectionMeta = (
+  direction: NetworkPolicyRuleDirection,
+  t: Translate,
+) =>
   direction === 'ingress'
     ? {
-        denyAllMessage:
-          '未添加入站规则：将输出 ingress: []，拒绝所选 Pod 的全部入站流量。',
-        disabledMessage:
-          '策略类型未选择入站流量，创建时不会输出 ingress 规则。',
+        denyAllMessage: t('pages.k8s.forms.networkpolicy.ingress.denyAll'),
+        disabledMessage: t('pages.k8s.forms.networkpolicy.ingress.disabled'),
         fieldName: 'ingress' as const,
         policyType: 'Ingress' as NetworkPolicyPolicyType,
-        title: '入站规则',
-        tooltip:
-          '对应 spec.ingress。未添加规则时会输出空数组，表示拒绝所有入站流量。',
+        title: t('pages.k8s.forms.networkpolicy.ingress'),
+        tooltip: t('pages.k8s.forms.networkpolicy.ingress.tooltip'),
       }
     : {
-        denyAllMessage:
-          '未添加出站规则：将输出 egress: []，拒绝所选 Pod 的全部出站流量。',
-        disabledMessage: '策略类型未选择出站流量，创建时不会输出 egress 规则。',
+        denyAllMessage: t('pages.k8s.forms.networkpolicy.egress.denyAll'),
+        disabledMessage: t('pages.k8s.forms.networkpolicy.egress.disabled'),
         fieldName: 'egress' as const,
         policyType: 'Egress' as NetworkPolicyPolicyType,
-        title: '出站规则',
-        tooltip:
-          '对应 spec.egress。未添加规则时会输出空数组，表示拒绝所有出站流量。',
+        title: t('pages.k8s.forms.networkpolicy.egress'),
+        tooltip: t('pages.k8s.forms.networkpolicy.egress.tooltip'),
       };
 
 const NetworkPolicyRuleSettings = ({
   direction,
   form,
 }: NetworkPolicyRuleSettingsProps) => {
+  const t = useT();
   const { styles } = useStyles();
-  const meta = getDirectionMeta(direction);
+  const meta = getDirectionMeta(direction, t);
   const policyTypes =
     (Form.useWatch('policyTypes', {
       form,

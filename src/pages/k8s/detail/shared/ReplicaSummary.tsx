@@ -1,6 +1,7 @@
 import { MinusOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Progress, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 
 // 副本摘要卡片仅收敛视觉色值，避免影响组件布局和伸缩交互。
 const replicaCardColors = {
@@ -136,9 +137,12 @@ const getReplicaPercent = (current: number, desired: number) => {
 const ReplicaSummary = ({
   loading = false,
   data,
-  disabledReason = '该类型不支持手动调整副本',
+  disabledReason: disabledReasonProp,
   onScale,
 }: ReplicaSummaryProps) => {
+  const t = useT();
+  const disabledReason =
+    disabledReasonProp ?? t('pages.k8s.detail.replica.unsupported');
   const { styles } = useStyles();
   const desiredReplicas = data?.desiredReplicas || 0;
   const currentReplicas = data?.currentReplicas || 0;
@@ -159,14 +163,24 @@ const ReplicaSummary = ({
         type="circle"
       />
       <div className={styles.content}>
-        <div className={styles.title}>副本</div>
+        <div className={styles.title}>
+          {t('pages.k8s.detail.replica.title')}
+        </div>
         <div className={styles.metaList}>
-          <div className={styles.meta}>期望副本数: {desiredReplicas}</div>
-          <div className={styles.meta}>当前副本数: {currentReplicas}</div>
+          <div className={styles.meta}>
+            {t('pages.k8s.detail.replica.desired', { count: desiredReplicas })}
+          </div>
+          <div className={styles.meta}>
+            {t('pages.k8s.detail.replica.current', { count: currentReplicas })}
+          </div>
         </div>
       </div>
       <div className={styles.actions}>
-        <Tooltip title={canScale ? '增加副本' : disabledReason}>
+        <Tooltip
+          title={
+            canScale ? t('pages.k8s.detail.replica.increase') : disabledReason
+          }
+        >
           <Button
             className={styles.actionButton}
             disabled={!canScale}
@@ -177,7 +191,11 @@ const ReplicaSummary = ({
             type="text"
           />
         </Tooltip>
-        <Tooltip title={canScale ? '减少副本' : disabledReason}>
+        <Tooltip
+          title={
+            canScale ? t('pages.k8s.detail.replica.decrease') : disabledReason
+          }
+        >
           <Button
             className={styles.actionButton}
             disabled={!canScaleDown}

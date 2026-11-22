@@ -4,6 +4,7 @@
  */
 import { Alert, Form } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import type { EditFormProps } from '../../shared/edit';
 import { EditSubmit, useEditObject } from '../../shared/edit';
 import { fetchObject, GVRS, toYaml } from '../../shared/kube';
@@ -25,8 +26,6 @@ type ExpandFormValues = {
 /** 存储类是否允许卷扩容：checking 查询中；unknown 取不到存储类（无权限或已删除） */
 type ExpansionSupport = 'allowed' | 'checking' | 'denied' | 'none' | 'unknown';
 
-const TITLE = '扩容持久卷声明';
-
 const PersistentVolumeClaimExpandDrawer = ({
   clusterId,
   target,
@@ -34,6 +33,8 @@ const PersistentVolumeClaimExpandDrawer = ({
   onDone,
 }: EditFormProps) => {
   const { styles } = usePvcFormStyles();
+  const t = useT();
+  const title = t('pages.k8s.forms.edit.pvc.expand.title');
   const [form] = Form.useForm<ExpandFormValues>();
   const { object, resourceVersion, loading, error, reload } = useEditObject(
     clusterId,
@@ -112,7 +113,9 @@ const PersistentVolumeClaimExpandDrawer = ({
         <Alert
           className={styles.notice}
           showIcon
-          title={`存储类 ${storageClassName} 未开启「允许卷扩容」，无法扩容。请先在存储类上开启后再试。`}
+          title={t('pages.k8s.forms.edit.pvc.expand.denied', {
+            name: storageClassName,
+          })}
           type="warning"
         />
       );
@@ -122,7 +125,7 @@ const PersistentVolumeClaimExpandDrawer = ({
         <Alert
           className={styles.notice}
           showIcon
-          title="该持久卷声明没有指定存储类，无法扩容。"
+          title={t('pages.k8s.forms.edit.pvc.expand.noStorageClass')}
           type="warning"
         />
       );
@@ -132,7 +135,9 @@ const PersistentVolumeClaimExpandDrawer = ({
         <Alert
           className={styles.notice}
           showIcon
-          title={`无法读取存储类 ${storageClassName}，不能确认它是否允许卷扩容；不允许时提交会被集群拒绝。`}
+          title={t('pages.k8s.forms.edit.pvc.expand.unknown', {
+            name: storageClassName,
+          })}
           type="info"
         />
       );
@@ -152,7 +157,7 @@ const PersistentVolumeClaimExpandDrawer = ({
           support === 'denied' ||
           support === 'none'
         }
-        title={TITLE}
+        title={title}
         onCancel={onClose}
         onReload={reload}
         onSubmit={handleSubmit}
@@ -167,10 +172,13 @@ const PersistentVolumeClaimExpandDrawer = ({
               requiredMark
             >
               <Form.Item
-                label="容量"
+                label={t('pages.k8s.forms.common.capacity')}
                 name="size"
                 rules={[
-                  { required: true, message: '请输入容量' },
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.common.capacity.required'),
+                  },
                   {
                     validator: (_, value?: number | null) => {
                       if (value === undefined || value === null) {
@@ -180,6 +188,7 @@ const PersistentVolumeClaimExpandDrawer = ({
                       const sizeError = getPvcSizeError(
                         object,
                         formatPvcQuantity(value, current.unit),
+                        t,
                       );
 
                       return sizeError
@@ -197,8 +206,9 @@ const PersistentVolumeClaimExpandDrawer = ({
                 />
               </Form.Item>
               <div className={styles.helpText}>
-                当前容量 {currentRequest || '-'}
-                。仅支持增大容量，且要求所用存储类允许卷扩容。
+                {t('pages.k8s.forms.edit.pvc.expand.help', {
+                  capacity: currentRequest || '-',
+                })}
               </div>
             </Form>
           </>
@@ -209,7 +219,7 @@ const PersistentVolumeClaimExpandDrawer = ({
           clusterId={clusterId}
           resourceVersion={resourceVersion}
           target={target}
-          title={TITLE}
+          title={title}
           yaml={pending}
           onBack={() => setPending(undefined)}
           onClose={onClose}

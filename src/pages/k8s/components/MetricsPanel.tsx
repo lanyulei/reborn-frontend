@@ -338,7 +338,10 @@ export const MetricsPanel: React.FC<{
   const targetKey = JSON.stringify(target);
   const panelKey = (panels ?? []).join(',');
 
+  /** 请求序号：切换时间范围时只采纳最后一次请求的结果 */
+  const seq = useRef(0);
   const load = useCallback(async () => {
+    const id = ++seq.current;
     setLoading(true);
     const end = dayjs();
     try {
@@ -351,17 +354,22 @@ export const MetricsPanel: React.FC<{
         },
         panelKey ? panelKey.split(',') : undefined,
       );
+      if (id !== seq.current) return;
       setData(res);
       setError(undefined);
     } catch (err) {
+      if (id !== seq.current) return;
       setError(getK8sErrorMessage(err));
     } finally {
-      setLoading(false);
+      if (id === seq.current) setLoading(false);
     }
   }, [clusterId, targetKey, panelKey, range]);
 
   useEffect(() => {
     void load();
+    return () => {
+      seq.current += 1;
+    };
   }, [load]);
 
   if (error) return <Alert type="error" showIcon title={error} />;

@@ -1,3 +1,4 @@
+import { t } from '@/utils/i18n';
 import { DETAIL_NONE, isNamespaced, KIND_GVR } from '../../components/meta';
 import {
   formatValue,
@@ -131,7 +132,7 @@ const buildHpaRelationItems = (
 
   return [
     {
-      key: '伸缩目标',
+      key: t('pages.k8s.detail.basic.scaleTarget'),
       path: getObjectRefDetailPath(target, namespace),
       value: formatObjectRef(target) || '-',
     },
@@ -173,12 +174,12 @@ const buildPersistentVolumeRelationItems = (
   const nodeAffinity = getRecordValue(spec?.nodeAffinity);
   return [
     {
-      key: '绑定声明',
+      key: t('pages.k8s.detail.basic.claimRef'),
       path: getObjectRefDetailPath(claimRef),
       value: formatObjectRef(claimRef) || '-',
     },
     {
-      key: '节点亲和',
+      key: t('pages.k8s.detail.basic.nodeAffinity'),
       value: nodeAffinity ? JSON.stringify(nodeAffinity, null, 2) : '-',
     },
   ];
@@ -212,7 +213,9 @@ const formatSelector = (selector?: Record<string, unknown>) => {
 
   return [
     matchLabels,
-    expressionCount ? `${expressionCount} 个表达式` : undefined,
+    expressionCount
+      ? t('pages.k8s.detail.netpol.expressions', { count: expressionCount })
+      : undefined,
   ]
     .filter(Boolean)
     .join('、');
@@ -224,9 +227,11 @@ const formatPolicyPeer = (peer?: Record<string, unknown>) => {
   const ipBlock = getRecordValue(peer?.ipBlock);
   const parts = [
     namespaceSelector
-      ? `ns(${formatSelector(namespaceSelector) || '任意'})`
+      ? `ns(${formatSelector(namespaceSelector) || t('pages.k8s.detail.netpol.any')})`
       : undefined,
-    podSelector ? `pod(${formatSelector(podSelector) || '任意'})` : undefined,
+    podSelector
+      ? `pod(${formatSelector(podSelector) || t('pages.k8s.detail.netpol.any')})`
+      : undefined,
     ipBlock
       ? `ipBlock(${getStringValue(ipBlock.cidr) || '-'}${
           getArrayValue(ipBlock.except).length
@@ -236,12 +241,12 @@ const formatPolicyPeer = (peer?: Record<string, unknown>) => {
       : undefined,
   ].filter(Boolean);
 
-  return parts.length ? parts.join(' + ') : '任意';
+  return parts.length ? parts.join(' + ') : t('pages.k8s.detail.netpol.any');
 };
 
 const summarizePeers = (peers: unknown[], label: string) => {
   if (!peers.length) {
-    return `${label} 任意`;
+    return t('pages.k8s.detail.netpol.anyPeer', { label });
   }
 
   return `${label} ${peers
@@ -260,7 +265,7 @@ const summarizeRule = (
     .map((item) => {
       const port =
         item?.port === undefined || item?.port === null
-          ? '全部'
+          ? t('pages.k8s.detail.all')
           : formatValue(item.port);
       const endPort =
         item?.endPort === undefined || item?.endPort === null
@@ -274,8 +279,15 @@ const summarizeRule = (
     .join('、');
 
   return [
-    summarizePeers(peers, direction === 'ingress' ? '来源' : '目标'),
-    ports ? `端口 ${ports}` : '端口 全部',
+    summarizePeers(
+      peers,
+      direction === 'ingress'
+        ? t('pages.k8s.detail.source')
+        : t('pages.k8s.detail.target'),
+    ),
+    ports
+      ? t('pages.k8s.detail.netpol.ports', { ports })
+      : t('pages.k8s.detail.netpol.allPorts'),
   ]
     .filter(Boolean)
     .join('；');

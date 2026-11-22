@@ -5,6 +5,7 @@ import {
   HddOutlined,
 } from '@ant-design/icons';
 import { Empty, Spin } from 'antd';
+import { useT } from '@/utils/i18n';
 import SubTitle from '../shared/SubTitle';
 import {
   formatQuotaValue,
@@ -21,56 +22,57 @@ type QuotaOverviewProps = {
 };
 
 const QuotaOverview = ({ loading, quotaSummary }: QuotaOverviewProps) => {
+  const t = useT();
   const { styles } = useStyles();
   const defaultQuotaItems = [
     {
       key: 'cpu',
       icon: <DatabaseOutlined />,
       request: quotaSummary.defaultContainer.cpuRequest,
-      requestLabel: 'CPU 预留',
+      requestLabel: t('pages.k8s.detail.quota.cpuRequest'),
       limit: quotaSummary.defaultContainer.cpuLimit,
-      limitLabel: 'CPU 限制',
+      limitLabel: t('pages.k8s.detail.quota.cpuLimit'),
     },
     {
       key: 'memory',
       icon: <HddOutlined />,
       request: quotaSummary.defaultContainer.memoryRequest,
-      requestLabel: '内存预留',
+      requestLabel: t('pages.k8s.detail.quota.memoryRequest'),
       limit: quotaSummary.defaultContainer.memoryLimit,
-      limitLabel: '内存限制',
+      limitLabel: t('pages.k8s.detail.quota.memoryLimit'),
     },
   ];
   const projectQuotaItems = [
     {
       key: 'cpuLimit',
       icon: <DatabaseOutlined />,
-      title: 'CPU 上限',
+      title: t('pages.k8s.form.cpuLimit'),
       quota: quotaSummary.project.cpuLimit,
       parser: parseCpuQuantity,
     },
     {
       key: 'memoryLimit',
       icon: <HddOutlined />,
-      title: '内存限制',
+      title: t('pages.k8s.detail.quota.memoryLimit'),
       quota: quotaSummary.project.memoryLimit,
       parser: parseMemoryQuantity,
     },
     {
       key: 'pods',
       icon: <ClusterOutlined />,
-      title: '容器组',
+      title: t('pages.k8s.kind.Pod'),
       quota: quotaSummary.project.pods,
     },
     {
       key: 'deployments',
       icon: <DeploymentUnitOutlined />,
-      title: '部署',
+      title: t('pages.k8s.kind.Deployment'),
       quota: quotaSummary.project.deployments,
     },
     {
       key: 'persistentVolumeClaims',
       icon: <HddOutlined />,
-      title: '持久卷声明',
+      title: t('pages.k8s.kind.PersistentVolumeClaim'),
       quota: quotaSummary.project.persistentVolumeClaims,
     },
   ];
@@ -83,7 +85,7 @@ const QuotaOverview = ({ loading, quotaSummary }: QuotaOverviewProps) => {
     return (
       <Empty
         image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description="该命名空间尚未设置配额与默认容器配额；可在命名空间列表的「配额」操作里设置。"
+        description={t('pages.k8s.detail.quota.empty')}
       />
     );
   }
@@ -92,14 +94,14 @@ const QuotaOverview = ({ loading, quotaSummary }: QuotaOverviewProps) => {
     <Spin spinning={loading}>
       <div className={styles.quotaPanel}>
         <div>
-          <SubTitle>默认容器配额</SubTitle>
+          <SubTitle>{t('pages.k8s.detail.quota.defaultContainer')}</SubTitle>
           <div className={styles.defaultQuota}>
             {defaultQuotaItems.map((item) => (
               <div className={styles.defaultQuotaGroup} key={item.key}>
                 <div className={styles.quotaIcon}>{item.icon}</div>
                 <div className={styles.quotaMetric}>
                   <div className={styles.quotaMetricValue}>
-                    {item.request || '无预留'}
+                    {item.request || t('pages.k8s.detail.noRequest')}
                   </div>
                   <div className={styles.quotaMetricLabel}>
                     {item.requestLabel}
@@ -118,7 +120,7 @@ const QuotaOverview = ({ loading, quotaSummary }: QuotaOverviewProps) => {
           </div>
         </div>
         <div>
-          <SubTitle>项目配额</SubTitle>
+          <SubTitle>{t('pages.k8s.detail.quota.project')}</SubTitle>
           <div className={styles.projectQuota}>
             {projectQuotaItems.map((item) => {
               const usagePercent = getQuotaUsagePercent(
@@ -132,24 +134,36 @@ const QuotaOverview = ({ loading, quotaSummary }: QuotaOverviewProps) => {
                   <div className={styles.quotaIcon}>{item.icon}</div>
                   <div className={styles.quotaMetric}>
                     <div className={styles.quotaMetricValue}>{item.title}</div>
-                    <div className={styles.quotaMetricLabel}>资源类型</div>
+                    <div className={styles.quotaMetricLabel}>
+                      {t('pages.k8s.detail.quota.resourceType')}
+                    </div>
                   </div>
                   <div className={styles.quotaMetric}>
                     <div className={styles.quotaMetricValue}>
                       {item.quota.used || '0'}
                     </div>
-                    <div className={styles.quotaMetricLabel}>已使用</div>
+                    <div className={styles.quotaMetricLabel}>
+                      {t('pages.k8s.detail.used')}
+                    </div>
                   </div>
                   <div className={styles.quotaMetric}>
                     <div className={styles.quotaMetricValue}>
                       {formatQuotaValue(item.quota.hard)}
                     </div>
-                    <div className={styles.quotaMetricLabel}>配额</div>
+                    <div className={styles.quotaMetricLabel}>
+                      {t('pages.k8s.action.quota')}
+                    </div>
                   </div>
                   <div className={styles.quotaUsage}>
                     <div className={styles.usageHeader}>
-                      <span className={styles.usageTitle}>用量</span>
-                      <span>已使用：{usagePercent}%</span>
+                      <span className={styles.usageTitle}>
+                        {t('pages.k8s.detail.usage')}
+                      </span>
+                      <span>
+                        {t('pages.k8s.detail.usedPercent', {
+                          percent: usagePercent,
+                        })}
+                      </span>
                     </div>
                     <div className={styles.usageBar}>
                       <div

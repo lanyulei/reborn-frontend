@@ -2,7 +2,8 @@ import { DeploymentUnitOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 import { App, AutoComplete, Button, Col, Form, Input, Row } from 'antd';
 import { createStyles } from 'antd-style';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import WorkloadSelectorModal, {
   type WorkloadSelectorTab,
 } from '../service/WorkloadSelectorModal';
@@ -15,11 +16,6 @@ const TARGET_KIND_OPTIONS = [
   { label: 'StatefulSet', value: 'StatefulSet' },
   { label: 'ReplicaSet', value: 'ReplicaSet' },
   { label: 'ReplicationController', value: 'ReplicationController' },
-];
-
-const HPA_WORKLOAD_TABS: WorkloadSelectorTab[] = [
-  { label: '部署', value: 'Deployment' },
-  { label: '有状态副本集', value: 'StatefulSet' },
 ];
 
 const useStyles = createStyles(({ token }) => ({
@@ -97,6 +93,7 @@ const TargetPicker = ({
   value,
   onSelect,
 }: TargetPickerProps) => {
+  const t = useT();
   const { styles } = useStyles();
   const hasTarget = Boolean(value);
 
@@ -107,12 +104,12 @@ const TargetPicker = ({
       </span>
       <div>
         <div className={styles.pickerTitle}>
-          {hasTarget ? value : '选择工作负载'}
+          {hasTarget ? value : t('pages.k8s.forms.hpa.target.pick')}
         </div>
         <div className={styles.pickerDescription}>
           {hasTarget
             ? `${targetKind || '-'} · ${apiVersion || '-'}`
-            : '从当前命名空间选择 HPA 管理副本数的工作负载。'}
+            : t('pages.k8s.forms.hpa.target.pick.description')}
         </div>
       </div>
       <Button
@@ -121,15 +118,25 @@ const TargetPicker = ({
         type={hasTarget ? 'default' : 'primary'}
         onClick={onSelect}
       >
-        {hasTarget ? '重新选择' : '选择工作负载'}
+        {hasTarget
+          ? t('pages.k8s.forms.hpa.target.repick')
+          : t('pages.k8s.forms.hpa.target.pick')}
       </Button>
     </div>
   );
 };
 
 const TargetSettings = ({ clusterId, form }: TargetSettingsProps) => {
+  const t = useT();
   const { styles } = useStyles();
   const { message } = App.useApp();
+  const workloadTabs = useMemo<WorkloadSelectorTab[]>(
+    () => [
+      { label: t('pages.k8s.kind.Deployment'), value: 'Deployment' },
+      { label: t('pages.k8s.kind.StatefulSet'), value: 'StatefulSet' },
+    ],
+    [t],
+  );
   const [workloadModalOpen, setWorkloadModalOpen] = useState(false);
   const values: CreateHorizontalPodAutoscalerFormValues =
     Form.useWatch([], { form, preserve: true }) || {};
@@ -137,7 +144,7 @@ const TargetSettings = ({ clusterId, form }: TargetSettingsProps) => {
   // 命名空间字段在上一步，这里没有挂载：直接看表单存储里的值
   const openWorkloadModal = () => {
     if (!values.namespace?.trim()) {
-      message.warning('请先选择命名空间');
+      message.warning(t('pages.k8s.forms.hpa.target.namespaceFirst'));
       return;
     }
     setWorkloadModalOpen(true);
@@ -150,12 +157,14 @@ const TargetSettings = ({ clusterId, form }: TargetSettingsProps) => {
   return (
     <>
       <FormSection
-        description="可从当前命名空间选择工作负载自动回填，也可以直接填写其他实现 scale 子资源的对象。"
-        title="伸缩目标"
+        description={t('pages.k8s.forms.hpa.target.description')}
+        title={t('pages.k8s.forms.hpa.step.target')}
       >
         <div className={styles.stack}>
           <div>
-            <div className={styles.pickerLabel}>目标工作负载</div>
+            <div className={styles.pickerLabel}>
+              {t('pages.k8s.forms.hpa.target.workload')}
+            </div>
             <TargetPicker
               apiVersion={values.targetApiVersion}
               targetKind={values.targetKind}
@@ -167,34 +176,53 @@ const TargetSettings = ({ clusterId, form }: TargetSettingsProps) => {
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item
-                label="目标类型"
+                label={t('pages.k8s.forms.hpa.targetType')}
                 name="targetKind"
-                rules={[{ required: true, message: '请选择目标类型' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.hpa.targetType.required'),
+                  },
+                ]}
               >
                 <AutoComplete
                   options={TARGET_KIND_OPTIONS}
-                  placeholder="请选择目标类型"
+                  placeholder={t('pages.k8s.forms.hpa.targetType.required')}
                   onChange={handleTargetKindChange}
                 />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item
-                label="目标名称"
+                label={t('pages.k8s.forms.hpa.targetName')}
                 name="targetName"
-                rules={[{ required: true, message: '请输入目标名称' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.hpa.targetName.required'),
+                  },
+                ]}
               >
-                <Input placeholder="请输入目标名称" />
+                <Input
+                  placeholder={t('pages.k8s.forms.hpa.targetName.required')}
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item
-                label="目标 API 版本"
+                label={t('pages.k8s.forms.hpa.targetApiVersion')}
                 name="targetApiVersion"
-                rules={[{ required: true, message: '请输入目标 API 版本' }]}
-                tooltip="选择工作负载时会自动带出，引用其他实现 scale 子资源的对象时可手动调整。"
+                rules={[
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.hpa.targetApiVersion.required'),
+                  },
+                ]}
+                tooltip={t('pages.k8s.forms.hpa.targetApiVersion.tooltip')}
               >
-                <Input placeholder="如 apps/v1" />
+                <Input
+                  placeholder={t('pages.k8s.forms.hpa.apiVersion.placeholder')}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -204,10 +232,10 @@ const TargetSettings = ({ clusterId, form }: TargetSettingsProps) => {
       <WorkloadSelectorModal
         clusterId={clusterId}
         detail={false}
-        hint="选择同命名空间下可被 HPA 引用的工作负载，名称会写入 scaleTargetRef。"
+        hint={t('pages.k8s.forms.hpa.target.hint')}
         namespace={values.namespace}
         open={workloadModalOpen}
-        tabs={HPA_WORKLOAD_TABS}
+        tabs={workloadTabs}
         onCancel={() => setWorkloadModalOpen(false)}
         onOk={(workload) => {
           form.setFieldsValue({

@@ -18,6 +18,7 @@ import {
   Typography,
 } from 'antd';
 import type React from 'react';
+import { useMemo } from 'react';
 import { DeptSelect } from '@/components/DeptSelect';
 import { type UserOption, UserSelect } from '@/components/UserSelect';
 import { useT } from '@/utils/i18n';
@@ -120,34 +121,48 @@ export interface FieldGroup {
   fields: readonly { code: string; name: string }[];
 }
 
-/** 在流程副本里定位节点或分支并修改 */
+/**
+ * 定位节点或分支并修改，返回新的流程：只复制被改的节点 / 分支及其所在路径上的容器
+ * （结构共享），其余子树沿用原引用——每次按键都深拷贝整张流程在大流程上会卡顿。
+ */
 const patchFlow = (
   flow: Flow,
   id: string,
   fn: (target: { node?: StepNode; branch?: Branch }) => void,
 ): Flow => {
-  const draft = structuredClone(flow);
-  const visit = (nodes: FlowNode[]): boolean => {
-    for (const node of nodes) {
+  const visit = (nodes: FlowNode[]): FlowNode[] | undefined => {
+    for (let i = 0; i < nodes.length; i += 1) {
+      const node = nodes[i];
       if (node.kind !== 'branch') {
-        if (node.id === id) {
-          fn({ node });
-          return true;
-        }
-        continue;
+        if (node.id !== id) continue;
+        const copy = structuredClone(node);
+        fn({ node: copy });
+        const next = [...nodes];
+        next[i] = copy;
+        return next;
       }
-      for (const branch of node.branches) {
+      for (let j = 0; j < node.branches.length; j += 1) {
+        const branch = node.branches[j];
+        let replaced: Branch | undefined;
         if (branch.id === id) {
-          fn({ branch });
-          return true;
+          replaced = structuredClone(branch);
+          fn({ branch: replaced });
+        } else {
+          const inner = visit(branch.nodes);
+          if (inner) replaced = { ...branch, nodes: inner };
         }
-        if (visit(branch.nodes)) return true;
+        if (!replaced) continue;
+        const branches = [...node.branches];
+        branches[j] = replaced;
+        const next = [...nodes];
+        next[i] = { ...node, branches };
+        return next;
       }
     }
-    return false;
+    return undefined;
   };
-  visit(draft.nodes);
-  return draft;
+  const nodes = visit(flow.nodes);
+  return nodes ? { ...flow, nodes } : flow;
 };
 
 interface Target {
@@ -872,11 +887,13 @@ const StepForm: React.FC<{
   update: (fn: (node: StepNode) => void) => void;
 }> = ({ flow, node, deps, update }) => {
   const t = useT();
-  const path = parallelPathOf(flow, node.id);
-  // 拒绝去向只能是同一并行分支内的其他人工任务
-  const rejectTargets = listTasks(flow).filter(
-    (n) => n.id !== node.id && parallelPathOf(flow, n.id) === path,
-  );
+  // 拒绝去向只能是同一并行分支内的其他人工任务；按流程 / 节点缓存，不随每次按键重走整棵树
+  const rejectTargets = useMemo(() => {
+    const path = parallelPathOf(flow, node.id);
+    return listTasks(flow).filter(
+      (n) => n.id !== node.id && parallelPathOf(flow, n.id) === path,
+    );
+  }, [flow, node.id]);
   const setRule = (index: number, rule: AssigneeRule) =>
     update((n) => {
       n.assignee.rules[index] = rule;
@@ -1185,9 +1202,16 @@ const BranchForm: React.FC<{
 }> = ({ flow, branch, mode, deps, update }) => {
   const t = useT();
   const conditional = isConditional(mode);
-  // 并行分支内部不能直接结束流程：其他并行分支还在进行，汇聚永远等不齐
-  const insideParallel = !!parallelPathOf(flow, branch.id);
-  const jumpTargets = jumpTargetsOf(flow, branch.id);
+  // 并行分支内部不能直接结束流程：其他并行分支还在进行，汇聚永远等不齐。
+  // 候选去向要把流程当作图算一遍：按流程 / 分支缓存，不随每次按键重算
+  const { insideParallel, jumpTargets, tasks } = useMemo(
+    () => ({
+      insideParallel: !!parallelPathOf(flow, branch.id),
+      jumpTargets: jumpTargetsOf(flow, branch.id),
+      tasks: listTasks(flow),
+    }),
+    [flow, branch.id],
+  );
   const endOptions = [
     { value: 'join', label: t('component.flow.end.join') },
     ...(insideParallel && branch.end.type !== 'end'
@@ -1209,7 +1233,7 @@ const BranchForm: React.FC<{
     endOptions.push({
       value: `jump:${to}`,
       label: t('component.flow.end.jump', {
-        name: listTasks(flow).find((n) => n.id === to)?.name ?? to,
+        name: tasks.find((n) => n.id === to)?.name ?? to,
       }),
     });
   }

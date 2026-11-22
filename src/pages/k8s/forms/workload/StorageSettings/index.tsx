@@ -28,6 +28,7 @@ import {
 } from 'antd';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import { GVRS, listNames, listRows } from '../../shared/kube';
 import CreatableSelect from '../CreatableSelect';
 import { useWizardScope } from '../context';
@@ -98,6 +99,7 @@ type StorageActionItem = {
 const StorageSettings = ({ form, type }: StorageSettingsProps) => {
   const { styles } = useStyles();
   const { message } = App.useApp();
+  const t = useT();
   const { clusterId } = useWizardScope();
   const storageSnapshotRef = useRef<Partial<CreateWorkloadFormValues> | null>(
     null,
@@ -185,16 +187,19 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
       pvcs.map((item) => ({
         label: (
           <ResourceOptionContent
-            description={item.storageClassName || '默认存储类'}
+            description={
+              item.storageClassName ||
+              t('pages.k8s.forms.workload.storage.defaultStorageClass')
+            }
             icon={<HddOutlined />}
-            metrics={getPvcMetrics(item)}
+            metrics={getPvcMetrics(item, t)}
             title={item.name}
           />
         ),
         searchLabel: item.name,
         value: item.name,
       })),
-    [pvcs],
+    [pvcs, t],
   );
 
   const storageClassOptions = useMemo(
@@ -211,7 +216,7 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
       selectedConfigResources.map((item) => ({
         label: (
           <ResourceOptionContent
-            description={getConfigResourceLabel(configResourceType)}
+            description={getConfigResourceLabel(configResourceType, t)}
             icon={getResourceIcon(configResourceType)}
             title={item}
           />
@@ -219,7 +224,7 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
         searchLabel: item,
         value: item,
       })),
-    [configResourceType, selectedConfigResources],
+    [configResourceType, selectedConfigResources, t],
   );
 
   const normalizeMounts = useCallback(
@@ -263,7 +268,7 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     if (nextValue && !isVolumeItemPath(nextValue)) {
       setSubPathEditor({
         ...subPathEditor,
-        error: '请输入绝对路径或相对路径，且不能包含 ..',
+        error: t('pages.k8s.forms.workload.storage.subPath.invalid'),
       });
       return;
     }
@@ -593,12 +598,12 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
 
       if (!mountPath) {
         errors.push({
-          errors: ['请输入挂载路径'],
+          errors: [t('pages.k8s.forms.workload.storage.mountPath.required')],
           name: ['containerMounts', index, 'mountPath'],
         });
       } else if (!ABSOLUTE_PATH_PATTERN.test(mountPath)) {
         errors.push({
-          errors: ['请输入以 / 开头的绝对路径'],
+          errors: [t('pages.k8s.forms.workload.storage.absolutePath')],
           name: ['containerMounts', index, 'mountPath'],
         });
       } else {
@@ -610,7 +615,7 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
 
       if (subPath && !isVolumeItemPath(subPath)) {
         errors.push({
-          errors: ['请输入绝对路径或相对路径，且不能包含 ..'],
+          errors: [t('pages.k8s.forms.workload.storage.subPath.invalid')],
           name: ['containerMounts', index, 'subPath'],
         });
       } else {
@@ -630,8 +635,11 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     }
 
     form.setFields(fieldErrors as Parameters<typeof form.setFields>[0]);
-    message.warning('请完善挂载路径设置');
-    throw new Error('请完善挂载路径设置');
+    const incomplete = t(
+      'pages.k8s.forms.workload.storage.mountPath.incomplete',
+    );
+    message.warning(incomplete);
+    throw new Error(incomplete);
   };
 
   const confirmStorageModal = async () => {
@@ -730,12 +738,15 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
       type === 'StatefulSet'
         ? [
             {
-              description:
-                '添加持久卷声明模板为有状态副本集的每个容器组挂载一个持久卷',
+              description: t(
+                'pages.k8s.forms.workload.storage.volumeClaimTemplate.add.description',
+              ),
               icon: <HddOutlined />,
               key: 'volumeClaimTemplate',
               onSelect: () => openStorageModal(selectVolumeClaimTemplate),
-              title: '添加持久卷声明模板',
+              title: t(
+                'pages.k8s.forms.workload.storage.volumeClaimTemplate.add',
+              ),
               wide: true,
             },
           ]
@@ -748,18 +759,22 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     key: 'mounts',
     actions: [
       {
-        description: '为容器挂载持久卷、临时卷或 HostPath 卷',
+        description: t(
+          'pages.k8s.forms.workload.storage.volume.mount.description',
+        ),
         icon: <HddOutlined />,
         key: 'volume',
         onSelect: () => openStorageModal(() => selectStorageCategory('volume')),
-        title: '挂载卷',
+        title: t('pages.k8s.forms.workload.storage.volume.mount'),
       },
       {
-        description: '为容器挂载配置字典或保密字典',
+        description: t(
+          'pages.k8s.forms.workload.storage.config.mount.description',
+        ),
         icon: <ToolOutlined />,
         key: 'config',
         onSelect: () => openStorageModal(() => selectStorageCategory('config')),
-        title: '挂载配置字典或保密字典',
+        title: t('pages.k8s.forms.workload.storage.config.mount'),
       },
     ],
     match: (item: WorkloadStorageConfigItem) =>
@@ -863,7 +878,12 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
       <Form.Item
         className={styles.resourceItem}
         name="claimName"
-        rules={[{ required: true, message: '请选择持久卷声明' }]}
+        rules={[
+          {
+            required: true,
+            message: t('pages.k8s.forms.workload.storage.pvc.required'),
+          },
+        ]}
       >
         <Select
           className={styles.resourceSelect}
@@ -873,14 +893,24 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
           }}
           loading={resourceLoading}
           notFoundContent={
-            resourceLoading ? <Spin size="small" /> : '未发现可用资源'
+            resourceLoading ? (
+              <Spin size="small" />
+            ) : (
+              t('pages.k8s.forms.common.noResources')
+            )
           }
           options={pvcOptions}
           placeholder={
             <ResourcePlaceholder
-              description="将根据持久卷声明创建的持久卷挂载到容器"
+              description={t(
+                'pages.k8s.forms.workload.storage.pvc.description',
+              )}
               icon={<HddOutlined />}
-              title={pvcs.length > 0 ? '选择持久卷声明' : '未发现可用资源'}
+              title={
+                pvcs.length > 0
+                  ? t('pages.k8s.forms.workload.storage.pvc.select')
+                  : t('pages.k8s.forms.common.noResources')
+              }
             />
           }
           showSearch={{ optionFilterProp: 'searchLabel' }}
@@ -891,14 +921,24 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
   );
 
   const renderConfigResourceSelector = () => {
-    const resourceLabel = getConfigResourceLabel(configResourceType);
+    const resourceLabel = getConfigResourceLabel(configResourceType, t);
 
     return (
       <div className={styles.resourceSelector}>
         <Form.Item
           className={styles.resourceItem}
           name="configResourceName"
-          rules={[{ required: true, message: `请选择${resourceLabel}。` }]}
+          rules={[
+            {
+              required: true,
+              message: t(
+                'pages.k8s.forms.workload.storage.configResource.required',
+                {
+                  label: resourceLabel,
+                },
+              ),
+            },
+          ]}
         >
           <Select
             className={styles.resourceSelect}
@@ -908,17 +948,29 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
             }}
             loading={resourceLoading}
             notFoundContent={
-              resourceLoading ? <Spin size="small" /> : '未发现可用资源'
+              resourceLoading ? (
+                <Spin size="small" />
+              ) : (
+                t('pages.k8s.forms.common.noResources')
+              )
             }
             options={configResourceOptions}
             placeholder={
               <ResourcePlaceholder
-                description={`将${resourceLabel}挂载到容器。`}
+                description={t(
+                  'pages.k8s.forms.workload.storage.configResource.description',
+                  {
+                    label: resourceLabel,
+                  },
+                )}
                 icon={getResourceIcon(configResourceType)}
                 title={
                   selectedConfigResources.length > 0
-                    ? `选择${resourceLabel}`
-                    : '未发现可用资源'
+                    ? t(
+                        'pages.k8s.forms.workload.storage.configResource.select',
+                        { label: resourceLabel },
+                      )
+                    : t('pages.k8s.forms.common.noResources')
                 }
               />
             }
@@ -947,38 +999,58 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
         <>
           <Alert
             className={styles.info}
-            title="使用 HostPath 卷将主机文件系统中的文件或目录挂载到容器中。"
+            title={t('pages.k8s.forms.workload.storage.hostPath.info')}
             showIcon={false}
             type="info"
           />
           <div className={styles.formGrid}>
             <Form.Item
-              label="卷名称"
+              label={t('pages.k8s.forms.workload.storage.volumeName')}
               name="volumeName"
               rules={[
-                { required: true, message: '请输入卷名称' },
-                { max: 63, message: '卷名称最长 63 个字符' },
+                {
+                  required: true,
+                  message: t('pages.k8s.forms.common.volumeName.required'),
+                },
+                {
+                  max: 63,
+                  message: t(
+                    'pages.k8s.forms.workload.storage.volumeName.maxLength',
+                  ),
+                },
                 {
                   pattern: KUBERNETES_NAME_PATTERN,
-                  message:
-                    '卷名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+                  message: t(
+                    'pages.k8s.forms.workload.storage.volumeName.pattern',
+                  ),
                 },
               ]}
             >
-              <Input placeholder="请输入卷名称" />
+              <Input
+                placeholder={t('pages.k8s.forms.common.volumeName.required')}
+              />
             </Form.Item>
             <Form.Item
-              label="主机路径"
+              label={t('pages.k8s.forms.workload.storage.hostPath')}
               name="hostPath"
               rules={[
-                { required: true, message: '请输入主机路径' },
+                {
+                  required: true,
+                  message: t(
+                    'pages.k8s.forms.workload.storage.hostPath.required',
+                  ),
+                },
                 {
                   pattern: ABSOLUTE_PATH_PATTERN,
-                  message: '请输入以 / 开头的绝对路径',
+                  message: t('pages.k8s.forms.workload.storage.absolutePath'),
                 },
               ]}
             >
-              <Input placeholder="请输入主机路径" />
+              <Input
+                placeholder={t(
+                  'pages.k8s.forms.workload.storage.hostPath.required',
+                )}
+              />
             </Form.Item>
           </div>
         </>
@@ -988,33 +1060,49 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     return (
       <div className={styles.formGrid}>
         <Form.Item
-          label="卷名称"
+          label={t('pages.k8s.forms.workload.storage.volumeName')}
           name="volumeName"
           rules={[
-            { required: true, message: '请输入卷名称' },
-            { max: 63, message: '卷名称最长 63 个字符' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.volumeName.required'),
+            },
+            {
+              max: 63,
+              message: t(
+                'pages.k8s.forms.workload.storage.volumeName.maxLength',
+              ),
+            },
             {
               pattern: KUBERNETES_NAME_PATTERN,
-              message:
-                '卷名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+              message: t('pages.k8s.forms.workload.storage.volumeName.pattern'),
             },
           ]}
         >
-          <Input placeholder="请输入卷名称" />
+          <Input
+            placeholder={t('pages.k8s.forms.common.volumeName.required')}
+          />
         </Form.Item>
         <Form.Item
-          label="容量上限"
+          label={t('pages.k8s.forms.workload.storage.sizeLimit')}
           name="emptyDirSizeLimit"
           rules={[
-            { required: true, message: '请输入容量上限' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.workload.storage.sizeLimit.required'),
+            },
             {
               pattern: STORAGE_QUANTITY_PATTERN,
-              message: '请输入合法的容量，例如 200Mi 或 2Gi',
+              message: t('pages.k8s.forms.workload.storage.quantity.invalid'),
             },
           ]}
-          tooltip="设置当前存储卷的容量上限，默认值为 200Mi，最大值不能超过 2Gi"
+          tooltip={t('pages.k8s.forms.workload.storage.sizeLimit.tip')}
         >
-          <Input placeholder="例如 200Mi 或 2Gi" />
+          <Input
+            placeholder={t(
+              'pages.k8s.forms.workload.storage.quantity.placeholder',
+            )}
+          />
         </Form.Item>
       </div>
     );
@@ -1025,53 +1113,86 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
       <div className={styles.templateFormGrid}>
         <Form.Item
           className={styles.templateField}
-          tooltip="持久卷声明名称的前缀。前缀只能包含小写字母、数字和连字符（-），必须以小写字母或数字开头和结尾，最长 253 个字符"
-          label="PVC 名称前缀"
+          tooltip={t('pages.k8s.forms.workload.storage.pvcPrefix.tip')}
+          label={t('pages.k8s.forms.workload.storage.pvcPrefix')}
           name="pvcNamePrefix"
           rules={[
-            { required: true, message: '请输入 PVC 名称前缀' },
-            { max: 253, message: 'PVC 名称前缀最长 253 个字符' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.workload.storage.pvcPrefix.required'),
+            },
+            {
+              max: 253,
+              message: t(
+                'pages.k8s.forms.workload.storage.pvcPrefix.maxLength',
+              ),
+            },
             {
               pattern: KUBERNETES_NAME_PATTERN,
-              message:
-                'PVC 名称前缀只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+              message: t('pages.k8s.forms.workload.storage.pvcPrefix.pattern'),
             },
           ]}
         >
-          <Input placeholder="请输入 PVC 名称前缀" />
+          <Input
+            placeholder={t(
+              'pages.k8s.forms.workload.storage.pvcPrefix.required',
+            )}
+          />
         </Form.Item>
         <Form.Item
           className={styles.templateField}
-          tooltip="选择一个存储类来创建特定种类的卷"
-          label="存储类"
+          tooltip={t('pages.k8s.forms.workload.storage.storageClass.tip')}
+          label={t('pages.k8s.forms.common.storageClass')}
           name="pvcStorageClassName"
-          rules={[{ required: true, message: '请选择存储类' }]}
+          rules={[
+            {
+              required: true,
+              message: t(
+                'pages.k8s.forms.workload.storage.storageClass.required',
+              ),
+            },
+          ]}
         >
           <Select
             allowClear
             loading={resourceLoading}
             notFoundContent={
-              resourceLoading ? <Spin size="small" /> : '未发现可用存储类'
+              resourceLoading ? (
+                <Spin size="small" />
+              ) : (
+                t('pages.k8s.forms.workload.storage.storageClass.empty')
+              )
             }
             options={storageClassOptions}
-            placeholder="请选择存储类"
+            placeholder={t(
+              'pages.k8s.forms.workload.storage.storageClass.required',
+            )}
             showSearch
           />
         </Form.Item>
         <Form.Item
           className={styles.templateField}
-          tooltip="选择存储类支持的一种或多种访问模式"
-          label="访问模式"
+          tooltip={t('pages.k8s.forms.workload.storage.accessMode.tip')}
+          label={t('pages.k8s.forms.common.accessMode')}
           name="pvcAccessModes"
-          rules={[{ required: true, message: '请选择访问模式' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.accessMode.required'),
+            },
+          ]}
         >
           <Select
             mode="multiple"
             options={accessModeOptions}
-            placeholder="请选择访问模式"
+            placeholder={t('pages.k8s.forms.common.accessMode.required')}
           />
         </Form.Item>
-        <Form.Item className={styles.capacityFormItem} label="卷容量" required>
+        <Form.Item
+          className={styles.capacityFormItem}
+          label={t('pages.k8s.forms.workload.storage.volumeCapacity')}
+          required
+        >
           <div className={styles.capacityRow}>
             <Slider
               className={styles.capacitySlider}
@@ -1094,7 +1215,9 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
               controls={false}
               max={2048}
               min={1}
-              placeholder="请输入卷容量"
+              placeholder={t(
+                'pages.k8s.forms.workload.storage.volumeCapacity.required',
+              )}
               suffix="Gi"
               value={pvcSizeGi ?? 10}
               onChange={(value) => form.setFieldValue('pvcSizeGi', value || 1)}
@@ -1108,14 +1231,16 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
   const renderSubPathEditor = () => (
     <div className={styles.subPathEditor}>
       <div className={styles.subPathHeader}>
-        <div className={styles.subPathTitle}>指定子路径</div>
+        <div className={styles.subPathTitle}>
+          {t('pages.k8s.forms.workload.storage.subPath.title')}
+        </div>
         <div className={styles.subPathDescription}>
-          指定需要挂载到容器的卷子路径。
+          {t('pages.k8s.forms.workload.storage.subPath.description')}
         </div>
       </div>
       <Input
         autoFocus
-        placeholder="子路径"
+        placeholder={t('pages.k8s.forms.workload.storage.subPath')}
         prefix={<FolderOpenOutlined />}
         status={subPathEditor?.error ? 'error' : undefined}
         value={subPathEditor?.value}
@@ -1136,9 +1261,11 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
         <div className={styles.subPathError}>{subPathEditor.error}</div>
       )}
       <div className={styles.subPathFooter}>
-        <Button onClick={cancelSubPathEditor}>取消</Button>
+        <Button onClick={cancelSubPathEditor}>
+          {t('common.action.cancel')}
+        </Button>
         <Button type="primary" onClick={confirmSubPathEditor}>
-          确定
+          {t('common.action.confirm')}
         </Button>
       </div>
     </div>
@@ -1149,7 +1276,7 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
       return (
         <Empty
           className={styles.empty}
-          description="请先添加容器"
+          description={t('pages.k8s.forms.workload.storage.containersFirst')}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       );
@@ -1175,8 +1302,15 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
               <Form.Item name={['containerMounts', index, 'mountMode']}>
                 <Select
                   className={styles.mountControl}
-                  options={getMountModeOptions(storageCategory)}
-                  placeholder="请选择挂载方式"
+                  options={getMountModeOptions(storageCategory).map(
+                    (option) => ({
+                      label: t(option.labelId),
+                      value: option.value,
+                    }),
+                  )}
+                  placeholder={t(
+                    'pages.k8s.forms.workload.storage.mountMode.placeholder',
+                  )}
                 />
               </Form.Item>
               <Form.Item
@@ -1186,10 +1320,17 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
                   disabled
                     ? []
                     : [
-                        { required: true, message: '请输入挂载路径' },
+                        {
+                          required: true,
+                          message: t(
+                            'pages.k8s.forms.workload.storage.mountPath.required',
+                          ),
+                        },
                         {
                           pattern: ABSOLUTE_PATH_PATTERN,
-                          message: '请输入以 / 开头的绝对路径',
+                          message: t(
+                            'pages.k8s.forms.workload.storage.absolutePath',
+                          ),
                         },
                       ]
                 }
@@ -1197,7 +1338,7 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
                 <Input
                   className={styles.mountControl}
                   disabled={disabled}
-                  placeholder="挂载路径"
+                  placeholder={t('pages.k8s.forms.workload.storage.mountPath')}
                   prefix={<SettingOutlined />}
                   suffix={
                     <Popover
@@ -1214,9 +1355,15 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
                         cancelSubPathEditor();
                       }}
                     >
-                      <Tooltip title="指定子路径">
+                      <Tooltip
+                        title={t(
+                          'pages.k8s.forms.workload.storage.subPath.title',
+                        )}
+                      >
                         <Button
-                          aria-label="指定子路径"
+                          aria-label={t(
+                            'pages.k8s.forms.workload.storage.subPath.title',
+                          )}
                           className={[
                             styles.subPathTrigger,
                             subPath ? styles.subPathTriggerActive : '',
@@ -1241,7 +1388,9 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
                         ? Promise.resolve()
                         : Promise.reject(
                             new Error(
-                              '请输入绝对路径或相对路径，且不能包含 ..',
+                              t(
+                                'pages.k8s.forms.workload.storage.subPath.invalid',
+                              ),
                             ),
                           ),
                   },
@@ -1274,7 +1423,12 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
             <div className={styles.keyRow} key={item.id}>
               <Form.Item
                 name={['specificKeyPaths', index, 'keyName']}
-                rules={[{ required: true, message: '请选择键' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('pages.k8s.forms.workload.storage.key.required'),
+                  },
+                ]}
               >
                 <CreatableSelect
                   items={getAvailableKeys(
@@ -1282,26 +1436,43 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
                     specificKeyPaths,
                     item.keyName,
                   )}
-                  placeholder="键"
+                  placeholder={t('pages.k8s.form.key')}
                 />
               </Form.Item>
               <Form.Item
                 className={styles.keyValueField}
                 name={['specificKeyPaths', index, 'path']}
                 rules={[
-                  { required: true, message: '请输入路径' },
+                  {
+                    required: true,
+                    message: t(
+                      'pages.k8s.forms.workload.storage.path.required',
+                    ),
+                  },
                   {
                     validator: (_, value) =>
                       isRelativeVolumeItemPath(value)
                         ? Promise.resolve()
-                        : Promise.reject(new Error('请使用相对路径。')),
+                        : Promise.reject(
+                            new Error(
+                              t(
+                                'pages.k8s.forms.workload.storage.relativePath.required',
+                              ),
+                            ),
+                          ),
                   },
                 ]}
               >
-                <Input placeholder="相对路径" />
+                <Input
+                  placeholder={t(
+                    'pages.k8s.forms.workload.storage.relativePath',
+                  )}
+                />
               </Form.Item>
               <Button
-                aria-label="删除键映射"
+                aria-label={t(
+                  'pages.k8s.forms.workload.storage.keyPath.delete',
+                )}
                 className={styles.deleteButton}
                 icon={<DeleteOutlined />}
                 type="text"
@@ -1313,7 +1484,7 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
         <div className={styles.keyFooter}>
           <Button disabled={addDisabled} onClick={addSpecificKeyPath}>
             <PlusOutlined />
-            添加
+            {t('pages.k8s.form.add')}
           </Button>
         </div>
       </div>
@@ -1332,9 +1503,11 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
             <Checkbox />
           </Form.Item>
           <div>
-            <div className={styles.specificText}>选择特定键</div>
+            <div className={styles.specificText}>
+              {t('pages.k8s.forms.workload.storage.specificKeys')}
+            </div>
             <div className={styles.specificDescription}>
-              选择需要挂载到容器的特定键
+              {t('pages.k8s.forms.workload.storage.specificKeys.description')}
             </div>
           </div>
         </div>
@@ -1356,7 +1529,7 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
           type="button"
           onClick={() => handleVolumeTypeChange(option.value)}
         >
-          {option.label}
+          {t(option.labelId)}
         </button>
       ))}
     </div>
@@ -1375,7 +1548,7 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
           type="button"
           onClick={() => handleConfigResourceTypeChange(option.value)}
         >
-          {option.label}
+          {t(option.labelId)}
         </button>
       ))}
     </div>
@@ -1404,12 +1577,12 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     const currentStorageCategory = item?.storageCategory || storageCategory;
 
     if (currentStorageType === 'volumeClaimTemplate') {
-      return '持久卷声明模板';
+      return t('pages.k8s.forms.workload.storage.volumeClaimTemplate');
     }
     if (currentStorageCategory === 'volume') {
-      return '挂载卷';
+      return t('pages.k8s.forms.workload.storage.volume.mount');
     }
-    return '挂载配置字典或保密字典';
+    return t('pages.k8s.forms.workload.storage.config.mount');
   };
 
   const getStorageCardIcon = (item: WorkloadStorageConfigItem) => {
@@ -1423,15 +1596,15 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     if (item.storageType === 'volumeClaimTemplate') {
       return [
         {
-          label: '存储类',
+          label: t('pages.k8s.forms.common.storageClass'),
           value: item.pvcStorageClassName || '-',
         },
         {
-          label: '容量',
+          label: t('pages.k8s.forms.common.capacity'),
           value: `${item.pvcSizeGi || 10}Gi`,
         },
         {
-          label: '访问模式',
+          label: t('pages.k8s.forms.common.accessMode'),
           value: item.pvcAccessModes?.join(', ') || 'ReadWriteOnce',
         },
       ];
@@ -1440,15 +1613,15 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     if (item.storageType === 'persistentVolumeClaim') {
       return [
         {
-          label: '存储类',
+          label: t('pages.k8s.forms.common.storageClass'),
           value: item.claimStorageClassName || '-',
         },
         {
-          label: '容量',
+          label: t('pages.k8s.forms.common.capacity'),
           value: item.claimCapacity || '-',
         },
         {
-          label: '访问模式',
+          label: t('pages.k8s.forms.common.accessMode'),
           value: item.claimAccessModes?.join(', ') || '-',
         },
       ];
@@ -1461,13 +1634,18 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     if (item.storageType === 'configMap' || item.storageType === 'secret') {
       return [
         {
-          label: getConfigResourceLabel(item.configResourceType),
+          label: getConfigResourceLabel(item.configResourceType, t),
           value: item.configResourceName || '-',
         },
       ];
     }
 
-    return [{ label: '卷类型', value: 'EmptyDir' }];
+    return [
+      {
+        label: t('pages.k8s.forms.workload.storage.volumeType'),
+        value: 'EmptyDir',
+      },
+    ];
   };
 
   const getStorageCardName = (item: WorkloadStorageConfigItem) => {
@@ -1480,7 +1658,7 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     if (item.storageType === 'configMap' || item.storageType === 'secret') {
       return (
         item.configResourceName ||
-        getConfigResourceLabel(item.configResourceType)
+        getConfigResourceLabel(item.configResourceType, t)
       );
     }
     return item.volumeName || 'data';
@@ -1488,16 +1666,16 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
 
   const getStorageTypeDescription = (item: WorkloadStorageConfigItem) => {
     if (item.storageType === 'volumeClaimTemplate') {
-      return '持久卷声明';
+      return t('pages.k8s.kind.PersistentVolumeClaim');
     }
     if (item.storageType === 'persistentVolumeClaim') {
-      return '持久卷声明';
+      return t('pages.k8s.kind.PersistentVolumeClaim');
     }
     if (item.storageType === 'hostPath') {
       return 'HostPath';
     }
     if (item.storageType === 'configMap' || item.storageType === 'secret') {
-      return getConfigResourceLabel(item.configResourceType);
+      return getConfigResourceLabel(item.configResourceType, t);
     }
     return 'EmptyDir';
   };
@@ -1525,8 +1703,12 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
             <span className={styles.cardMountMeta}>
               <SettingOutlined />
               {mount.mountPath}
-              {mount.mountMode === 'readWrite' ? '（读写）' : ''}
-              {mount.subPath ? ` · 子路径：${mount.subPath}` : ''}
+              {mount.mountMode === 'readWrite'
+                ? t('pages.k8s.forms.workload.storage.mount.readWrite')
+                : ''}
+              {mount.subPath
+                ? ` ${t('pages.k8s.forms.workload.storage.mount.subPath', { subPath: mount.subPath })}`
+                : ''}
             </span>
           </div>
         ))}
@@ -1546,7 +1728,9 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
             {getStorageCardName(item)}
           </div>
           <div className={styles.storageCardDescription}>
-            卷类型： {getStorageTypeDescription(item)}
+            {t('pages.k8s.forms.workload.storage.volumeTypeOf', {
+              type: getStorageTypeDescription(item),
+            })}
           </div>
         </div>
         {getStorageCardFields(item).map((field) => (
@@ -1557,13 +1741,13 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
         ))}
         <div className={styles.storageCardActions}>
           <Button
-            aria-label="删除存储配置"
+            aria-label={t('pages.k8s.forms.workload.storage.delete')}
             icon={<DeleteOutlined />}
             type="text"
             onClick={() => deleteStorageConfig(index)}
           />
           <Button
-            aria-label="编辑存储配置"
+            aria-label={t('pages.k8s.forms.workload.storage.edit')}
             icon={<EditOutlined />}
             type="text"
             onClick={() => editStorageConfig(item, index)}
@@ -1600,7 +1784,9 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
 
   const renderConfiguredStorage = () => (
     <div className={styles.storageList}>
-      <div className={styles.storageTitle}>存储设置</div>
+      <div className={styles.storageTitle}>
+        {t('pages.k8s.forms.common.storage')}
+      </div>
       <div className={styles.storageListPanel}>
         {type === 'StatefulSet' ? (
           renderStatefulSetConfiguredStorage()
@@ -1618,7 +1804,9 @@ const StorageSettings = ({ form, type }: StorageSettingsProps) => {
     <div>
       {storageItems.length === 0 ? (
         <>
-          <div className={styles.storageTitle}>存储设置</div>
+          <div className={styles.storageTitle}>
+            {t('pages.k8s.forms.common.storage')}
+          </div>
           {renderEntry()}
         </>
       ) : (

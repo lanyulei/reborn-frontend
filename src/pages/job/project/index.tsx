@@ -139,10 +139,21 @@ const ProjectDrawer: React.FC<{
       }}
       formRef={formRef}
       request={async () => {
-        if (!row) {
-          return { name: '', repoUrl: '', ref: 'main', authType: 1 };
+        const initial: ProjectFormValues = {
+          name: '',
+          repoUrl: '',
+          ref: 'main',
+          authType: 1,
+        };
+        if (!row) return initial;
+        let project: JobProject;
+        try {
+          ({ project } = await getJobProject(row.id));
+        } catch {
+          // 错误提示已由请求层给出：关闭抽屉，避免留下一张空白但可保存的表单
+          onClose();
+          return initial;
         }
-        const { project } = await getJobProject(row.id);
         setSaved(project);
         const { spec } = project;
         // 凭据恒不回填

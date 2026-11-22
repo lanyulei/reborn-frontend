@@ -1,3 +1,4 @@
+import type { Translate } from '@/utils/i18n';
 import type { KeyValueEditorItem } from '../shared/KeyValueEditor';
 import {
   createKeyValueItem,
@@ -41,11 +42,14 @@ const keyValueItemsToRecord = (items?: KeyValueEditorItem[]) => {
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 
-const getModeDescription = (mode?: PersistentVolumeClaimCreateMode) => {
+const getModeDescription = (
+  mode: PersistentVolumeClaimCreateMode | undefined,
+  t: Translate,
+) => {
   if (mode === 'persistentVolume') {
-    return '绑定已有持久卷创建';
+    return t('pages.k8s.forms.pvc.mode.persistentVolume');
   }
-  return '通过存储类创建';
+  return t('pages.k8s.forms.pvc.mode.storageClass');
 };
 
 /** 数值 + 单位 → Kubernetes 数量（如 10Gi、1.5Ti） */
@@ -131,6 +135,7 @@ const getPersistentVolumeClaimStepFields = (
 /** YAML 模式提交前的检查；通过返回 undefined，否则返回提示语 */
 const validatePersistentVolumeClaimManifest = (
   resource: Record<string, unknown>,
+  t: Translate,
 ): string | undefined => {
   const metadata = getRecordValue(resource.metadata);
   const name = typeof metadata?.name === 'string' ? metadata.name.trim() : '';
@@ -138,13 +143,15 @@ const validatePersistentVolumeClaimManifest = (
     typeof metadata?.namespace === 'string' ? metadata.namespace.trim() : '';
 
   if (!name || !namespace) {
-    return 'YAML 必须包含 metadata.name 和 metadata.namespace';
+    return t('pages.k8s.forms.common.yaml.nameNamespaceRequired');
   }
   if (resource.kind !== PVC_KIND) {
-    return `YAML kind 必须为 ${PVC_KIND}`;
+    return t('pages.k8s.forms.common.yaml.kindMismatch', { kind: PVC_KIND });
   }
   if (resource.apiVersion !== PVC_API_VERSION) {
-    return `YAML apiVersion 必须为 ${PVC_API_VERSION}`;
+    return t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+      apiVersion: PVC_API_VERSION,
+    });
   }
   return undefined;
 };

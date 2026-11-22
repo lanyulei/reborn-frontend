@@ -76,10 +76,18 @@ export type AssistantEvent =
   | { type: 'done'; data: { status: AssistantDoneStatus } }
   | { type: 'error'; data: { reason: string; message: string } };
 
+/** 页内助手上下文：用户正在查看的对象（知识文档 / 故障） */
+export interface ChatContext {
+  type: 'knowledge_document' | 'incident';
+  id: string;
+}
+
 /** 发送用户消息 */
 export interface ChatParams {
   conversationId?: string;
   content: string;
+  /** 页内上下文：服务端校验读权限后拼进系统提示并预加载所属模块工具 */
+  context?: ChatContext;
 }
 
 /** 确认 / 拒绝待执行的写操作 */

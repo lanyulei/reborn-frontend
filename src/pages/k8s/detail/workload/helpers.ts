@@ -2,6 +2,7 @@
  * 工作负载详情页的纯逻辑：从对象原文推导状态 / 副本数 / 容器信息，以及容器组行的整理。
  */
 import type { K8sObject, ListRow, StateCell } from '@/services/k8s/typings';
+import { t } from '@/utils/i18n';
 import { statusLabel } from '../../components/statusText';
 import type { WorkloadKind } from '../../forms/workload/types';
 import type { StatusType } from '../shared/StatusDot';
@@ -55,28 +56,30 @@ export const workloadStatus = (
 ): { label: string; type: StatusType } => {
   if (!object) return { label: '-', type: 'default' };
   if (object.metadata?.deletionTimestamp) {
-    return { label: '删除中', type: 'warning' };
+    return { label: t('pages.k8s.detail.deleting'), type: 'warning' };
   }
   if (kind === 'Deployment') {
     if (asRecord(object.spec)?.paused === true) {
-      return { label: '已暂停', type: 'warning' };
+      return { label: t('pages.k8s.detail.paused'), type: 'warning' };
     }
     if (
       conditionOf(object, 'Progressing')?.status === 'False' ||
       conditionOf(object, 'ReplicaFailure')?.status === 'True'
     ) {
-      return { label: '异常', type: 'error' };
+      return { label: t('pages.k8s.state.abnormal'), type: 'error' };
     }
   }
   const { desired, ready, updated } = workloadReplicas(kind, object);
   const generation = asNumber(object.metadata?.generation);
   const observed = asNumber(asRecord(object.status)?.observedGeneration);
-  if (desired === 0 && ready === 0) return { label: '已停止', type: 'default' };
+  if (desired === 0 && ready === 0)
+    return { label: t('pages.k8s.detail.workload.stopped'), type: 'default' };
   if (observed < generation || updated < desired) {
-    return { label: '更新中', type: 'warning' };
+    return { label: t('pages.k8s.detail.workload.updating'), type: 'warning' };
   }
-  if (ready >= desired) return { label: '运行中', type: 'success' };
-  return { label: '启动中', type: 'warning' };
+  if (ready >= desired)
+    return { label: t('pages.k8s.metrics.series.running'), type: 'success' };
+  return { label: t('pages.k8s.detail.workload.starting'), type: 'warning' };
 };
 
 /** 最近一次状态变化的时间（取各 Condition 里最晚的一个）；没有则为 undefined */
@@ -124,13 +127,27 @@ const envValue = (env: AnyRecord): string => {
   if (value) return value;
   const from = asRecord(env.valueFrom);
   const configMap = asRecord(from?.configMapKeyRef);
-  if (configMap) return `配置字典 ${configMap.name} / ${configMap.key}`;
+  if (configMap)
+    return t('pages.k8s.detail.workload.env.configMap', {
+      name: String(configMap.name),
+      key: String(configMap.key),
+    });
   const secret = asRecord(from?.secretKeyRef);
-  if (secret) return `保密字典 ${secret.name} / ${secret.key}`;
+  if (secret)
+    return t('pages.k8s.detail.workload.env.secret', {
+      name: String(secret.name),
+      key: String(secret.key),
+    });
   const field = asRecord(from?.fieldRef);
-  if (field) return `字段 ${field.fieldPath}`;
+  if (field)
+    return t('pages.k8s.detail.workload.env.field', {
+      path: String(field.fieldPath),
+    });
   const resource = asRecord(from?.resourceFieldRef);
-  if (resource) return `资源 ${resource.resource}`;
+  if (resource)
+    return t('pages.k8s.detail.workload.env.resource', {
+      resource: String(resource.resource),
+    });
   return '-';
 };
 

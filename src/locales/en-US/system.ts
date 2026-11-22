@@ -158,6 +158,11 @@ export default {
   'pages.account.security.changePassword.title': 'Change password',
   'pages.account.security.changePassword.submit': 'Confirm',
   'pages.account.security.changePassword.success': 'Password changed',
+  'pages.account.security.changePassword.oldPassword': 'Current password',
+  'pages.account.security.changePassword.oldPassword.placeholder':
+    'Enter your current password',
+  'pages.account.security.changePassword.oldInvalid':
+    'Current password is incorrect',
   'pages.account.menu.base': 'Basic settings',
   'pages.account.menu.security': 'Security settings',
 
@@ -185,6 +190,10 @@ export default {
   'pages.system.permission.saved': 'Permissions saved',
   'pages.system.permission.readonly':
     'This is a built-in role; only super admins can change its permissions. The content below is read-only.',
+  'pages.system.permission.loadFailed': 'Failed to load permissions',
+  'pages.system.permission.retry': 'Retry',
+  'pages.system.permission.extra':
+    'Other grants (not in this frontend catalog, kept as-is on save): ',
 
   // System config
   'pages.system.config.readonly':
@@ -265,6 +274,8 @@ export default {
   'app.request.retry': 'Request failed, please retry',
   'app.profile.loadFailed': 'Failed to load your session. Please try again.',
   'app.profile.retry': 'Reload',
-  'app.request.noResponse': 'None response! Please retry.',
+  'app.request.noResponse': 'No response from server. Please retry.',
   'app.request.error': 'Request error, please retry.',
+  // Domain error text + backend detail (domainRequest / k8s request)
+  'app.request.withDetail': '{text}: {detail}',
 };

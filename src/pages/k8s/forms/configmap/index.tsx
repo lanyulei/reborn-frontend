@@ -6,6 +6,8 @@ import {
 import { App, Col, Form, Input, Row, Select } from 'antd';
 import { createStyles } from 'antd-style';
 import { useMemo, useState } from 'react';
+import type { Translate } from '@/utils/i18n';
+import { useT } from '@/utils/i18n';
 import { parseObject, toYaml, useNamespaceOptions } from '../shared/kube';
 import { getRecordValue } from '../shared/manifest';
 import ResourceCreateWizardDrawer from '../shared/ResourceCreateWizardDrawer';
@@ -48,34 +50,35 @@ const getStepStatusText = (
   current: number,
   index: number,
   values: CreateConfigMapFormValues,
+  t: Translate,
 ) => {
   if (current === index) {
-    return '当前';
+    return t('pages.k8s.forms.common.current');
   }
   if (index === 0 && values.name && values.namespace) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 1 && hasConfigMapDataContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 2 && hasMetadataContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
-  return '未设置';
+  return t('pages.k8s.forms.common.unset');
 };
 
 /** YAML 模式下 data 的形态检查；返回错误文案 */
-const getYamlDataError = (data: unknown) => {
+const getYamlDataError = (data: unknown, t: Translate) => {
   if (data === undefined || data === null) {
     return undefined;
   }
 
   const dataRecord = getRecordValue(data);
   if (!dataRecord) {
-    return 'YAML data 必须为键值对象';
+    return t('pages.k8s.forms.configmap.yaml.dataNotObject');
   }
   if (Object.values(dataRecord).some((value) => typeof value !== 'string')) {
-    return 'YAML data 的值必须为字符串';
+    return t('pages.k8s.forms.configmap.yaml.dataValueNotString');
   }
 
   return undefined;
@@ -88,6 +91,7 @@ const CreateConfigMapDrawer = ({
   onDone,
 }: CreateFormProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
   const [form] = Form.useForm<CreateConfigMapFormValues>();
   const initialValues = useMemo(
@@ -120,19 +124,19 @@ const CreateConfigMapDrawer = ({
   const steps = useMemo(
     () => [
       {
-        title: '基本信息',
+        title: t('pages.k8s.form.section.basic'),
         icon: <AppstoreOutlined />,
       },
       {
-        title: '数据设置',
+        title: t('pages.k8s.forms.secret.dataSettings'),
         icon: <DatabaseOutlined />,
       },
       {
-        title: '高级设置',
+        title: t('pages.k8s.forms.common.advanced'),
         icon: <SlidersOutlined />,
       },
     ],
-    [],
+    [t],
   );
 
   const handleYamlModeChange = (checked: boolean) => {
@@ -149,14 +153,16 @@ const CreateConfigMapDrawer = ({
       current === 2
         ? validateConfigMapMetadataItems(
             form.getFieldValue('labels'),
-            '标签',
+            t('pages.k8s.forms.common.labels'),
+            t,
           ) ||
           validateConfigMapMetadataItems(
             form.getFieldValue('annotations'),
-            '注解',
+            t('pages.k8s.forms.common.annotations'),
+            t,
           )
         : current === 1
-          ? validateConfigMapDataItems(form.getFieldValue('dataItems'))
+          ? validateConfigMapDataItems(form.getFieldValue('dataItems'), t)
           : undefined;
     if (error) {
       message.warning(error);
@@ -182,7 +188,7 @@ const CreateConfigMapDrawer = ({
       try {
         resource = parseObject(yamlValue);
       } catch {
-        message.error('YAML 格式不正确或不是有效的资源对象，请检查后重试');
+        message.error(t('pages.k8s.forms.common.yaml.invalid'));
         return;
       }
 
@@ -200,19 +206,27 @@ const CreateConfigMapDrawer = ({
         typeof resource.apiVersion === 'string' ? resource.apiVersion : '';
 
       if (!name || !namespace) {
-        message.error('YAML 必须包含 metadata.name 和 metadata.namespace');
+        message.error(t('pages.k8s.forms.common.yaml.nameNamespaceRequired'));
         return;
       }
       if (kind !== CONFIG_MAP_KIND) {
-        message.error(`YAML kind 必须为 ${CONFIG_MAP_KIND}`);
+        message.error(
+          t('pages.k8s.forms.common.yaml.kindMismatch', {
+            kind: CONFIG_MAP_KIND,
+          }),
+        );
         return;
       }
       if (apiVersion !== CONFIG_MAP_API_VERSION) {
-        message.error(`YAML apiVersion 必须为 ${CONFIG_MAP_API_VERSION}`);
+        message.error(
+          t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+            apiVersion: CONFIG_MAP_API_VERSION,
+          }),
+        );
         return;
       }
 
-      const dataError = getYamlDataError(resource.data);
+      const dataError = getYamlDataError(resource.data, t);
       if (dataError) {
         message.error(dataError);
         return;
@@ -225,7 +239,7 @@ const CreateConfigMapDrawer = ({
     // 只有当前步骤的表单项处于挂载状态：先校验它们，再对全量值整体检查一遍
     await form.validateFields();
     const formValues: CreateConfigMapFormValues = form.getFieldsValue(true);
-    const error = getConfigMapFormError(formValues);
+    const error = getConfigMapFormError(formValues, t);
 
     if (error) {
       message.warning(error);
@@ -243,28 +257,38 @@ const CreateConfigMapDrawer = ({
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            tooltip="名称只能包含小写字母、数字和连字符（-），必须以小写字母或数字开头和结尾，最长 63 个字符"
-            label="名称"
+            tooltip={t('pages.k8s.forms.common.name.dnsLabel')}
+            label={t('pages.k8s.forms.common.name')}
             name="name"
             rules={[
-              { required: true, message: '请输入名称' },
-              { max: 63, message: '名称最长 63 个字符' },
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.name.required'),
+              },
+              { max: 63, message: t('pages.k8s.forms.common.name.maxLength') },
               {
                 pattern: CONFIG_MAP_NAME_PATTERN,
-                message:
-                  '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+                message: t('pages.k8s.forms.common.name.pattern'),
               },
             ]}
           >
-            <Input placeholder="请输入名称" autoFocus />
+            <Input
+              placeholder={t('pages.k8s.forms.common.name.required')}
+              autoFocus
+            />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
-            tooltip="选择将要创建资源的命名空间"
-            label="命名空间"
+            tooltip={t('pages.k8s.forms.common.namespace.placeholder')}
+            label={t('pages.k8s.forms.common.namespace')}
             name="namespace"
-            rules={[{ required: true, message: '请选择命名空间' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.namespace.required'),
+              },
+            ]}
           >
             <Select
               loading={namespacesLoading}
@@ -273,7 +297,7 @@ const CreateConfigMapDrawer = ({
                 optionFilterProp: 'label',
                 onSearch: setNamespaceSearch,
               }}
-              placeholder="请选择命名空间"
+              placeholder={t('pages.k8s.forms.common.namespace.required')}
             />
           </Form.Item>
         </Col>
@@ -299,11 +323,11 @@ const CreateConfigMapDrawer = ({
       <ResourceCreateWizardDrawer
         current={current}
         getStepDescription={(_, index) =>
-          getStepStatusText(current, index, values)
+          getStepStatusText(current, index, values, t)
         }
         open
         steps={steps}
-        title="创建配置字典"
+        title={t('pages.k8s.forms.configmap.createTitle')}
         yamlMode={yamlMode}
         yamlValue={yamlValue}
         onCancel={onClose}
@@ -346,7 +370,7 @@ const CreateConfigMapDrawer = ({
           clusterId={clusterId}
           yaml={pending.yaml}
           namespace={pending.namespace}
-          title="创建配置字典"
+          title={t('pages.k8s.forms.configmap.createTitle')}
           onBack={() => setPending(undefined)}
           onClose={onClose}
           onDone={onDone}

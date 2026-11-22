@@ -1,4 +1,5 @@
 /** 服务账户表单 → 清单的纯逻辑（不依赖 React / antd，可单独用 Node 运行） */
+import type { Translate } from '@/utils/i18n';
 import { trimValue as normalizeText } from '../shared/manifest';
 
 type ServiceAccountMetadataItem = {
@@ -37,6 +38,7 @@ const normalizeImagePullSecrets = (names?: string[]) => [
 const validateMetadataItems = (
   items: ServiceAccountMetadataItem[] | undefined,
   title: string,
+  t: Translate,
 ) => {
   const keys = new Set<string>();
 
@@ -44,10 +46,14 @@ const validateMetadataItems = (
     const keyName = normalizeText(item.keyName);
 
     if (!keyName && normalizeText(item.value)) {
-      return `请填写${title}的键`;
+      return t('pages.k8s.forms.serviceaccount.metadata.keyRequired', {
+        title,
+      });
     }
     if (keys.has(keyName)) {
-      return `${title}的键不能重复`;
+      return t('pages.k8s.forms.serviceaccount.metadata.keyDuplicate', {
+        title,
+      });
     }
     if (keyName) {
       keys.add(keyName);
@@ -57,12 +63,19 @@ const validateMetadataItems = (
   return undefined;
 };
 
-const validateImagePullSecrets = (names?: string[]) => {
+const validateImagePullSecrets = (
+  names: string[] | undefined,
+  t: Translate,
+) => {
   const invalid = normalizeImagePullSecrets(names).find(
     (name) => name.length > 253 || !SECRET_NAME_PATTERN.test(name),
   );
 
-  return invalid ? `镜像拉取密钥名称不合法：${invalid}` : undefined;
+  return invalid
+    ? t('pages.k8s.forms.serviceaccount.imagePullSecrets.invalid', {
+        name: invalid,
+      })
+    : undefined;
 };
 
 const buildServiceAccountManifest = (

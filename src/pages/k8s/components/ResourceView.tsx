@@ -84,8 +84,10 @@ export const ResourceView: React.FC<{
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={
                 namespaced && scope.namespace
-                  ? `命名空间 ${scope.namespace} 下还没有该类资源`
-                  : '还没有该类资源'
+                  ? t('pages.k8s.detail.view.emptyNamespaced', {
+                      namespace: scope.namespace,
+                    })
+                  : t('pages.k8s.detail.view.empty')
               }
             >
               <Button

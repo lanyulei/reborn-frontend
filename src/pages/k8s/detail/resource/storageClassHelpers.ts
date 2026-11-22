@@ -1,3 +1,4 @@
+import { t } from '@/utils/i18n';
 import { formatValue, getRecordValue, getStringValue } from './helpers';
 
 const DEFAULT_CLASS_ANNOTATIONS = [
@@ -131,18 +132,18 @@ const formatStorageClassBoolean = (value: unknown) => {
     return '-';
   }
 
-  return value ? '是' : '否';
+  return value ? t('pages.k8s.yes') : t('pages.k8s.no');
 };
 
 const getReclaimPolicyLabel = (value: unknown) => {
   if (value === 'Delete') {
-    return '删除';
+    return t('pages.k8s.action.delete');
   }
   if (value === 'Retain') {
-    return '保留';
+    return t('pages.k8s.detail.storage.reclaim.retain');
   }
   if (value === 'Recycle') {
-    return '回收';
+    return t('pages.k8s.detail.storage.reclaim.recycle');
   }
 
   return formatValue(value);

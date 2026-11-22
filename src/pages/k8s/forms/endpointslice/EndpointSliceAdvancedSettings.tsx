@@ -1,6 +1,7 @@
 import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import { createStyles } from 'antd-style';
 import { useState } from 'react';
+import { useT } from '@/utils/i18n';
 import ResourceMetadataFields from '../shared/ResourceMetadataFields';
 
 const useStyles = createStyles(({ token }) => ({
@@ -61,11 +62,14 @@ const useStyles = createStyles(({ token }) => ({
 
 const EndpointSliceAdvancedSettings = () => {
   const { styles } = useStyles();
+  const t = useT();
   const [metadataOpen, setMetadataOpen] = useState(true);
 
   return (
     <div>
-      <div className={styles.sectionTitle}>元数据</div>
+      <div className={styles.sectionTitle}>
+        {t('pages.k8s.forms.common.metadata')}
+      </div>
       <div className={styles.option}>
         <button
           aria-expanded={metadataOpen}
@@ -77,9 +81,11 @@ const EndpointSliceAdvancedSettings = () => {
             {metadataOpen ? <UpOutlined /> : <DownOutlined />}
           </span>
           <span>
-            <div className={styles.title}>添加元数据</div>
+            <div className={styles.title}>
+              {t('pages.k8s.forms.common.addMetadata')}
+            </div>
             <div className={styles.description}>
-              为端点切片资源添加自定义标签和注解。
+              {t('pages.k8s.forms.endpointslice.metadata.description')}
             </div>
           </span>
         </button>

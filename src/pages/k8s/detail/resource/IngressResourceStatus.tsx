@@ -1,6 +1,7 @@
 import { GlobalOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { Empty, Tooltip, Typography } from 'antd';
 import { createStyles } from 'antd-style';
+import { useT } from '@/utils/i18n';
 import SubTitle from '../shared/SubTitle';
 import { formatIngressRuleValue, type IngressRuleItem } from './ingressHelpers';
 
@@ -107,12 +108,13 @@ type IngressResourceStatusProps = {
 };
 
 const IngressResourceStatus = ({ rules }: IngressResourceStatusProps) => {
+  const t = useT();
   const { styles } = useStyles();
 
   return (
     <div className={styles.resourceStatus}>
       <div>
-        <SubTitle>规则</SubTitle>
+        <SubTitle>{t('pages.k8s.detail.ingress.rules')}</SubTitle>
         {rules && rules.length > 0 ? (
           <div className={styles.list}>
             {rules.map((rule) => (
@@ -127,16 +129,18 @@ const IngressResourceStatus = ({ rules }: IngressResourceStatusProps) => {
                         {formatIngressRuleValue(rule.host)}
                       </div>
                       <div className={styles.label}>
-                        协议：{rule.protocol || '-'}
+                        {t('pages.k8s.detail.ingress.protocol', {
+                          protocol: rule.protocol || '-',
+                        })}
                       </div>
                     </div>
                   </div>
                   <div className={styles.access}>
-                    无法访问服务
+                    {t('pages.k8s.detail.ingress.inaccessible')}
                     <Tooltip
                       title={
                         rule.accessible_url ||
-                        '规则未提供可直接访问的域名或网关地址'
+                        t('pages.k8s.detail.ingress.noAddress')
                       }
                     >
                       <QuestionCircleOutlined className={styles.accessHelp} />
@@ -145,19 +149,25 @@ const IngressResourceStatus = ({ rules }: IngressResourceStatusProps) => {
                 </div>
                 <div className={styles.pathPanel}>
                   <div className={styles.pathInfo}>
-                    <div className={styles.label}>路径：</div>
+                    <div className={styles.label}>
+                      {t('pages.k8s.detail.ingress.path')}
+                    </div>
                     <div className={styles.value}>
                       {formatIngressRuleValue(rule.path)}
                     </div>
                   </div>
                   <div className={styles.pathInfo}>
-                    <div className={styles.label}>服务：</div>
+                    <div className={styles.label}>
+                      {t('pages.k8s.detail.ingress.service')}
+                    </div>
                     <div className={styles.value}>
                       {formatIngressRuleValue(rule.service_name)}
                     </div>
                   </div>
                   <div className={styles.pathInfo}>
-                    <div className={styles.label}>端口：</div>
+                    <div className={styles.label}>
+                      {t('pages.k8s.detail.ingress.port')}
+                    </div>
                     <div className={styles.value}>
                       {formatIngressRuleValue(rule.service_port)}
                     </div>
@@ -168,7 +178,7 @@ const IngressResourceStatus = ({ rules }: IngressResourceStatusProps) => {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    访问服务
+                    {t('pages.k8s.detail.ingress.visit')}
                   </Typography.Link>
                 </div>
               </div>

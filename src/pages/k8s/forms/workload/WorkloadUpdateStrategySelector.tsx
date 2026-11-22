@@ -9,13 +9,14 @@ import type { NamePath } from 'antd/es/form/interface';
 import { createStyles } from 'antd-style';
 import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import { INT_OR_PERCENT_PATTERN } from './helpers';
 import type { WorkloadKind, WorkloadUpdateStrategyType } from './types';
 
 type StrategyOption = {
-  title: string;
+  titleId: string;
   value: WorkloadUpdateStrategyType;
-  description: string;
+  descriptionId: string;
 };
 
 const useStyles = createStyles(({ token }) => ({
@@ -138,28 +139,27 @@ type WorkloadUpdateStrategySelectorProps = {
 };
 
 const rollingStrategy: StrategyOption = {
-  title: '滚动更新（推荐）',
+  titleId: 'pages.k8s.forms.workload.updateStrategy.rolling',
   value: 'RollingUpdate',
-  description:
-    '用新容器组副本逐步替换旧容器组副本。升级过程中业务流量会负载均衡到新旧容器组副本上，业务不会中断。',
+  descriptionId: 'pages.k8s.forms.workload.updateStrategy.rolling.description',
 };
 
 const recreateStrategy: StrategyOption = {
-  title: '同时更新',
+  titleId: 'pages.k8s.forms.workload.updateStrategy.recreate',
   value: 'Recreate',
-  description: '删除全部旧容器组副本再创建新容器组副本。升级过程中业务会中断。',
+  descriptionId: 'pages.k8s.forms.workload.updateStrategy.recreate.description',
 };
 
 const onDeleteStrategy: StrategyOption = {
-  title: '删除容器组时更新',
+  titleId: 'pages.k8s.forms.workload.updateStrategy.onDelete',
   value: 'OnDelete',
-  description: '需要手动删除容器组副本才可对其进行更新。',
+  descriptionId: 'pages.k8s.forms.workload.updateStrategy.onDelete.description',
 };
 
 const WorkloadUpdateStrategySelector = ({
   form,
   type,
-  label = '更新策略',
+  label,
   strategyName = 'updateStrategyType',
   maxUnavailableName = 'maxUnavailable',
   maxSurgeName = 'maxSurge',
@@ -168,6 +168,7 @@ const WorkloadUpdateStrategySelector = ({
   updatePartitionName = 'updatePartition',
 }: WorkloadUpdateStrategySelectorProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const [strategyOpen, setStrategyOpen] = useState(false);
   const updateStrategyType =
     (Form.useWatch(strategyName, form) as WorkloadUpdateStrategyType) ||
@@ -213,8 +214,10 @@ const WorkloadUpdateStrategySelector = ({
       }
     >
       <span>
-        <span className={styles.strategyTitle}>{option.title}</span>
-        <span className={styles.strategyDescription}>{option.description}</span>
+        <span className={styles.strategyTitle}>{t(option.titleId)}</span>
+        <span className={styles.strategyDescription}>
+          {t(option.descriptionId)}
+        </span>
       </span>
       {showArrow && strategyOptions.length > 1 && (
         <span className={styles.strategyArrow}>
@@ -230,8 +233,8 @@ const WorkloadUpdateStrategySelector = ({
       style={marginTop !== undefined ? { marginTop } : undefined}
     >
       <div className={styles.updateStrategyLabel}>
-        <span>{label}</span>
-        <Tooltip title="配置工作负载更新容器组副本时采用的策略">
+        <span>{label ?? t('pages.k8s.form.strategy')}</span>
+        <Tooltip title={t('pages.k8s.forms.workload.updateStrategy.tip')}>
           <QuestionCircleOutlined className={styles.updateStrategyHelpIcon} />
         </Tooltip>
       </div>
@@ -252,7 +255,9 @@ const WorkloadUpdateStrategySelector = ({
       {updateStrategyType === 'RollingUpdate' && type !== 'StatefulSet' && (
         <div className={styles.rollingSettings}>
           <div className={styles.rollingSettingsTitle}>
-            <span>滚动更新设置</span>
+            <span>
+              {t('pages.k8s.forms.workload.updateStrategy.rollingSettings')}
+            </span>
           </div>
           <div className={styles.rollingSettingsBody}>
             <Row gutter={16}>
@@ -260,17 +265,25 @@ const WorkloadUpdateStrategySelector = ({
                 span={type === 'Deployment' || type === 'DaemonSet' ? 12 : 24}
               >
                 <Form.Item
-                  extra="更新过程中允许的不可用容器组副本的最大数量或百分比。"
-                  label="最大不可用容器组数量"
+                  extra={t(
+                    'pages.k8s.forms.workload.updateStrategy.maxUnavailable.extra',
+                  )}
+                  label={t(
+                    'pages.k8s.forms.workload.updateStrategy.maxUnavailable',
+                  )}
                   name={maxUnavailableName}
                   rules={[
                     {
                       required: true,
-                      message: '请输入最大不可用容器组数量',
+                      message: t(
+                        'pages.k8s.forms.workload.updateStrategy.maxUnavailable.required',
+                      ),
                     },
                     {
                       pattern: INT_OR_PERCENT_PATTERN,
-                      message: '请输入整数或百分比，例如 1 或 25%',
+                      message: t(
+                        'pages.k8s.forms.workload.updateStrategy.intOrPercent',
+                      ),
                     },
                   ]}
                 >
@@ -280,17 +293,25 @@ const WorkloadUpdateStrategySelector = ({
               {type === 'Deployment' && (
                 <Col span={12}>
                   <Form.Item
-                    tooltip="更新过程中允许的多余容器组副本的最大数量或百分比"
-                    label="最大多余容器组数量"
+                    tooltip={t(
+                      'pages.k8s.forms.workload.updateStrategy.maxSurge.tip',
+                    )}
+                    label={t(
+                      'pages.k8s.forms.workload.updateStrategy.maxSurge',
+                    )}
                     name={maxSurgeName}
                     rules={[
                       {
                         required: true,
-                        message: '请输入最大多余容器组数量',
+                        message: t(
+                          'pages.k8s.forms.workload.updateStrategy.maxSurge.required',
+                        ),
                       },
                       {
                         pattern: INT_OR_PERCENT_PATTERN,
-                        message: '请输入整数或百分比，例如 1 或 25%',
+                        message: t(
+                          'pages.k8s.forms.workload.updateStrategy.intOrPercent',
+                        ),
                       },
                     ]}
                   >
@@ -301,13 +322,19 @@ const WorkloadUpdateStrategySelector = ({
               {type === 'DaemonSet' && (
                 <Col span={12}>
                   <Form.Item
-                    extra="容器组副本被视为就绪所需要的最短稳定运行时长。"
-                    label="容器组就绪最短运行时长（s）"
+                    extra={t(
+                      'pages.k8s.forms.workload.updateStrategy.minReadySeconds.extra',
+                    )}
+                    label={t(
+                      'pages.k8s.forms.workload.updateStrategy.minReadySeconds',
+                    )}
                     name={minReadySecondsName}
                     rules={[
                       {
                         required: true,
-                        message: '请输入容器组就绪最短运行时长',
+                        message: t(
+                          'pages.k8s.forms.workload.updateStrategy.minReadySeconds.required',
+                        ),
                       },
                     ]}
                   >
@@ -327,17 +354,23 @@ const WorkloadUpdateStrategySelector = ({
       {updateStrategyType === 'RollingUpdate' && type === 'StatefulSet' && (
         <div className={styles.rollingSettings}>
           <div className={styles.rollingSettingsTitle}>
-            <span>滚动更新设置</span>
+            <span>
+              {t('pages.k8s.forms.workload.updateStrategy.rollingSettings')}
+            </span>
           </div>
           <div className={styles.rollingSettingsBody}>
             <Form.Item
-              extra="设置一个分组序号以将容器组副本分成两组。更新有状态副本集时，只有序号大于或等于分组序号的容器组副本会被更新。"
-              label="容器组副本分组序号"
+              extra={t(
+                'pages.k8s.forms.workload.updateStrategy.partition.extra',
+              )}
+              label={t('pages.k8s.forms.workload.updateStrategy.partition')}
               name={updatePartitionName}
               rules={[
                 {
                   required: true,
-                  message: '请输入容器组副本分组序号',
+                  message: t(
+                    'pages.k8s.forms.workload.updateStrategy.partition.required',
+                  ),
                 },
               ]}
             >

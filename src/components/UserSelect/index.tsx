@@ -6,7 +6,7 @@
  */
 import { Select, type SelectProps } from 'antd';
 import type React from 'react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 /** 候选用户：id + 展示名 */
 export interface UserOption {
@@ -68,6 +68,14 @@ export const UserSelect: React.FC<UserSelectProps> = ({
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   // 只采纳最后一次搜索的结果
   const seq = useRef(0);
+  // 卸载：停掉未触发的防抖，并作废在途搜索（不再写状态）
+  useEffect(
+    () => () => {
+      clearTimeout(timer.current);
+      seq.current += 1;
+    },
+    [],
+  );
 
   for (const user of knownUsers ?? []) {
     if (!names.current.has(user.id)) names.current.set(user.id, user.label);

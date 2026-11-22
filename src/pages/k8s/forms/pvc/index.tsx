@@ -6,6 +6,7 @@ import {
 import { App, AutoComplete, Col, Form, Input, Row } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useMemo, useState } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import {
   GVRS,
   listRows,
@@ -60,20 +61,21 @@ const getStepStatusText = (
   current: number,
   index: number,
   values: CreatePersistentVolumeClaimFormValues,
+  t: Translate,
 ) => {
   if (current === index) {
-    return '当前';
+    return t('pages.k8s.forms.common.current');
   }
   if (index === 0 && hasBasicInfoContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 1 && hasStorageContent(values)) {
-    return getModeDescription(values.createMode);
+    return getModeDescription(values.createMode, t);
   }
   if (index === 2 && hasAdvancedContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
-  return '未设置';
+  return t('pages.k8s.forms.common.unset');
 };
 
 const buildYaml = (values: CreatePersistentVolumeClaimFormValues) =>
@@ -88,6 +90,7 @@ const CreatePersistentVolumeClaimDrawer = ({
   onDone,
 }: CreateFormProps) => {
   const { styles } = useStyles();
+  const t = useT();
   const { message } = App.useApp();
   const [form] = Form.useForm<CreatePersistentVolumeClaimFormValues>();
   const [initialValues] = useState(() =>
@@ -112,19 +115,19 @@ const CreatePersistentVolumeClaimDrawer = ({
   const steps = useMemo(
     () => [
       {
-        title: '基本信息',
+        title: t('pages.k8s.form.section.basic'),
         icon: <AppstoreOutlined />,
       },
       {
-        title: '存储设置',
+        title: t('pages.k8s.forms.common.storage'),
         icon: <HddOutlined />,
       },
       {
-        title: '高级设置',
+        title: t('pages.k8s.forms.common.advanced'),
         icon: <SlidersOutlined />,
       },
     ],
-    [],
+    [t],
   );
 
   useEffect(() => {
@@ -206,11 +209,11 @@ const CreatePersistentVolumeClaimDrawer = ({
       try {
         resource = parseObject(yamlValue);
       } catch {
-        message.error('YAML 格式不正确，内容必须是有效的资源对象');
+        message.error(t('pages.k8s.forms.common.yaml.invalidObject'));
         return;
       }
 
-      const error = validatePersistentVolumeClaimManifest(resource);
+      const error = validatePersistentVolumeClaimManifest(resource, t);
       if (error) {
         message.error(error);
         return;
@@ -239,28 +242,41 @@ const CreatePersistentVolumeClaimDrawer = ({
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            tooltip="名称只能包含小写字母、数字和连字符（-），必须以小写字母或数字开头和结尾，最长 63 个字符"
-            label="名称"
+            tooltip={t('pages.k8s.forms.common.name.dnsLabel')}
+            label={t('pages.k8s.forms.common.name')}
             name="name"
             rules={[
-              { required: true, message: '请输入名称' },
-              { max: 63, message: '名称最长 63 个字符' },
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.name.required'),
+              },
+              {
+                max: 63,
+                message: t('pages.k8s.forms.common.name.maxLength'),
+              },
               {
                 pattern: NAME_PATTERN,
-                message:
-                  '名称只能包含小写字母、数字和连字符（-），且不能以连字符开头或结尾',
+                message: t('pages.k8s.forms.common.name.pattern'),
               },
             ]}
           >
-            <Input placeholder="请输入名称" autoFocus />
+            <Input
+              placeholder={t('pages.k8s.forms.common.name.required')}
+              autoFocus
+            />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
-            tooltip="选择将要创建资源的命名空间"
-            label="命名空间"
+            tooltip={t('pages.k8s.forms.common.namespace.placeholder')}
+            label={t('pages.k8s.forms.common.namespace')}
             name="namespace"
-            rules={[{ required: true, message: '请选择命名空间' }]}
+            rules={[
+              {
+                required: true,
+                message: t('pages.k8s.forms.common.namespace.required'),
+              },
+            ]}
           >
             <AutoComplete
               showSearch={{
@@ -270,7 +286,7 @@ const CreatePersistentVolumeClaimDrawer = ({
                     .includes(input.toLowerCase()),
               }}
               options={namespaces.map((item) => ({ label: item, value: item }))}
-              placeholder="请选择命名空间"
+              placeholder={t('pages.k8s.forms.common.namespace.required')}
             />
           </Form.Item>
         </Col>
@@ -303,11 +319,11 @@ const CreatePersistentVolumeClaimDrawer = ({
       <ResourceCreateWizardDrawer
         current={current}
         getStepDescription={(_, index) =>
-          getStepStatusText(current, index, values)
+          getStepStatusText(current, index, values, t)
         }
         open
         steps={steps}
-        title="创建持久卷声明"
+        title={t('pages.k8s.forms.pvc.title')}
         yamlMode={yamlMode}
         yamlValue={yamlValue}
         onCancel={onClose}
@@ -350,7 +366,7 @@ const CreatePersistentVolumeClaimDrawer = ({
           clusterId={clusterId}
           yaml={submission.yaml}
           namespace={submission.namespace}
-          title="创建持久卷声明"
+          title={t('pages.k8s.forms.pvc.title')}
           onBack={() => setSubmission(undefined)}
           onClose={onClose}
           onDone={onDone}

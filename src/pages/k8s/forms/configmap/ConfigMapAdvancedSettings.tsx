@@ -1,16 +1,21 @@
+import { useT } from '@/utils/i18n';
 import CollapsibleField from '../shared/CollapsibleField';
 import ResourceFormSection from '../shared/ResourceFormSection';
 import ResourceMetadataFields from '../shared/ResourceMetadataFields';
 
-const ConfigMapAdvancedSettings = () => (
-  <ResourceFormSection title="元数据">
-    <CollapsibleField
-      description="为配置字典资源添加标签和注解。"
-      title="添加元数据"
-    >
-      <ResourceMetadataFields />
-    </CollapsibleField>
-  </ResourceFormSection>
-);
+const ConfigMapAdvancedSettings = () => {
+  const t = useT();
+
+  return (
+    <ResourceFormSection title={t('pages.k8s.forms.common.metadata')}>
+      <CollapsibleField
+        description={t('pages.k8s.forms.configmap.metadata.description')}
+        title={t('pages.k8s.forms.common.addMetadata')}
+      >
+        <ResourceMetadataFields />
+      </CollapsibleField>
+    </ResourceFormSection>
+  );
+};
 
 export default ConfigMapAdvancedSettings;

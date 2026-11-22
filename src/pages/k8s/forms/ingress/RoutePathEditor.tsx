@@ -3,6 +3,7 @@ import type { FormInstance } from 'antd';
 import { AutoComplete, Button, Form, Input, Select } from 'antd';
 import { createStyles } from 'antd-style';
 import { useEffect, useState } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import {
   createIngressPathItem,
   INGRESS_PATH_TYPE_OPTIONS,
@@ -99,6 +100,7 @@ const ServicePortSelect = ({
   value,
   onChange,
 }: ServicePortSelectProps) => {
+  const t = useT();
   const [search, setSearch] = useState('');
   const keyword = search.trim();
   const typedValue = /^\d+$/.test(keyword) ? Number(keyword) : keyword;
@@ -120,9 +122,9 @@ const ServicePortSelect = ({
       allowClear
       className={className}
       disabled={disabled}
-      notFoundContent="输入端口号或端口名称"
+      notFoundContent={t('pages.k8s.forms.ingress.port.notFound')}
       options={mergedOptions}
-      placeholder="端口"
+      placeholder={t('pages.k8s.form.port')}
       showSearch={{
         optionFilterProp: 'label',
         onSearch: setSearch,
@@ -136,14 +138,17 @@ const ServicePortSelect = ({
   );
 };
 
-const getBackendSummary = (backend?: Record<string, unknown>) => {
+const getBackendSummary = (t: Translate, backend?: Record<string, unknown>) => {
   const resource = backend?.resource as
     | { kind?: unknown; name?: unknown }
     | undefined;
 
   return resource && typeof resource === 'object'
-    ? `资源后端：${String(resource.kind ?? '-')}/${String(resource.name ?? '-')}`
-    : '自定义后端';
+    ? t('pages.k8s.forms.ingress.resourceBackend', {
+        kind: String(resource.kind ?? '-'),
+        name: String(resource.name ?? '-'),
+      })
+    : t('pages.k8s.forms.ingress.customBackend');
 };
 
 const RoutePathEditor = ({
@@ -151,6 +156,7 @@ const RoutePathEditor = ({
   serviceOptions,
   onServiceSelect,
 }: RoutePathEditorProps) => {
+  const t = useT();
   const { styles } = useStyles();
   const paths = (Form.useWatch('paths', form) as IngressRoutePathItem[]) || [];
   const addDisabled = paths.some((path) => !isValidIngressPath(path));
@@ -178,7 +184,7 @@ const RoutePathEditor = ({
             if ((value || []).some(isValidIngressPath)) {
               return;
             }
-            throw new Error('请添加至少一条路径');
+            throw new Error(t('pages.k8s.forms.ingress.paths.required'));
           },
         },
       ]}
@@ -196,13 +202,18 @@ const RoutePathEditor = ({
                     className={styles.formItem}
                     name={[field.name, 'path']}
                     rules={[
-                      { required: true, message: '请输入路径' },
+                      {
+                        required: true,
+                        message: t('pages.k8s.forms.ingress.path.required'),
+                      },
                       {
                         validator: async (_, value?: string) => {
                           if (!value || value.startsWith('/')) {
                             return;
                           }
-                          throw new Error('路径必须以 / 开头');
+                          throw new Error(
+                            t('pages.k8s.forms.ingress.path.leadingSlash'),
+                          );
                         },
                       },
                     ]}
@@ -212,32 +223,44 @@ const RoutePathEditor = ({
                   <Form.Item
                     className={styles.formItem}
                     name={[field.name, 'pathType']}
-                    rules={[{ required: true, message: '请选择匹配方式' }]}
+                    rules={[
+                      {
+                        required: true,
+                        message: t('pages.k8s.forms.ingress.pathType.required'),
+                      },
+                    ]}
                   >
                     <Select
                       className={styles.control}
                       options={INGRESS_PATH_TYPE_OPTIONS}
-                      placeholder="匹配方式"
+                      placeholder={t('pages.k8s.forms.ingress.pathType')}
                     />
                   </Form.Item>
                   {rawBackend ? (
                     <Input
                       className={styles.rawBackend}
                       disabled
-                      value={getBackendSummary(rawBackend)}
+                      value={getBackendSummary(t, rawBackend)}
                     />
                   ) : (
                     <>
                       <Form.Item
                         className={styles.formItem}
                         name={[field.name, 'serviceName']}
-                        rules={[{ required: true, message: '请选择服务' }]}
+                        rules={[
+                          {
+                            required: true,
+                            message: t(
+                              'pages.k8s.forms.ingress.service.required',
+                            ),
+                          },
+                        ]}
                       >
                         <AutoComplete
                           allowClear
                           className={styles.control}
                           options={serviceSelectOptions}
-                          placeholder="服务"
+                          placeholder={t('pages.k8s.kind.Service')}
                           showSearch={{
                             filterOption: (inputValue, option) =>
                               String(option?.value || '')
@@ -267,19 +290,26 @@ const RoutePathEditor = ({
                         className={styles.formItem}
                         name={[field.name, 'servicePort']}
                         rules={[
-                          { required: true, message: '请选择端口' },
+                          {
+                            required: true,
+                            message: t('pages.k8s.forms.ingress.port.required'),
+                          },
                           {
                             validator: async (_, value?: number | string) => {
                               if (typeof value === 'number') {
                                 if (value >= 1 && value <= 65535) {
                                   return;
                                 }
-                                throw new Error('端口范围为 1-65535');
+                                throw new Error(
+                                  t('pages.k8s.forms.common.port.range'),
+                                );
                               }
                               if (value?.trim()) {
                                 return;
                               }
-                              throw new Error('请选择端口');
+                              throw new Error(
+                                t('pages.k8s.forms.ingress.port.required'),
+                              );
                             },
                           },
                         ]}
@@ -293,7 +323,7 @@ const RoutePathEditor = ({
                     </>
                   )}
                   <Button
-                    aria-label="删除路径"
+                    aria-label={t('pages.k8s.forms.ingress.path.delete')}
                     className={styles.deleteButton}
                     icon={<DeleteOutlined />}
                     type="text"
@@ -323,7 +353,7 @@ const RoutePathEditor = ({
               }}
             >
               <PlusOutlined />
-              添加
+              {t('pages.k8s.form.add')}
             </Button>
           </div>
         </>

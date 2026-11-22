@@ -14,25 +14,12 @@ import type {
   RecordRuleValidateResult,
 } from '@/services/monitor/typings';
 import { useT } from '@/utils/i18n';
+import { fetchAllPages } from '@/utils/paging';
 import type { DatasourceOptionsState } from '../components/hooks';
 import { NO_WRITE_URL } from './meta';
 
-/** 数据源列表每页条数（后端上限）与至多翻的页数 */
-const PAGE_SIZE = 100;
-const MAX_PAGES = 10;
-
-const loadAllDatasources = async (): Promise<MonitorDatasource[]> => {
-  const all: MonitorDatasource[] = [];
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const result = await listDatasources({ page, pageSize: PAGE_SIZE });
-    const items = result.items ?? [];
-    all.push(...items);
-    if (items.length < PAGE_SIZE || all.length >= Number(result.total ?? 0)) {
-      break;
-    }
-  }
-  return all;
-};
+const loadAllDatasources = (): Promise<MonitorDatasource[]> =>
+  fetchAllPages((page, pageSize) => listDatasources({ page, pageSize }));
 
 export const useWritableDatasources = (datasources: DatasourceOptionsState) => {
   const t = useT();

@@ -78,6 +78,9 @@ const RuleList: React.FC = () => {
   const t = useT();
   const { styles } = useMonitorStyles();
   const [searchParams, setSearchParams] = useSearchParams();
+  // 地址栏参数的最新值：分组树右键菜单等缓存的回调里不能直接读 searchParams（闭包过期）
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
   const groupState = useRuleGroups();
   const { groups } = groupState;
   const datasources = useDatasourceOptions();
@@ -133,18 +136,23 @@ const RuleList: React.FC = () => {
   /** 关闭规则抽屉：从告警详情带 ?ruleId= 跳转过来的，把该参数从地址栏去掉（否则刷新又会打开） */
   const closeForm = () => {
     setFormRow(undefined);
-    if (!searchParams.has('ruleId')) return;
-    const next = new URLSearchParams(searchParams);
+    const current = searchParamsRef.current;
+    if (!current.has('ruleId')) return;
+    const next = new URLSearchParams(current);
     next.delete('ruleId');
     setSearchParams(next, { replace: true });
   };
 
-  /** 选分组：同步到地址栏（replace，不产生历史记录） */
+  /**
+   * 选分组：同步到地址栏（replace，不产生历史记录）。切换分组（含分组删除后收回「全部」）
+   * 时一并去掉深链的 ruleId，否则刷新又会打开那条规则。
+   */
   const selectGroup = (id?: string) => {
     setGroupId(id);
-    const next = new URLSearchParams(searchParams);
+    const next = new URLSearchParams(searchParamsRef.current);
     if (id) next.set('group', id);
     else next.delete('group');
+    next.delete('ruleId');
     setSearchParams(next, { replace: true });
   };
 
@@ -439,7 +447,8 @@ const RuleList: React.FC = () => {
           ]}
           onClose={() => setBatch(null)}
           onDone={() => {
-            if (batch.action === 'delete') setSelectedRows([]);
+            // 删除后行已不存在，移动后分组已变：勾选的快照都过期了，一律清空
+            setSelectedRows([]);
             reloadAll();
           }}
         />

@@ -3,6 +3,7 @@
  * Job / CronJob 向导复用这里的 Pod 模板构建（buildPodTemplate），控制器专属字段只在各自的构建函数里写。
  */
 import { parseAllDocuments } from 'yaml';
+import type { Translate } from '@/utils/i18n';
 import {
   createId,
   NAME_PATTERN,
@@ -165,9 +166,66 @@ const formatCpuQuantity = (value?: number) => {
   return Number.isInteger(value) ? `${value}` : `${Math.round(value * 1000)}m`;
 };
 
-/** 内存（Mi）→ 数量 */
-const formatMemoryQuantity = (value?: number) =>
-  isFiniteNumber(value) && value >= 0 ? `${Math.round(value)}Mi` : undefined;
+/** 内存（Mi）→ 数量：整数写 Mi，带小数时降到 Ki / 字节表示，不四舍五入 */
+const formatMemoryQuantity = (value?: number) => {
+  if (!isFiniteNumber(value) || value < 0) {
+    return undefined;
+  }
+  if (Number.isInteger(value)) {
+    return `${value}Mi`;
+  }
+  const kibibytes = value * 1024;
+  return Number.isInteger(kibibytes)
+    ? `${kibibytes}Ki`
+    : `${Math.round(kibibytes * 1024)}`;
+};
+
+/** 数量后缀 → 倍数：十进制 SI（k/M/G/T/P/E = 1000^n）、二进制（Ki/Mi/… = 1024^n）、m/u/n */
+const QUANTITY_SUFFIX_MULTIPLIERS: Record<string, number> = {
+  n: 1e-9,
+  u: 1e-6,
+  m: 1e-3,
+  k: 1e3,
+  K: 1e3,
+  M: 1e6,
+  G: 1e9,
+  T: 1e12,
+  P: 1e15,
+  E: 1e18,
+  Ki: 1024,
+  Mi: 1024 ** 2,
+  Gi: 1024 ** 3,
+  Ti: 1024 ** 4,
+  Pi: 1024 ** 5,
+  Ei: 1024 ** 6,
+};
+
+const QUANTITY_PATTERN =
+  /^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(?:([eE][+-]?\d+)|([numkKMGTPE]i?))?$/;
+
+/**
+ * Kubernetes 数量 → 基本单位的数值（字节 / 核）。支持纯数字、指数形式（1e9、1E3）、
+ * 十进制 SI 与二进制后缀、毫核等小数后缀；无法识别返回 undefined。
+ */
+const parseQuantity = (value: unknown): number | undefined => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined;
+  }
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const matched = value.trim().match(QUANTITY_PATTERN);
+  if (!matched) {
+    return undefined;
+  }
+  const [, mantissa, exponent, suffix] = matched;
+  const multiplier = suffix ? QUANTITY_SUFFIX_MULTIPLIERS[suffix] : 1;
+  if (multiplier === undefined) {
+    return undefined;
+  }
+  const result = Number(`${mantissa}${exponent ?? ''}`) * multiplier;
+  return Number.isFinite(result) ? result : undefined;
+};
 
 /** IntOrString：纯数字必须以整数提交（字符串 "1" 会被当作非法百分比） */
 const toIntOrPercent = (value: string | undefined, fallback: string) => {
@@ -1133,19 +1191,20 @@ const buildCreateWorkloadDocuments = (
 /** 容器列表的检查：至少一个工作容器、名称不重复；返回提示文案，通过则为 undefined */
 const checkContainers = (
   values: CreateWorkloadFormValues,
+  t: Translate,
 ): string | undefined => {
   if (!values.containers?.length) {
-    return '请先添加容器并填写容器名称和镜像';
+    return t('pages.k8s.forms.workload.check.containersRequired');
   }
   if (!hasWorkerContainer(values)) {
-    return '请至少添加一个工作容器';
+    return t('pages.k8s.forms.workload.check.workerContainerRequired');
   }
 
   const names = values.containers.map((container) =>
     normalizeName(container.containerName),
   );
   if (new Set(names).size !== names.length) {
-    return '容器名称不能重复';
+    return t('pages.k8s.forms.workload.check.containerNameDuplicate');
   }
 
   return undefined;
@@ -1154,10 +1213,11 @@ const checkContainers = (
 /** 提交前对整份表单值的检查（各步骤的字段校验之外）；返回提示文案，通过则为 undefined */
 const checkWorkloadValues = (
   values: CreateWorkloadFormValues,
+  t: Translate,
 ): string | undefined =>
   !normalizeName(values.name) || !normalizeName(values.namespace)
-    ? '请先填写名称和命名空间'
-    : checkContainers(values);
+    ? t('pages.k8s.forms.workload.check.nameNamespaceRequired')
+    : checkContainers(values, t);
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -1170,32 +1230,37 @@ const inspectYamlSubmission = (
   text: string,
   kind: string,
   apiVersion: string,
+  t: Translate,
 ): { error: string } | { error?: undefined; namespace?: string } => {
   const documents = parseAllDocuments(text);
   if (documents.some((document) => document.errors.length > 0)) {
-    return { error: 'YAML 格式不正确，请检查后重试' };
+    return { error: t('pages.k8s.forms.workload.yaml.invalid') };
   }
 
   const objects: unknown[] = documents
     .map((document) => document.toJS())
     .filter((value) => value !== null && value !== undefined);
   if (objects.length === 0 || !objects.every(isPlainObject)) {
-    return { error: 'YAML 内容必须是有效的资源对象' };
+    return { error: t('pages.k8s.forms.workload.yaml.invalidObject') };
   }
 
   const resource = objects
     .filter(isPlainObject)
     .find((item) => item.kind === kind);
   if (!resource) {
-    return { error: `YAML kind 必须为 ${kind}` };
+    return { error: t('pages.k8s.forms.common.yaml.kindMismatch', { kind }) };
   }
   if (resource.apiVersion !== apiVersion) {
-    return { error: `YAML apiVersion 必须为 ${apiVersion}` };
+    return {
+      error: t('pages.k8s.forms.common.yaml.apiVersionMismatch', {
+        apiVersion,
+      }),
+    };
   }
 
   const metadata = isPlainObject(resource.metadata) ? resource.metadata : {};
   if (typeof metadata.name !== 'string' || !metadata.name) {
-    return { error: 'YAML 必须包含 metadata.name' };
+    return { error: t('pages.k8s.forms.common.yaml.nameRequired') };
   }
 
   return {
@@ -1224,6 +1289,7 @@ export {
   inspectYamlSubmission,
   isFiniteNumber,
   NAME_PATTERN,
+  parseQuantity,
   prune,
   toArgList,
   WORKLOAD_API_VERSION,

@@ -17,6 +17,7 @@ import {
 } from 'antd';
 import { createStyles } from 'antd-style';
 import { useMemo, useState } from 'react';
+import { type Translate, useT } from '@/utils/i18n';
 import CollapsibleField from '../shared/CollapsibleField';
 import KeyValueEditor from '../shared/KeyValueEditor';
 import { parseObject, toYaml, useNamespaceOptions } from '../shared/kube';
@@ -141,34 +142,31 @@ const SELECTOR_OPERATOR_OPTIONS = [
   { label: 'DoesNotExist', value: 'DoesNotExist' },
 ];
 
-const STEPS = [
-  { title: '基本信息', icon: <AppstoreOutlined /> },
-  { title: '权限规则', icon: <SafetyCertificateOutlined /> },
-  { title: '高级设置', icon: <SlidersOutlined /> },
-];
+const STEP_COUNT = 3;
 
 const getStepStatusText = (
   current: number,
   index: number,
   values: CreateRoleFormValues,
+  t: Translate,
 ) => {
   if (current === index) {
-    return '当前';
+    return t('pages.k8s.forms.common.current');
   }
   if (
     index === 0 &&
     values.name &&
     (values.type === 'ClusterRole' || values.namespace)
   ) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 1 && hasRulesContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
   if (index === 2 && hasAdvancedContent(values)) {
-    return '已设置';
+    return t('pages.k8s.forms.common.set');
   }
-  return '未设置';
+  return t('pages.k8s.forms.common.unset');
 };
 
 const buildYaml = (values: CreateRoleFormValues) =>
@@ -183,6 +181,7 @@ const CreateRoleDrawer = ({
 }: CreateRoleDrawerProps) => {
   const { styles } = useStyles();
   const { message } = App.useApp();
+  const t = useT();
   const [form] = Form.useForm<CreateRoleFormValues>();
   const [initialValues] = useState(() =>
     getInitialCreateRoleValues(kind || 'Role', defaultNamespace),
@@ -199,6 +198,20 @@ const CreateRoleDrawer = ({
     Form.useWatch([], { form, preserve: true }) || {};
   const roleType: CreateRoleType =
     kind || values.type || initialValues.type || 'Role';
+  const steps = useMemo(
+    () => [
+      { title: t('pages.k8s.form.section.basic'), icon: <AppstoreOutlined /> },
+      {
+        title: t('pages.k8s.forms.role.rules'),
+        icon: <SafetyCertificateOutlined />,
+      },
+      {
+        title: t('pages.k8s.forms.common.advanced'),
+        icon: <SlidersOutlined />,
+      },
+    ],
+    [t],
+  );
   const namespaceOptions = useMemo(
     () => namespaces.map((item) => ({ label: item, value: item })),
     [namespaces],
@@ -225,10 +238,10 @@ const CreateRoleDrawer = ({
     const formValues: CreateRoleFormValues = form.getFieldsValue(true);
 
     if (current === 1) {
-      return warn(getPolicyRulesError(formValues));
+      return warn(getPolicyRulesError(formValues, t));
     }
     if (current === 2) {
-      return warn(getAggregationError(formValues));
+      return warn(getAggregationError(formValues, t));
     }
 
     return true;
@@ -241,7 +254,7 @@ const CreateRoleDrawer = ({
       return;
     }
 
-    setCurrent((step) => Math.min(step + 1, STEPS.length - 1));
+    setCurrent((step) => Math.min(step + 1, STEP_COUNT - 1));
   };
 
   const handleSubmit = async () => {
@@ -250,11 +263,11 @@ const CreateRoleDrawer = ({
       try {
         resource = parseObject(yamlValue);
       } catch {
-        message.error('YAML 格式不正确，内容必须是有效的资源对象');
+        message.error(t('pages.k8s.forms.common.yaml.invalidObject'));
         return;
       }
 
-      const error = getRoleManifestError(resource, kind);
+      const error = getRoleManifestError(resource, t, kind);
       if (error) {
         message.error(error);
         return;
@@ -276,8 +289,8 @@ const CreateRoleDrawer = ({
     const formValues: CreateRoleFormValues = form.getFieldsValue(true);
 
     if (
-      !warn(getPolicyRulesError(formValues)) ||
-      !warn(getAggregationError(formValues))
+      !warn(getPolicyRulesError(formValues, t)) ||
+      !warn(getAggregationError(formValues, t))
     ) {
       return;
     }
@@ -293,30 +306,38 @@ const CreateRoleDrawer = ({
     <Row gutter={16}>
       <Col span={12}>
         <Form.Item
-          tooltip="名称只能包含小写字母、数字、连字符（-）和点（.）"
-          label="名称"
+          tooltip={t('pages.k8s.forms.role.name.tooltip')}
+          label={t('pages.k8s.forms.common.name')}
           name="name"
           rules={[
-            { required: true, message: '请输入名称' },
-            { max: 253, message: '名称最长 253 个字符' },
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.name.required'),
+            },
+            {
+              max: 253,
+              message: t('pages.k8s.forms.common.name.maxLength253'),
+            },
             {
               pattern: ROLE_NAME_PATTERN,
-              message:
-                '名称只能包含小写字母、数字、连字符（-）和点（.），且不能以连字符或点开头结尾',
+              message: t('pages.k8s.forms.role.name.pattern'),
             },
           ]}
         >
-          <Input autoFocus placeholder="请输入名称" />
+          <Input
+            autoFocus
+            placeholder={t('pages.k8s.forms.common.name.required')}
+          />
         </Form.Item>
       </Col>
       <Col span={12}>
         <Form.Item
-          label="命名空间"
+          label={t('pages.k8s.forms.common.namespace')}
           name="namespace"
           rules={[
             {
               required: roleType === 'Role',
-              message: '请选择命名空间',
+              message: t('pages.k8s.forms.common.namespace.required'),
             },
           ]}
         >
@@ -325,8 +346,8 @@ const CreateRoleDrawer = ({
             options={namespaceOptions}
             placeholder={
               roleType === 'ClusterRole'
-                ? 'ClusterRole 不需要命名空间'
-                : '请选择命名空间'
+                ? t('pages.k8s.forms.role.namespace.notNeeded')
+                : t('pages.k8s.forms.common.namespace.required')
             }
             showSearch={{
               filterOption: (input, option) =>
@@ -339,9 +360,14 @@ const CreateRoleDrawer = ({
       </Col>
       <Col span={24}>
         <Form.Item
-          label="类型"
+          label={t('pages.k8s.forms.common.type')}
           name="type"
-          rules={[{ required: true, message: '请选择类型' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.k8s.forms.common.type.required'),
+            },
+          ]}
         >
           <Select
             disabled={Boolean(kind)}
@@ -359,7 +385,9 @@ const CreateRoleDrawer = ({
 
   const renderRuleSettings = () => (
     <>
-      <div className={styles.ruleSectionTitle}>权限规则</div>
+      <div className={styles.ruleSectionTitle}>
+        {t('pages.k8s.forms.role.rules')}
+      </div>
       <PolicyRuleEditor clusterScoped={roleType === 'ClusterRole'} />
     </>
   );
@@ -372,12 +400,12 @@ const CreateRoleDrawer = ({
             {fields.map((field) => (
               <div className={styles.expressionRow} key={field.key}>
                 <Form.Item name={[field.name, 'key']} noStyle>
-                  <Input placeholder="标签键" />
+                  <Input placeholder={t('pages.k8s.forms.common.labelKey')} />
                 </Form.Item>
                 <Form.Item name={[field.name, 'operator']} noStyle>
                   <Select
                     options={SELECTOR_OPERATOR_OPTIONS}
-                    placeholder="操作符"
+                    placeholder={t('pages.k8s.forms.role.selector.operator')}
                   />
                 </Form.Item>
                 <Form.Item shouldUpdate noStyle>
@@ -394,14 +422,16 @@ const CreateRoleDrawer = ({
                             operator === 'Exists' || operator === 'DoesNotExist'
                           }
                           mode="tags"
-                          placeholder="标签值"
+                          placeholder={t('pages.k8s.forms.common.labelValue')}
                         />
                       </Form.Item>
                     );
                   }}
                 </Form.Item>
                 <Button
-                  aria-label="删除匹配表达式"
+                  aria-label={t(
+                    'pages.k8s.forms.role.selector.deleteExpression',
+                  )}
                   icon={<DeleteOutlined />}
                   type="text"
                   onClick={() => remove(field.name)}
@@ -419,7 +449,7 @@ const CreateRoleDrawer = ({
                 })
               }
             >
-              添加匹配表达式
+              {t('pages.k8s.forms.role.selector.addExpression')}
             </Button>
           </div>
         </>
@@ -431,7 +461,9 @@ const CreateRoleDrawer = ({
     <div className={styles.advancedStack}>
       {roleType === 'ClusterRole' && (
         <div>
-          <div className={styles.advancedSectionTitle}>聚合规则</div>
+          <div className={styles.advancedSectionTitle}>
+            {t('pages.k8s.forms.role.aggregation')}
+          </div>
           <div className={styles.advancedOption}>
             <div className={styles.advancedOptionHeader}>
               <Form.Item
@@ -439,13 +471,16 @@ const CreateRoleDrawer = ({
                 name="aggregationEnabled"
                 valuePropName="checked"
               >
-                <Checkbox aria-label="聚合 ClusterRole" />
+                <Checkbox
+                  aria-label={t('pages.k8s.forms.role.aggregation.enable')}
+                />
               </Form.Item>
               <span>
-                <div className={styles.advancedTitle}>聚合 ClusterRole</div>
+                <div className={styles.advancedTitle}>
+                  {t('pages.k8s.forms.role.aggregation.enable')}
+                </div>
                 <div className={styles.advancedDescription}>
-                  按标签选择器聚合其他 ClusterRole
-                  的权限规则，适合组合多个细粒度角色
+                  {t('pages.k8s.forms.role.aggregation.description')}
                 </div>
               </span>
             </div>
@@ -455,18 +490,22 @@ const CreateRoleDrawer = ({
               >
                 <div>
                   <div className={styles.advancedFieldLabel}>
-                    聚合标签选择器
+                    {t('pages.k8s.forms.role.aggregation.labels')}
                   </div>
                   <Form.Item name="aggregationLabels">
                     <KeyValueEditor
                       addIcon={false}
-                      addText="添加"
-                      deleteAriaLabel="删除匹配标签"
-                      keyPlaceholder="标签键"
+                      addText={t('pages.k8s.form.add')}
+                      deleteAriaLabel={t(
+                        'pages.k8s.forms.role.aggregation.deleteLabel',
+                      )}
+                      keyPlaceholder={t('pages.k8s.forms.common.labelKey')}
                       minRows={1}
-                      valuePlaceholder="标签值"
+                      valuePlaceholder={t('pages.k8s.forms.common.labelValue')}
                       onAddBlocked={() =>
-                        message.warning('请先填写已有匹配标签的键。')
+                        message.warning(
+                          t('pages.k8s.forms.role.aggregation.labelKeyFirst'),
+                        )
                       }
                       onCreateItem={createMetadataItem}
                     />
@@ -474,7 +513,7 @@ const CreateRoleDrawer = ({
                 </div>
                 <div>
                   <div className={styles.advancedFieldLabel}>
-                    聚合匹配表达式
+                    {t('pages.k8s.forms.role.aggregation.expressions')}
                   </div>
                   <Form.Item>{renderAggregationExpressions()}</Form.Item>
                 </div>
@@ -485,42 +524,52 @@ const CreateRoleDrawer = ({
       )}
 
       <div>
-        <div className={styles.advancedSectionTitle}>元数据</div>
+        <div className={styles.advancedSectionTitle}>
+          {t('pages.k8s.forms.common.metadata')}
+        </div>
         <div className={styles.advancedOption}>
           <CollapsibleField
-            description="为角色资源添加标签和注解，便于筛选、识别和自动化管理"
-            title="添加元数据"
+            description={t('pages.k8s.forms.role.metadata.description')}
+            title={t('pages.k8s.forms.common.addMetadata')}
           >
             <div className={styles.advancedMetadataBody}>
               <div>
-                <div className={styles.advancedFieldLabel}>标签</div>
+                <div className={styles.advancedFieldLabel}>
+                  {t('pages.k8s.forms.common.labels')}
+                </div>
                 <Form.Item name="labels">
                   <KeyValueEditor
                     addIcon={false}
-                    addText="添加"
-                    deleteAriaLabel="删除标签"
-                    keyPlaceholder="标签键"
+                    addText={t('pages.k8s.form.add')}
+                    deleteAriaLabel={t('pages.k8s.forms.common.deleteLabel')}
+                    keyPlaceholder={t('pages.k8s.forms.common.labelKey')}
                     minRows={1}
-                    valuePlaceholder="标签值"
+                    valuePlaceholder={t('pages.k8s.forms.common.labelValue')}
                     onAddBlocked={() =>
-                      message.warning('请先填写已有标签的键。')
+                      message.warning(t('pages.k8s.forms.common.labelKeyFirst'))
                     }
                     onCreateItem={createMetadataItem}
                   />
                 </Form.Item>
               </div>
               <div>
-                <div className={styles.advancedFieldLabel}>注解</div>
+                <div className={styles.advancedFieldLabel}>
+                  {t('pages.k8s.forms.common.annotations')}
+                </div>
                 <Form.Item name="annotations">
                   <KeyValueEditor
                     addIcon={false}
-                    addText="添加"
-                    deleteAriaLabel="删除注解"
-                    keyPlaceholder="注解键"
+                    addText={t('pages.k8s.form.add')}
+                    deleteAriaLabel={t(
+                      'pages.k8s.forms.common.deleteAnnotation',
+                    )}
+                    keyPlaceholder={t('pages.k8s.forms.role.annotationKey')}
                     minRows={1}
-                    valuePlaceholder="注解值"
+                    valuePlaceholder={t('pages.k8s.forms.role.annotationValue')}
                     onAddBlocked={() =>
-                      message.warning('请先填写已有注解的键。')
+                      message.warning(
+                        t('pages.k8s.forms.common.annotationKeyFirst'),
+                      )
                     }
                     onCreateItem={createMetadataItem}
                   />
@@ -544,11 +593,11 @@ const CreateRoleDrawer = ({
       <ResourceCreateWizardDrawer
         current={current}
         getStepDescription={(_, index) =>
-          getStepStatusText(current, index, values)
+          getStepStatusText(current, index, values, t)
         }
         open
-        steps={STEPS}
-        title={`创建 ${roleType}`}
+        steps={steps}
+        title={t('pages.k8s.forms.role.title', { kind: roleType })}
         yamlMode={yamlMode}
         yamlValue={yamlValue}
         onCancel={onClose}
@@ -590,7 +639,7 @@ const CreateRoleDrawer = ({
           clusterId={clusterId}
           yaml={submission.yaml}
           namespace={submission.namespace}
-          title={`创建 ${roleType}`}
+          title={t('pages.k8s.forms.role.title', { kind: roleType })}
           onBack={() => setSubmission(undefined)}
           onClose={onClose}
           onDone={onDone}

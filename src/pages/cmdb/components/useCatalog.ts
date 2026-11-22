@@ -6,12 +6,8 @@
  * - 收藏失败：favorites = null，调用方隐藏收藏入口
  * - 范围失败：视为不受限（数据接口由后端守卫兜底）
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  listFavorites,
-  listModelGroups,
-  setFavorite,
-} from '@/services/cmdb/insight';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { listFavorites, listModelGroups } from '@/services/cmdb/insight';
 import { listAllModels } from '@/services/cmdb/model';
 import { getMyScope, type MyScope } from '@/services/cmdb/scope';
 import type {
@@ -38,7 +34,6 @@ export interface UseCatalogResult {
   groupsEditable: boolean;
   /** 收藏的模型 code；null 表示收藏能力不可用（隐藏星标） */
   favorites: string[] | null;
-  toggleFavorite: (modelCode: string) => void;
   reload: () => void;
   /** 仅刷新模型实例数（比 reload 轻：只发模型请求） */
   refreshCounts: () => void;
@@ -145,19 +140,6 @@ export function useCatalog(): UseCatalogResult {
     [allModels, scope],
   );
 
-  // 收藏切换：本地乐观更新，失败回滚（错误提示由 authRequest 全局处理）
-  const favoritesRef = useRef<string[] | null>(null);
-  favoritesRef.current = favorites;
-  const toggleFavorite = useCallback((modelCode: string) => {
-    const cur = favoritesRef.current;
-    if (!cur) return;
-    const favorite = !cur.includes(modelCode);
-    setFavorites(
-      favorite ? [...cur, modelCode] : cur.filter((c) => c !== modelCode),
-    );
-    setFavorite(modelCode, favorite).catch(() => setFavorites(cur));
-  }, []);
-
   const reload = useCallback(() => setTick((n) => n + 1), []);
 
   // 只刷新模型（实例数）：行操作后用它，不必连同范围 / 分组 / 收藏一起重拉
@@ -174,7 +156,6 @@ export function useCatalog(): UseCatalogResult {
     groups: groupsWithCount,
     groupsEditable: serverGroups !== null,
     favorites,
-    toggleFavorite,
     reload,
     refreshCounts,
   };

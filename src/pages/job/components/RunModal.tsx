@@ -214,7 +214,10 @@ export const RunModal: React.FC<{
                 key: 'project',
                 label: t('pages.job.template.column.project'),
                 children: template.projectName
-                  ? `${template.projectName}（${template.projectRef ?? ''}）`
+                  ? t('pages.job.common.withCode', {
+                      name: template.projectName,
+                      code: template.projectRef ?? '',
+                    })
                   : t('common.empty'),
               },
               {
@@ -341,7 +344,9 @@ export const RunModal: React.FC<{
               type="error"
               showIcon
               title={t('pages.job.approval.unavailable')}
-              description={approvalReasons.join('；')}
+              description={approvalReasons.join(
+                t('pages.job.common.separator'),
+              )}
               style={{ marginTop: 12 }}
             />
           )}
@@ -350,7 +355,7 @@ export const RunModal: React.FC<{
               type="info"
               showIcon
               title={t('pages.job.approval.notice', {
-                reasons: approvalReasons.join('；'),
+                reasons: approvalReasons.join(t('pages.job.common.separator')),
               })}
               style={{ marginTop: 12 }}
             />

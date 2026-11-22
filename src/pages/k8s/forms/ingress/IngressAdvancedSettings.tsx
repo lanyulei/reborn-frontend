@@ -1,6 +1,7 @@
 import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import { createStyles } from 'antd-style';
 import { useState } from 'react';
+import { useT } from '@/utils/i18n';
 import ResourceMetadataFields from '../shared/ResourceMetadataFields';
 
 const useStyles = createStyles(({ token }) => ({
@@ -65,13 +66,16 @@ const useStyles = createStyles(({ token }) => ({
 }));
 
 const IngressAdvancedSettings = () => {
+  const t = useT();
   const { styles } = useStyles();
   const [metadataOpen, setMetadataOpen] = useState(true);
 
   return (
     <div className={styles.stack}>
       <div>
-        <div className={styles.sectionTitle}>元数据</div>
+        <div className={styles.sectionTitle}>
+          {t('pages.k8s.forms.common.metadata')}
+        </div>
         <div className={styles.option}>
           <button
             aria-expanded={metadataOpen}
@@ -83,8 +87,12 @@ const IngressAdvancedSettings = () => {
               {metadataOpen ? <UpOutlined /> : <DownOutlined />}
             </span>
             <span>
-              <div className={styles.title}>添加元数据</div>
-              <div className={styles.description}>为应用路由添加元数据。</div>
+              <div className={styles.title}>
+                {t('pages.k8s.forms.common.addMetadata')}
+              </div>
+              <div className={styles.description}>
+                {t('pages.k8s.forms.ingress.metadata.description')}
+              </div>
             </span>
           </button>
           {metadataOpen && (

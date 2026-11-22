@@ -7,7 +7,8 @@ import { Checkbox, Form, Input, Select } from 'antd';
 import type { NamePath } from 'antd/es/form/interface';
 import { createStyles } from 'antd-style';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useT } from '@/utils/i18n';
 import ArgListEditor from '../ArgListEditor';
 import ContainerEnvFields from './ContainerEnvFields';
 import ContainerHealthCheckFields from './ContainerHealthCheckFields';
@@ -148,27 +149,11 @@ type ToggleOptionCardProps = {
 
 type ImagePullPolicyType = 'IfNotPresent' | 'Always' | 'Never';
 
-const imagePullPolicyOptions: {
+type ImagePullPolicyOption = {
   title: string;
   value: ImagePullPolicyType;
   description: string;
-}[] = [
-  {
-    title: '优先使用本地镜像',
-    value: 'IfNotPresent',
-    description: '如果本地存在所需的镜像，则优先使用本地镜像。',
-  },
-  {
-    title: '每次都拉取镜像',
-    value: 'Always',
-    description: '在容器组创建及更新时，每次都尝试拉取新的镜像。',
-  },
-  {
-    title: '仅使用本地镜像',
-    value: 'Never',
-    description: '仅使用本地镜像。如果本地不存在所需的镜像，则会导致容器异常。',
-  },
-];
+};
 
 const ToggleOptionCard = ({
   bodyClassName,
@@ -204,8 +189,35 @@ const ToggleOptionCard = ({
 
 const ContainerAdvancedOptions = () => {
   const { styles } = useStyles();
+  const t = useT();
   const form = Form.useFormInstance();
   const [policyOpen, setPolicyOpen] = useState(false);
+  const imagePullPolicyOptions = useMemo<ImagePullPolicyOption[]>(
+    () => [
+      {
+        title: t('pages.k8s.forms.workload.container.pullPolicy.ifNotPresent'),
+        value: 'IfNotPresent',
+        description: t(
+          'pages.k8s.forms.workload.container.pullPolicy.ifNotPresent.description',
+        ),
+      },
+      {
+        title: t('pages.k8s.forms.workload.container.pullPolicy.always'),
+        value: 'Always',
+        description: t(
+          'pages.k8s.forms.workload.container.pullPolicy.always.description',
+        ),
+      },
+      {
+        title: t('pages.k8s.forms.workload.container.pullPolicy.never'),
+        value: 'Never',
+        description: t(
+          'pages.k8s.forms.workload.container.pullPolicy.never.description',
+        ),
+      },
+    ],
+    [t],
+  );
   const enableHealthCheck = Form.useWatch('enableHealthCheck', form);
   const enableLifecycle = Form.useWatch('enableLifecycle', form);
   const enableStartupCommand = Form.useWatch('enableStartupCommand', form);
@@ -226,7 +238,7 @@ const ContainerAdvancedOptions = () => {
   };
 
   const renderImagePullPolicyOption = (
-    option: (typeof imagePullPolicyOptions)[number],
+    option: ImagePullPolicyOption,
     showArrow: boolean,
   ) => (
     <button
@@ -252,6 +264,19 @@ const ContainerAdvancedOptions = () => {
     </button>
   );
 
+  const resizePolicyOptions = [
+    {
+      label: t('pages.k8s.forms.workload.container.resizePolicy.notRequired'),
+      value: 'NotRequired',
+    },
+    {
+      label: t(
+        'pages.k8s.forms.workload.container.resizePolicy.restartContainer',
+      ),
+      value: 'RestartContainer',
+    },
+  ];
+
   const selectedImagePullPolicy =
     imagePullPolicyOptions.find((option) => option.value === imagePullPolicy) ||
     imagePullPolicyOptions[0];
@@ -273,44 +298,68 @@ const ContainerAdvancedOptions = () => {
       </div>
 
       <ToggleOptionCard
-        description="添加探针以定时检查容器健康状态。"
+        description={t(
+          'pages.k8s.forms.workload.container.healthCheck.description',
+        )}
         enabled={enableHealthCheck}
         name="enableHealthCheck"
-        title="健康检查"
+        title={t('pages.k8s.forms.workload.container.healthCheck')}
       >
         <ContainerHealthCheckFields />
       </ToggleOptionCard>
 
       <ToggleOptionCard
-        description="设置容器启动后或终止前需要执行的动作，以进行环境检查或体面终止。"
+        description={t(
+          'pages.k8s.forms.workload.container.lifecycle.description',
+        )}
         enabled={enableLifecycle}
         name="enableLifecycle"
-        title="生命周期管理"
+        title={t('pages.k8s.forms.workload.container.lifecycle')}
       >
         <ContainerLifecycleFields />
       </ToggleOptionCard>
 
       <ToggleOptionCard
-        description="自定义容器启动时运行的命令。默认情况下，容器启动时将运行镜像默认命令。"
+        description={t(
+          'pages.k8s.forms.workload.container.startupCommand.description',
+        )}
         enabled={enableStartupCommand}
         name="enableStartupCommand"
-        title="启动命令"
+        title={t('pages.k8s.form.command')}
       >
         <div className={styles.fieldStack}>
           <div className={styles.fieldBlock}>
-            <Form.Item label="命令" name="startupCommand">
-              <ArgListEditor addText="添加命令" placeholder="例如 /bin/sh" />
+            <Form.Item
+              label={t('pages.k8s.forms.common.command')}
+              name="startupCommand"
+            >
+              <ArgListEditor
+                addText={t(
+                  'pages.k8s.forms.workload.container.startupCommand.add',
+                )}
+                placeholder={t(
+                  'pages.k8s.forms.workload.container.command.placeholder',
+                )}
+              />
             </Form.Item>
             <div className={styles.fieldHelp}>
-              容器的启动命令。每项填写一个参数，例如 /bin/sh、-c。
+              {t('pages.k8s.forms.workload.container.startupCommand.help')}
             </div>
           </div>
           <div className={styles.fieldBlock}>
-            <Form.Item label="参数" name="startupArgs">
-              <ArgListEditor addText="添加参数" placeholder="请输入参数" />
+            <Form.Item
+              label={t('pages.k8s.forms.workload.container.args')}
+              name="startupArgs"
+            >
+              <ArgListEditor
+                addText={t('pages.k8s.forms.workload.container.args.add')}
+                placeholder={t(
+                  'pages.k8s.forms.workload.container.args.placeholder',
+                )}
+              />
             </Form.Item>
             <div className={styles.fieldHelp}>
-              容器启动命令的参数。每项填写一个参数，参数内容原样传递（可以包含逗号和空格）。
+              {t('pages.k8s.forms.workload.container.args.help')}
             </div>
           </div>
         </div>
@@ -318,66 +367,77 @@ const ContainerAdvancedOptions = () => {
 
       <ToggleOptionCard
         bodyClassName={styles.plainBody}
-        description="为容器添加添加环境变量。"
+        description={t('pages.k8s.forms.workload.container.env.description')}
         enabled={enableContainerEnv}
         name="enableContainerEnv"
-        title="环境变量"
+        title={t('pages.k8s.form.env')}
       >
         <ContainerEnvFields />
       </ToggleOptionCard>
 
       <ToggleOptionCard
-        description="自定义容器的权限设置。"
+        description={t(
+          'pages.k8s.forms.workload.container.securityContext.description',
+        )}
         enabled={enableContainerSecurityContext}
         name="enableContainerSecurityContext"
-        title="容器安全上下文"
+        title={t('pages.k8s.forms.workload.container.securityContext')}
       >
         <ContainerSecurityContextFields />
       </ToggleOptionCard>
 
       <ToggleOptionCard
-        description="声明 Kubernetes 1.35+ 原地调整 CPU 或内存时是否需要重启容器。"
+        description={t(
+          'pages.k8s.forms.workload.container.resizePolicy.description',
+        )}
         enabled={enableResizePolicy}
         name="enableResizePolicy"
-        title="Resize 策略"
+        title={t('pages.k8s.forms.workload.container.resizePolicy')}
       >
         <div className={styles.fieldStack}>
           <div className={styles.fieldBlock}>
-            <Form.Item label="CPU 调整策略" name="cpuResizeRestartPolicy">
+            <Form.Item
+              label={t('pages.k8s.forms.workload.container.resizePolicy.cpu')}
+              name="cpuResizeRestartPolicy"
+            >
               <Select
                 allowClear
-                options={[
-                  { label: '无需重启', value: 'NotRequired' },
-                  { label: '重启容器', value: 'RestartContainer' },
-                ]}
-                placeholder="默认无需重启"
+                options={resizePolicyOptions}
+                placeholder={t(
+                  'pages.k8s.forms.workload.container.resizePolicy.placeholder',
+                )}
               />
             </Form.Item>
           </div>
           <div className={styles.fieldBlock}>
-            <Form.Item label="内存调整策略" name="memoryResizeRestartPolicy">
+            <Form.Item
+              label={t(
+                'pages.k8s.forms.workload.container.resizePolicy.memory',
+              )}
+              name="memoryResizeRestartPolicy"
+            >
               <Select
                 allowClear
-                options={[
-                  { label: '无需重启', value: 'NotRequired' },
-                  { label: '重启容器', value: 'RestartContainer' },
-                ]}
-                placeholder="默认无需重启"
+                options={resizePolicyOptions}
+                placeholder={t(
+                  'pages.k8s.forms.workload.container.resizePolicy.placeholder',
+                )}
               />
             </Form.Item>
             <div className={styles.fieldHelp}>
-              当 Pod restartPolicy 为 Never 时，容器 resizePolicy
-              必须保持无需重启。
+              {t('pages.k8s.forms.workload.container.resizePolicy.help')}
             </div>
           </div>
         </div>
       </ToggleOptionCard>
 
       <ToggleOptionCard
-        description="同步容器与主机的时区。"
+        description={t(
+          'pages.k8s.forms.workload.container.syncTimezone.description',
+        )}
         enabled={syncHostTimezone}
         name="syncHostTimezone"
-        title="同步主机时区"
+        title={t('pages.k8s.forms.workload.container.syncTimezone')}
       />
     </div>
   );
