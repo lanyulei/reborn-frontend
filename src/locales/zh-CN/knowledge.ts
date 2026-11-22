@@ -237,6 +237,9 @@ export default {
   'pages.knowledge.admin.refresh': '刷新',
   'pages.knowledge.admin.stats': '统计',
   'pages.knowledge.admin.days': '近 {days} 天',
+  'pages.knowledge.admin.statsHint':
+    '空间 / 文档 / 分块为全量计数，检索与反馈为所选时间范围内的数据',
+  'pages.knowledge.admin.gapsCount': '共 {n} 项',
   'pages.knowledge.admin.stat.spaces': '空间',
   'pages.knowledge.admin.stat.documents': '已发布文档',
   'pages.knowledge.admin.stat.drafts': '草稿',
@@ -245,6 +248,7 @@ export default {
   'pages.knowledge.admin.stat.pending': '待审核',
   'pages.knowledge.admin.stat.searches': '检索次数',
   'pages.knowledge.admin.stat.noResult': '无结果次数',
+  'pages.knowledge.admin.stat.noResultRatio': '占检索 {pct}%',
   'pages.knowledge.admin.gaps': '无结果高频检索词（知识缺口）',
   'pages.knowledge.admin.logs': '检索日志',
   'pages.knowledge.admin.log.query': '检索词',

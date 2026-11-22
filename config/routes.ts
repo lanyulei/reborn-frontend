@@ -90,56 +90,6 @@ export default [
     ],
   },
   {
-    // 流程中心（管理端）：流程设计、流程监控、流程配置；设计器与流程详情页隐藏于菜单。
-    // 个人待办在工单系统的工单列表里处理
-    path: '/workflow',
-    name: 'workflow',
-    icon: 'apartment',
-    access: 'canWorkflow',
-    routes: [
-      {
-        // 按权限落到第一个可访问的子页（见 src/pages/workflow/index.tsx）
-        path: '/workflow',
-        component: './workflow',
-        hideInMenu: true,
-      },
-      {
-        path: '/workflow/definition',
-        name: 'definition',
-        component: './workflow/definition',
-        access: 'canWorkflowDefinition',
-      },
-      {
-        path: '/workflow/definition/:id',
-        name: 'definition-design',
-        hideInMenu: true,
-        component: './workflow/definition/design',
-        access: 'canWorkflowDefinition',
-      },
-      {
-        path: '/workflow/instance',
-        name: 'instance',
-        component: './workflow/instance',
-        access: 'canWorkflowInstance',
-      },
-      {
-        // 流程详情（查看 / 处理）；不进菜单，可直接用链接打开
-        path: '/workflow/instance/:id',
-        name: 'instance-detail',
-        hideInMenu: true,
-        component: './workflow/instance/detail',
-        access: 'canWorkflow',
-      },
-      {
-        // 流程配置：工作日历、自动任务可调用的 Webhook 端点
-        path: '/workflow/config',
-        name: 'config',
-        component: './workflow/config',
-        access: 'canWorkflowConfig',
-      },
-    ],
-  },
-  {
     // 工单：提交工单（模板卡片）、工单列表（待办 / 已办 / 我提交的）、全部工单（管理视图）、工单统计、工单模板（分类与模板）
     path: '/ticket',
     name: 'ticket',
@@ -970,6 +920,13 @@ export default [
         component: './knowledge/admin',
         access: 'canKnowledgeAdmin',
       },
+      {
+        // 知识统计：全量计数 + 时间范围内的检索 / 反馈与知识缺口（数据来自 admin 接口）
+        path: '/knowledge/stats',
+        name: 'stats',
+        component: './knowledge/stats',
+        access: 'canKnowledgeAdmin',
+      },
     ],
   },
   {
@@ -1003,6 +960,56 @@ export default [
         hideInMenu: true,
         component: './oncall/group/detail',
         access: 'canOncallGroup',
+      },
+    ],
+  },
+  {
+    // 流程中心（管理端）：流程设计、流程监控、流程配置；设计器与流程详情页隐藏于菜单。
+    // 个人待办在工单系统的工单列表里处理
+    path: '/workflow',
+    name: 'workflow',
+    icon: 'apartment',
+    access: 'canWorkflow',
+    routes: [
+      {
+        // 按权限落到第一个可访问的子页（见 src/pages/workflow/index.tsx）
+        path: '/workflow',
+        component: './workflow',
+        hideInMenu: true,
+      },
+      {
+        path: '/workflow/definition',
+        name: 'definition',
+        component: './workflow/definition',
+        access: 'canWorkflowDefinition',
+      },
+      {
+        path: '/workflow/definition/:id',
+        name: 'definition-design',
+        hideInMenu: true,
+        component: './workflow/definition/design',
+        access: 'canWorkflowDefinition',
+      },
+      {
+        path: '/workflow/instance',
+        name: 'instance',
+        component: './workflow/instance',
+        access: 'canWorkflowInstance',
+      },
+      {
+        // 流程详情（查看 / 处理）；不进菜单，可直接用链接打开
+        path: '/workflow/instance/:id',
+        name: 'instance-detail',
+        hideInMenu: true,
+        component: './workflow/instance/detail',
+        access: 'canWorkflow',
+      },
+      {
+        // 流程配置：工作日历、自动任务可调用的 Webhook 端点
+        path: '/workflow/config',
+        name: 'config',
+        component: './workflow/config',
+        access: 'canWorkflowConfig',
       },
     ],
   },

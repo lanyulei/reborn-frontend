@@ -237,6 +237,9 @@ export default {
   'pages.knowledge.admin.refresh': '重新整理',
   'pages.knowledge.admin.stats': '統計',
   'pages.knowledge.admin.days': '近 {days} 天',
+  'pages.knowledge.admin.statsHint':
+    '空間 / 文件 / 分塊為全量計數，檢索與回饋為所選時間範圍內的資料',
+  'pages.knowledge.admin.gapsCount': '共 {n} 項',
   'pages.knowledge.admin.stat.spaces': '空間',
   'pages.knowledge.admin.stat.documents': '已發佈文件',
   'pages.knowledge.admin.stat.drafts': '草稿',
@@ -245,6 +248,7 @@ export default {
   'pages.knowledge.admin.stat.pending': '待審核',
   'pages.knowledge.admin.stat.searches': '檢索次數',
   'pages.knowledge.admin.stat.noResult': '無結果次數',
+  'pages.knowledge.admin.stat.noResultRatio': '佔檢索 {pct}%',
   'pages.knowledge.admin.gaps': '無結果高頻檢索詞（知識缺口）',
   'pages.knowledge.admin.logs': '檢索日誌',
   'pages.knowledge.admin.log.query': '檢索詞',

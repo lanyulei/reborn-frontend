@@ -11,6 +11,7 @@ export default {
   'menu.knowledge.doc-edit': 'Edit Document',
   'menu.knowledge.ingest': 'Import',
   'menu.knowledge.admin': 'Knowledge Admin',
+  'menu.knowledge.stats': 'Knowledge Stats',
   'permission.knowledge.write': 'Write documents',
   'permission.knowledge.review': 'Review documents',
   'permission.knowledge.archive': 'Archive / restore documents',

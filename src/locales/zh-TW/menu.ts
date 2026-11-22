@@ -11,6 +11,7 @@ export default {
   'menu.knowledge.doc-edit': '編輯文件',
   'menu.knowledge.ingest': '文件匯入',
   'menu.knowledge.admin': '知識庫管理',
+  'menu.knowledge.stats': '知識統計',
   'permission.knowledge.write': '編寫文件',
   'permission.knowledge.review': '審核文件',
   'permission.knowledge.archive': '封存與恢復文件',

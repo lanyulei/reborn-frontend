@@ -1,59 +1,36 @@
 /**
  * 文档导入：上传 md / txt / html / pdf / docx 到目标空间，后台解析成文档；任务列表可重试失败任务。
+ * 上传弹窗与空间文档页共用（components/IngestModal）。
  */
-import { UploadOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import {
-  ModalForm,
-  PageContainer,
-  ProFormSelect,
-  ProFormSwitch,
-  ProFormText,
-  ProTable,
-} from '@ant-design/pro-components';
+import { PageContainer, ProTable } from '@ant-design/pro-components';
 import { Link, useSearchParams } from '@umijs/max';
-import { App, Button, Form, Space, Tag, Typography } from 'antd';
+import { App, Tag, Typography } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
 import { ConfirmLink, CreateButton } from '@/components/TableActions';
-import { FILE_MAX_SIZE, uploadFile } from '@/services/file';
-import {
-  createIngestJob,
-  listIngestJobs,
-  retryIngestJob,
-} from '@/services/knowledge/ingest';
+import { listIngestJobs, retryIngestJob } from '@/services/knowledge/ingest';
 import type {
   KnowledgeIngestJob,
   KnowledgeJobStatus,
 } from '@/services/knowledge/typings';
 import { usePermissions } from '@/services/system/permissions';
 import { formatTime } from '@/utils/format';
-import { useFormRules, useT, useValueEnum } from '@/utils/i18n';
+import { useT, useValueEnum } from '@/utils/i18n';
 import { toTableResult } from '@/utils/table';
-import { DOC_TAGS_MAX, docPath, JOB_STATUS_META } from '../components/meta';
-import { SpaceSelect, useSpaces } from '../components/selectors';
+import { IngestModal } from '../components/IngestModal';
+import { docPath, JOB_STATUS_META } from '../components/meta';
+import { useSpaces } from '../components/selectors';
 import { useKnowledgeStyles } from '../components/styles';
-
-const ACCEPT = '.md,.markdown,.txt,.log,.html,.htm,.pdf,.docx';
-
-interface IngestFormValues {
-  spaceId: string;
-  title?: string;
-  tags?: string[];
-  publish?: boolean;
-}
 
 const IngestPage: React.FC = () => {
   const t = useT();
-  const rules = useFormRules();
   const { message } = App.useApp();
   const has = usePermissions();
   const { styles } = useKnowledgeStyles();
   const [params] = useSearchParams();
   const actionRef = useRef<ActionType>(null);
   const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File>();
-  const fileInput = useRef<HTMLInputElement>(null);
   const statusEnum = useValueEnum(JOB_STATUS_META);
   const { spaces } = useSpaces(1);
   const spaceName = (id: string) => spaces.find((s) => s.id === id)?.name ?? id;
@@ -183,98 +160,12 @@ const IngestPage: React.FC = () => {
         }
       />
 
-      <ModalForm<IngestFormValues>
-        title={t('pages.knowledge.ingest.create')}
-        width={520}
+      <IngestModal
         open={open}
-        onOpenChange={(v) => {
-          setOpen(v);
-          if (!v) setFile(undefined);
-        }}
-        modalProps={{ destroyOnHidden: true }}
-        initialValues={{
-          spaceId: params.get('spaceId') ?? undefined,
-          publish: false,
-        }}
-        onFinish={async (values) => {
-          if (!file) {
-            message.error(t('pages.knowledge.ingest.fileRequired'));
-            return false;
-          }
-          if (file.size > FILE_MAX_SIZE) {
-            message.error(t('pages.knowledge.ingest.fileTooLarge'));
-            return false;
-          }
-          const uploaded = await uploadFile(file);
-          await createIngestJob({
-            spaceId: values.spaceId,
-            fileId: uploaded.file.id,
-            title: values.title?.trim() || undefined,
-            tags: values.tags,
-            publish: values.publish,
-          });
-          message.success(t('pages.knowledge.ingest.created'));
-          actionRef.current?.reload();
-          return true;
-        }}
-      >
-        <Form.Item
-          name="spaceId"
-          label={t('pages.knowledge.doc.column.space')}
-          rules={[rules.select(t('pages.knowledge.doc.column.space'))]}
-        >
-          <SpaceSelect minLevel={2} allowClear={false} />
-        </Form.Item>
-        <Form.Item
-          label={t('pages.knowledge.ingest.file')}
-          required
-          extra={t('pages.knowledge.ingest.fileHint')}
-        >
-          <Space>
-            <Button
-              icon={<UploadOutlined />}
-              onClick={() => fileInput.current?.click()}
-            >
-              {t('pages.knowledge.ingest.chooseFile')}
-            </Button>
-            <span className={file ? undefined : styles.hint}>
-              {file?.name ?? t('common.empty')}
-            </span>
-          </Space>
-          <input
-            ref={fileInput}
-            type="file"
-            accept={ACCEPT}
-            hidden
-            onChange={(e) => {
-              const picked = e.target.files?.[0];
-              setFile(picked);
-              e.target.value = '';
-            }}
-          />
-        </Form.Item>
-        <ProFormText
-          name="title"
-          label={t('pages.knowledge.doc.column.title')}
-          tooltip={t('pages.knowledge.ingest.titleTip')}
-          rules={[rules.maxChars(255)]}
-        />
-        <ProFormSelect
-          name="tags"
-          label={t('pages.knowledge.doc.column.tags')}
-          fieldProps={{
-            mode: 'tags',
-            open: false,
-            maxCount: DOC_TAGS_MAX,
-            tokenSeparators: [',', ' '],
-          }}
-        />
-        <ProFormSwitch
-          name="publish"
-          label={t('pages.knowledge.ingest.publish')}
-          tooltip={t('pages.knowledge.ingest.publishTip')}
-        />
-      </ModalForm>
+        defaultSpaceId={params.get('spaceId') ?? undefined}
+        onClose={() => setOpen(false)}
+        onDone={() => actionRef.current?.reload()}
+      />
     </PageContainer>
   );
 };

@@ -141,6 +141,11 @@ body .ant-pro-card.ant-pro-card-border {
   border-color: color-mix(in srgb, var(--ant-color-border) 25%, var(--ant-color-border-secondary));
 }
 
+// 卡片内容区的内边距收紧一档：上下 16（默认 24），左右保持 24，页面内容更紧凑
+body .ant-card .ant-card-body {
+  padding: 16px 24px;
+}
+
 // 表格外边框：只框住表格本体（表头 + 表体 + 页脚），不含分页与工具栏。颜色与白底卡片的
 // 外边框同一档（见上），圆角随表格自身的圆角。已开启 bordered（自带网格线与外框）的表格不重复加。
 // 最后一行原有的下分隔线与外框重叠成双线：去掉，并把最后一行两端的单元格收成圆角，免得

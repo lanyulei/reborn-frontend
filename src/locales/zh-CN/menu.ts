@@ -11,6 +11,7 @@ export default {
   'menu.knowledge.doc-edit': '编辑文档',
   'menu.knowledge.ingest': '文档导入',
   'menu.knowledge.admin': '知识库管理',
+  'menu.knowledge.stats': '知识统计',
   'permission.knowledge.write': '编写文档',
   'permission.knowledge.review': '审核文档',
   'permission.knowledge.archive': '归档与恢复文档',

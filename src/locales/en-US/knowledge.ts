@@ -252,6 +252,9 @@ export default {
   'pages.knowledge.admin.refresh': 'Refresh',
   'pages.knowledge.admin.stats': 'Statistics',
   'pages.knowledge.admin.days': 'Last {days} days',
+  'pages.knowledge.admin.statsHint':
+    'Spaces / documents / chunks are total counts; searches and feedback cover the selected range',
+  'pages.knowledge.admin.gapsCount': '{n} items',
   'pages.knowledge.admin.stat.spaces': 'Spaces',
   'pages.knowledge.admin.stat.documents': 'Published',
   'pages.knowledge.admin.stat.drafts': 'Drafts',
@@ -260,6 +263,7 @@ export default {
   'pages.knowledge.admin.stat.pending': 'Pending review',
   'pages.knowledge.admin.stat.searches': 'Searches',
   'pages.knowledge.admin.stat.noResult': 'No-result searches',
+  'pages.knowledge.admin.stat.noResultRatio': '{pct}% of searches',
   'pages.knowledge.admin.gaps': 'Frequent no-result queries (knowledge gaps)',
   'pages.knowledge.admin.logs': 'Search logs',
   'pages.knowledge.admin.log.query': 'Query',

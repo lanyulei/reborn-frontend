@@ -13,11 +13,11 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import { Link } from '@umijs/max';
-import { App, Form, Space, Tag } from 'antd';
+import { App, Col, Form, Space, Switch, Tag } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
-import { SectionTitle } from '@/components/SectionTitle';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
+import { FULL, HALF } from '@/constants/layout';
 import {
   createSpace,
   deleteSpace,
@@ -229,6 +229,8 @@ const SpaceList: React.FC = () => {
           )}
           width={640}
           open
+          grid
+          rowProps={{ gutter: 16 }}
           onOpenChange={(open) => {
             if (!open) setFormRow(undefined);
           }}
@@ -272,14 +274,13 @@ const SpaceList: React.FC = () => {
             return true;
           }}
         >
-          <SectionTitle style={{ marginTop: 0 }}>
-            {t('pages.knowledge.space.section.basic')}
-          </SectionTitle>
+          {/* 栅格布局（同通知渠道等表单）：短字段一行两个（HALF），长内容独占一行（FULL） */}
           <ProFormText
             name="code"
             label={t('pages.knowledge.space.form.code')}
             tooltip={t('pages.knowledge.space.form.codeTip')}
             disabled={!!formRow}
+            colProps={HALF}
             rules={
               formRow
                 ? undefined
@@ -295,6 +296,7 @@ const SpaceList: React.FC = () => {
           <ProFormText
             name="name"
             label={t('pages.knowledge.space.column.name')}
+            colProps={HALF}
             rules={[
               rules.required(t('pages.knowledge.space.column.name')),
               rules.maxChars(128),
@@ -305,6 +307,7 @@ const SpaceList: React.FC = () => {
             name="type"
             label={t('pages.knowledge.space.column.type')}
             options={typeOptions}
+            colProps={HALF}
             rules={[rules.select(t('pages.knowledge.space.column.type'))]}
           />
           <ProFormSelect
@@ -312,45 +315,56 @@ const SpaceList: React.FC = () => {
             label={t('pages.knowledge.space.column.visibility')}
             options={visibilityOptions}
             tooltip={t('pages.knowledge.space.form.visibilityTip')}
+            colProps={HALF}
             rules={[rules.select(t('pages.knowledge.space.column.visibility'))]}
           />
-          <Form.Item
-            name="ownerId"
-            label={t('pages.knowledge.space.column.owner')}
-          >
-            <OwnerSelect
-              known={
-                formRow?.ownerName
-                  ? [{ id: formRow.ownerId, label: formRow.ownerName }]
-                  : undefined
-              }
-            />
-          </Form.Item>
-          <ProFormTextArea
-            name="description"
-            label={t('pages.knowledge.space.form.description')}
-            fieldProps={{ rows: 2, maxLength: 1000, showCount: true }}
-          />
-          <SectionTitle>
-            {t('pages.knowledge.space.section.policy')}
-          </SectionTitle>
-          <ProFormSwitch
-            name="reviewRequired"
-            label={t('pages.knowledge.space.reviewRequired')}
-            tooltip={t('pages.knowledge.space.form.reviewRequiredTip')}
-          />
+          {/* 负责人（远程搜索用户控件，不参与 ProForm 栅格）与「生成嵌入」同行：
+              Col 直接放进 ProForm 的栅格流（与 colProps 等价），保证每行最多两个字段 */}
+          <Col span={12}>
+            <Form.Item
+              name="ownerId"
+              label={t('pages.knowledge.space.column.owner')}
+            >
+              <OwnerSelect
+                known={
+                  formRow?.ownerName
+                    ? [{ id: formRow.ownerId, label: formRow.ownerName }]
+                    : undefined
+                }
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="embeddingEnabled"
+              label={t('pages.knowledge.space.form.embedding')}
+              tooltip={t('pages.knowledge.space.form.embeddingTip')}
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+          </Col>
           <ProFormDigit
             name="reviewDays"
             label={t('pages.knowledge.space.form.reviewDays')}
             tooltip={t('pages.knowledge.space.form.reviewDaysTip')}
+            colProps={HALF}
             min={0}
             max={3650}
             fieldProps={{ precision: 0 }}
           />
           <ProFormSwitch
-            name="embeddingEnabled"
-            label={t('pages.knowledge.space.form.embedding')}
-            tooltip={t('pages.knowledge.space.form.embeddingTip')}
+            name="reviewRequired"
+            label={t('pages.knowledge.space.reviewRequired')}
+            tooltip={t('pages.knowledge.space.form.reviewRequiredTip')}
+            colProps={HALF}
+          />
+          {/* 说明放最后：长文本，独占一行 */}
+          <ProFormTextArea
+            name="description"
+            label={t('pages.knowledge.space.form.description')}
+            colProps={FULL}
+            fieldProps={{ rows: 2, maxLength: 1000, showCount: true }}
           />
         </ModalForm>
       )}

@@ -1,7 +1,6 @@
 /**
  * 空间内文档列表：按状态 / 关键字 / 标签 / 负责人筛选，快捷切换「待审核」「超期复审」；新建文档 / 导入。
  */
-import { LeftOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import { history, Link, useParams } from '@umijs/max';
@@ -29,6 +28,7 @@ import { usePermissions } from '@/services/system/permissions';
 import { formatTime } from '@/utils/format';
 import { useEnumText, useT, useValueEnum } from '@/utils/i18n';
 import { toTableResult } from '@/utils/table';
+import { IngestModal } from '../components/IngestModal';
 import {
   DOC_STATUS_META,
   docPath,
@@ -50,6 +50,7 @@ const SpaceDocuments: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
   const [space, setSpace] = useState<KnowledgeSpace>();
   const [quick, setQuick] = useState<QuickFilter>('all');
+  const [ingestOpen, setIngestOpen] = useState(false);
   const statusEnum = useValueEnum(DOC_STATUS_META);
   const indexText = useEnumText(INDEX_STATUS_META);
   const typeText = useEnumText(SPACE_TYPE_META);
@@ -152,14 +153,6 @@ const SpaceDocuments: React.FC = () => {
 
   return (
     <PageContainer title={false}>
-      <Button
-        type="link"
-        icon={<LeftOutlined />}
-        style={{ paddingInline: 0, marginBottom: 12 }}
-        onClick={() => history.push('/knowledge/space')}
-      >
-        {t('pages.knowledge.space.backToList')}
-      </Button>
       <Card variant="outlined" style={{ marginBottom: 16 }}>
         <Flex justify="space-between" align="flex-start" gap={16} wrap>
           <div style={{ minWidth: 0 }}>
@@ -217,9 +210,7 @@ const SpaceDocuments: React.FC = () => {
               </CreateButton>
             )}
             {canWrite && (
-              <Button
-                onClick={() => history.push(`/knowledge/ingest?spaceId=${id}`)}
-              >
+              <Button onClick={() => setIngestOpen(true)}>
                 {t('pages.knowledge.ingest.create')}
               </Button>
             )}
@@ -260,6 +251,14 @@ const SpaceDocuments: React.FC = () => {
             }),
           )
         }
+      />
+
+      {/* 批量导入：本页直接上传（空间锁定为当前空间），无需跳转文档导入页 */}
+      <IngestModal
+        open={ingestOpen}
+        lockSpaceId={id}
+        onClose={() => setIngestOpen(false)}
+        onDone={() => actionRef.current?.reload()}
       />
     </PageContainer>
   );

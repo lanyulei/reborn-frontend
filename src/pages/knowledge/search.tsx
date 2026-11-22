@@ -155,12 +155,15 @@ const KnowledgeSearch: React.FC = () => {
           <Card
             variant="outlined"
             title={
-              result
-                ? t('pages.knowledge.search.summary', {
-                    count: items.length,
-                    ms: result.durationMs ?? '0',
-                  })
-                : t('pages.knowledge.search.results')
+              // Card 标题默认加粗；结果摘要（共 N 条 / 耗时）按正文权重显示
+              <span style={{ fontWeight: 400 }}>
+                {result
+                  ? t('pages.knowledge.search.summary', {
+                      count: items.length,
+                      ms: result.durationMs ?? '0',
+                    })
+                  : t('pages.knowledge.search.results')}
+              </span>
             }
             extra={
               result?.searchLogId && (

@@ -157,4 +157,20 @@ export const useKnowledgeStyles = createStyles(({ token, css }) => ({
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 12px;
   `,
+  /** 统计工具条：时间范围等筛选与说明同一行（与告警 / 故障统计页同口径） */
+  toolbar: css`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  `,
+  /** 知识统计的十张瓦片：宽屏 5 列两行、窄屏 2 列五排——都排满，不剩孤张 */
+  statGrid: css`
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    @media (max-width: 1500px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  `,
 }));
