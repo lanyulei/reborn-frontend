@@ -5,6 +5,7 @@
  */
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
+import { useQueryClient } from '@umijs/max';
 import { App, Badge, Tag, Tooltip } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
@@ -27,6 +28,7 @@ import type {
 import { usePermissions } from '@/services/system/permissions';
 import { useEnumText, useT, useValueEnum } from '@/utils/i18n';
 import { parseBoolParam, toTableResult } from '@/utils/table';
+import { DATASOURCE_OPTIONS_QUERY_KEY } from '../components/hooks';
 import {
   AUTH_TYPE_META,
   HEALTH_STATUS_META,
@@ -40,6 +42,7 @@ const HEALTH_BADGE: Record<
 > = { 0: 'default', 1: 'success', 2: 'error' };
 const DatasourceList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
+  const queryClient = useQueryClient();
   const { message, modal } = App.useApp();
   const has = usePermissions();
   const t = useT();
@@ -54,7 +57,14 @@ const DatasourceList: React.FC = () => {
   );
   const [testingId, setTestingId] = useState<string>();
 
-  const reload = () => actionRef.current?.reload();
+  // 表格刷新 + 共享的数据源选项缓存失效：新建 / 编辑 / 删除后，其它页面的数据源下拉
+  // （useDatasourceOptions 共享缓存）同步看到最新列表
+  const reload = () => {
+    actionRef.current?.reload();
+    void queryClient.invalidateQueries({
+      queryKey: DATASOURCE_OPTIONS_QUERY_KEY,
+    });
+  };
   const hasAnyAction =
     has('monitor.datasource.edit') ||
     has('monitor.datasource.delete') ||

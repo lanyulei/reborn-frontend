@@ -4,6 +4,7 @@ import type {
   RequestConfig,
   RunTimeLayoutConfig,
   RuntimeAntdConfig,
+  RuntimeReactQueryType,
 } from '@umijs/max';
 import { history, Link } from '@umijs/max';
 import { Button, Result, theme } from 'antd';
@@ -294,6 +295,17 @@ export const antd: RuntimeAntdConfig = (memo) => {
     colorBorderSecondary: '#e8e8e8',
   });
   return memo;
+};
+
+/**
+ * @name react-query 的全局默认值
+ * 框架用它创建 QueryClient。关闭失败自动重试：请求失败时请求层已经提示过用户，
+ * 重试只会把同一个提示重复弹几次；确实需要重试的查询在各自的 useQuery 里单独打开。
+ */
+export const reactQuery: RuntimeReactQueryType = {
+  queryClient: {
+    defaultOptions: { queries: { retry: false } },
+  },
 };
 
 /** 在 antd 插件的 <App> 之内（本文件的运行时先于插件套用，故在其内层）：挂上请求层用的提示实例 */

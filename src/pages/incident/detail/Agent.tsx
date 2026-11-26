@@ -18,7 +18,7 @@ import {
   Tag,
 } from 'antd';
 import type React from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   num,
   RUN_STATUS_META,
@@ -59,19 +59,24 @@ export const AgentPanel: React.FC<{
   const [error, setError] = useState<string>();
   const [runId, setRunId] = useState<string>();
   const [summon, setSummon] = useState(false);
+  const seq = useRef(0);
 
   const load = useCallback(
     async (silent = false) => {
+      // 只采纳最后一次加载的结果：切换故障、轮询与手动刷新交错时，旧响应不覆盖新数据
+      const current = ++seq.current;
       if (!silent) setLoading(true);
       try {
         const res = await listIncidentRuns(incident.id, { silent: true });
+        if (current !== seq.current) return;
         setRuns(res.items ?? []);
         setActive(res.activeTask ?? null);
         setError(undefined);
       } catch (e) {
+        if (current !== seq.current) return;
         setError(getAgentErrorMessage(e));
       } finally {
-        setLoading(false);
+        if (current === seq.current) setLoading(false);
       }
     },
     [incident.id],

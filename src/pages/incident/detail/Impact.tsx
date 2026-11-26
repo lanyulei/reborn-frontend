@@ -30,6 +30,7 @@ import type {
   ImpactNode,
   Incident,
 } from '@/services/incident/typings';
+import { usePermissions } from '@/services/system/permissions';
 import { formatTime } from '@/utils/format';
 import { useT } from '@/utils/i18n';
 import { RELATION_META, RELATION_ORDER } from '../components/meta';
@@ -51,6 +52,7 @@ export const ImpactPanel: React.FC<{
 }> = ({ incident, refreshKey }) => {
   const t = useT();
   const access = useAccess();
+  const has = usePermissions();
   const { message } = App.useApp();
   const { styles } = useIncidentStyles();
   const [nodes, setNodes] = useState<ImpactNode[]>([]);
@@ -62,6 +64,7 @@ export const ImpactPanel: React.FC<{
   const [changesLoading, setChangesLoading] = useState(true);
   const [markOpen, setMarkOpen] = useState(false);
   const seq = useRef(0);
+  const impactSeq = useRef(0);
   // 变更详情链接按来源域的菜单权限决定是否可点（无权限只显示文本）
   const canOpen = (domain: string) => {
     switch (domain) {
@@ -82,15 +85,19 @@ export const ImpactPanel: React.FC<{
   };
 
   const loadImpact = useCallback(async () => {
+    // 只采纳最后一次加载的结果：切换故障或连续刷新时，旧响应不覆盖新数据
+    const current = ++impactSeq.current;
     setImpactLoading(true);
     try {
       const result = await getImpact(incident.id);
+      if (current !== impactSeq.current) return;
       setNodes(result.nodes ?? []);
       setTruncated(result.truncated === true);
     } catch {
+      if (current !== impactSeq.current) return;
       setNodes([]);
     } finally {
-      setImpactLoading(false);
+      if (current === impactSeq.current) setImpactLoading(false);
     }
   }, [incident.id]);
 
@@ -116,7 +123,11 @@ export const ImpactPanel: React.FC<{
     void loadChanges();
   }, [loadChanges, refreshKey]);
 
-  const canHandle = incident.canHandle === true && incident.status <= 4;
+  // 标记变更归元素权限「处置」（incident.list.handle），与页头操作同一口径
+  const canHandle =
+    incident.canHandle === true &&
+    incident.status <= 4 &&
+    has('incident.list.handle');
   const direct = nodes.filter((n) => (n.depth ?? 0) === 0);
   const downstream = nodes.filter((n) => (n.depth ?? 0) > 0);
 

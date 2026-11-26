@@ -615,4 +615,10 @@ export default {
   'pages.k8s.quota.delete.content':
     '將刪除該命名空間的 {kinds}，刪除後容器組不再受其約束。',
   'pages.k8s.detail.pods.noSelector': '沒有選擇器，不選中任何容器組',
+  // 列表批次操作
+  'pages.k8s.action.batch.title': '{action} {n} 個物件？',
+  'pages.k8s.action.batch.prefix': '批次{action}',
+  'pages.k8s.action.batch.partial': '成功 {done} 個，失敗 {failed} 個',
+  'pages.k8s.action.batch.submitted': '已提交 {n} 張變更單',
+  'pages.k8s.action.clearSelection': '取消選取',
 };

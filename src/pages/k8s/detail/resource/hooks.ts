@@ -34,6 +34,7 @@ export const useServiceEndpoints = (
   useEffect(() => {
     if (!enabled || !namespace) return undefined;
     let cancelled = false;
+    // 失败时请求层已提示；这里吞掉拒绝，避免留下未处理的 Promise
     (async () => {
       const rows = await listRows(clusterId, GVRS.endpointSlice, namespace, {
         labelSelector: `kubernetes.io/service-name=${name}`,
@@ -67,7 +68,7 @@ export const useServiceEndpoints = (
           });
         }),
       );
-    })();
+    })().catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -78,8 +79,9 @@ export const useServiceEndpoints = (
 /**
  * 至多检查这么多个容器组（逐个读取卷定义）。列表接口没有按卷过滤的参数
  * （只有 labelSelector / keyword / state / node / owner），只能取回再筛。
+ * 页面上的提示文案用到这个数，导出给页面，免得两处各写一个。
  */
-const CLAIM_POD_LIMIT = 100;
+export const CLAIM_POD_LIMIT = 100;
 
 /** 使用了某个持久卷声明的容器组（名称清单） */
 export const useClaimPods = (
@@ -100,26 +102,38 @@ export const useClaimPods = (
     if (!enabled || !namespace) return;
     const id = ++seq.current;
     setState((prev) => ({ ...prev, loading: true }));
-    const rows = await listRows(clusterId, GVRS.pod, namespace);
-    if (id !== seq.current) return;
-    const checked = rows.slice(0, CLAIM_POD_LIMIT);
-    const objects = await fetchObjects(clusterId, checked, namespace, GVRS.pod);
-    if (id !== seq.current) return;
-    const using = new Set(
-      objects
-        .filter((pod) =>
-          (Array.isArray(pod.spec?.volumes) ? pod.spec.volumes : []).some(
-            (volume: { persistentVolumeClaim?: { claimName?: string } }) =>
-              volume?.persistentVolumeClaim?.claimName === claimName,
-          ),
-        )
-        .map((pod) => pod.metadata?.name),
-    );
-    setState({
-      loading: false,
-      pods: checked.filter((row) => using.has(row.name)),
-      truncated: rows.length > CLAIM_POD_LIMIT,
-    });
+    // 失败时请求层已提示；这里把 loading 收回去，否则页签一直转圈
+    try {
+      const rows = await listRows(clusterId, GVRS.pod, namespace);
+      if (id !== seq.current) return;
+      const checked = rows.slice(0, CLAIM_POD_LIMIT);
+      const objects = await fetchObjects(
+        clusterId,
+        checked,
+        namespace,
+        GVRS.pod,
+      );
+      if (id !== seq.current) return;
+      const using = new Set(
+        objects
+          .filter((pod) =>
+            (Array.isArray(pod.spec?.volumes) ? pod.spec.volumes : []).some(
+              (volume: { persistentVolumeClaim?: { claimName?: string } }) =>
+                volume?.persistentVolumeClaim?.claimName === claimName,
+            ),
+          )
+          .map((pod) => pod.metadata?.name),
+      );
+      setState({
+        loading: false,
+        pods: checked.filter((row) => using.has(row.name)),
+        truncated: rows.length > CLAIM_POD_LIMIT,
+      });
+    } catch {
+      if (id === seq.current) {
+        setState((prev) => ({ ...prev, loading: false }));
+      }
+    }
   }, [claimName, clusterId, enabled, namespace]);
 
   useEffect(() => {
@@ -147,6 +161,8 @@ export const useStorageClassProvisioner = (
           setProvisioner(object.provisioner);
         }
       },
+      // 失败时请求层已提示；这里吞掉拒绝，避免留下未处理的 Promise
+      () => undefined,
     );
     return () => {
       cancelled = true;
@@ -168,11 +184,18 @@ export const useStorageClassClaims = (
   const reload = useCallback(async () => {
     if (!enabled) return;
     setState((prev) => ({ ...prev, loading: true }));
-    const rows = await listRows(clusterId, GVRS.pvc);
-    setState({
-      loading: false,
-      rows: rows.filter((row) => row.cells?.storageClass === storageClassName),
-    });
+    // 失败时请求层已提示；这里把 loading 收回去，否则页签一直转圈
+    try {
+      const rows = await listRows(clusterId, GVRS.pvc);
+      setState({
+        loading: false,
+        rows: rows.filter(
+          (row) => row.cells?.storageClass === storageClassName,
+        ),
+      });
+    } catch {
+      setState((prev) => ({ ...prev, loading: false }));
+    }
   }, [clusterId, enabled, storageClassName]);
   useEffect(() => {
     void reload();

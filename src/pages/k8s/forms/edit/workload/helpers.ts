@@ -9,6 +9,7 @@ import type { StringListEditorItem } from '../../shared/StringListEditor';
 import {
   buildCreateWorkloadManifest,
   getInitialCreateWorkloadValues,
+  getStorageItemNames,
   parseQuantity,
 } from '../../workload/helpers';
 import type {
@@ -922,53 +923,297 @@ const findBaseContainer = (
   return list[Number(matched[2])];
 };
 
-const getVolumeNames = (volumes: ManifestRecord[]) =>
-  volumes.flatMap((volume) => {
-    const name = getStringValue(volume.name);
-    return name ? [name] : [];
-  });
-
-const getTemplateNames = (templates: unknown) =>
-  getRecordArray(templates).flatMap((template) => {
-    const name = getStringValue(getRecordValue(template.metadata)?.name);
-    return name ? [name] : [];
-  });
-
-/** 表单能表达的卷（改动存储时由表单接管；其它类型的卷原样保留） */
-const getSupportedStorageVolumeNames = (manifest: ManifestRecord) => {
-  const volumeNames = getRecordArray(
-    getManifestPodSpec(manifest).volumes,
-  ).flatMap((volume) => {
-    const name = getStringValue(volume.name);
-    return name &&
-      (volume.persistentVolumeClaim ||
-        volume.emptyDir ||
-        volume.hostPath ||
-        volume.configMap ||
-        volume.secret)
-      ? [name]
-      : [];
-  });
-
-  return new Set([
-    ...volumeNames,
-    ...getTemplateNames(getManifestSpec(manifest).volumeClaimTemplates),
-    HOST_TIME_VOLUME_NAME,
-  ]);
+/** 列表里各按名称索引（名称缺失的不参与匹配） */
+const indexByName = (
+  value: unknown,
+  nameOf: (item: ManifestRecord) => string | undefined,
+) => {
+  const map = new Map<string, ManifestRecord>();
+  for (const item of getRecordArray(value)) {
+    const name = nameOf(item);
+    if (name) {
+      map.set(name, item);
+    }
+  }
+  return map;
 };
 
-/** 存储相关的生成结果：卷、卷声明模板与各容器的挂载（作为一个整体比较与回写） */
-const getStorageSignature = (
+/** 名称不与已保留的重复：重复时加序号（同一 Pod 内卷名必须唯一，口径同创建向导） */
+const uniqueStorageName = (name: string, used: Set<string>) => {
+  let next = name;
+  for (let index = 2; used.has(next); index += 1) {
+    const suffix = `-${index}`;
+    next = `${name.slice(0, 63 - suffix.length)}${suffix}`;
+  }
+  used.add(next);
+  return next;
+};
+
+/**
+ * 按名称做三路合并（挂载用）。base 是对象原文里的列表，initial / generated 是「打开时」「当前」两份表单值
+ * 各自生成的列表（已按 mergeStorageObjects 的结果换回原对象里的名称）：
+ * - 原文有、两份生成结果里相同：用户没动，沿用原文（表单没建模的子字段得以保留）；
+ * - 原文有、两份里都没有：表单不认识的项，原样保留；
+ * - 原文有、只有打开时有：用户删了，去掉；
+ * - 原文有、当前与打开时不同：用户改了，由 mergeItem 把表单的改动叠到原文上；
+ * - 原文没有、只有当前有：新增，追加在末尾。
+ * 原文没有但打开时就有的不写回：那是表单生成结果与原文的固有差异，不是用户的改动。
+ */
+const mergeStorageList = (
+  baseValue: unknown,
+  initialValue: unknown,
+  generatedValue: unknown,
+  nameOf: (item: ManifestRecord) => string | undefined,
+  mergeItem: (
+    base: ManifestRecord,
+    generated: ManifestRecord,
+  ) => ManifestRecord,
+): ManifestRecord[] | undefined => {
+  const baseByName = indexByName(baseValue, nameOf);
+  const initialByName = indexByName(initialValue, nameOf);
+  const generatedByName = indexByName(generatedValue, nameOf);
+  const merged: ManifestRecord[] = [];
+
+  for (const [name, baseItem] of baseByName) {
+    const initialItem = initialByName.get(name);
+    const generatedItem = generatedByName.get(name);
+    if (generatedItem === undefined) {
+      if (initialItem === undefined) {
+        merged.push(baseItem);
+      }
+      continue;
+    }
+    merged.push(
+      initialItem && same(initialItem, generatedItem)
+        ? baseItem
+        : mergeItem(baseItem, generatedItem),
+    );
+  }
+  for (const [name, generatedItem] of generatedByName) {
+    if (!baseByName.has(name) && !initialByName.has(name)) {
+      merged.push(generatedItem);
+    }
+  }
+  return merged.length > 0 ? merged : undefined;
+};
+
+/** 表单打开时由原对象解析出的存储项，id 里带着它在原对象里的位置（见 parseVolumeStorageItems / parseVolumeClaimTemplateItems） */
+const PARSED_STORAGE_ID = /^storage-(\d+)$/;
+const PARSED_TEMPLATE_ID = /^pvc-template-(\d+)$/;
+
+/** 原对象里的一个存储项与两份生成结果的对应关系 */
+type StorageLink = {
+  /** 打开时这一项生成的名称；当时没有产生卷 / 模板为空 */
+  initialName?: string;
+  /** 当前生成的名称；现在没有产生卷 / 模板为空 */
+  generatedName?: string;
+  /** 这一项已在表单里删除 */
+  removed: boolean;
+};
+
+/**
+ * 把原对象里的存储项与「打开时」「当前」两份生成结果连起来：键是它在原对象列表里的下标。
+ * 表单按资源名重新给 configMap / secret / PVC 卷命名，光比名称和原对象对不上，所以靠解析时写进 id 的位置来对应。
+ */
+const linkStorageItems = (
+  initialValues: CreateWorkloadFormValues,
+  values: CreateWorkloadFormValues,
+  parsedId: RegExp,
+  initialNames: Map<number, string>,
+  generatedNames: Map<number, string>,
+): Map<number, StorageLink> => {
+  const currentIndexes = new Map<string, number>();
+  (values.storageItems || []).forEach((item, index) => {
+    if (item.id) {
+      currentIndexes.set(item.id, index);
+    }
+  });
+
+  const links = new Map<number, StorageLink>();
+  (initialValues.storageItems || []).forEach((item, index) => {
+    const matched = item.id?.match(parsedId);
+    if (!matched || !item.id) {
+      return;
+    }
+    const currentIndex = currentIndexes.get(item.id);
+    links.set(Number(matched[1]), {
+      initialName: initialNames.get(index),
+      generatedName:
+        currentIndex === undefined
+          ? undefined
+          : generatedNames.get(currentIndex),
+      removed: currentIndex === undefined,
+    });
+  });
+  return links;
+};
+
+type StorageMerge = {
+  list: ManifestRecord[] | undefined;
+  /** 当前生成结果里的名称 → 回写后的名称（挂载按它同步改名） */
+  renames: Map<string, string>;
+  /** 打开时生成结果里的名称 → 回写后的名称（比对挂载有没有改动之前先统一名称） */
+  initialRenames: Map<string, string>;
+};
+
+/**
+ * 卷 / 卷声明模板的三路合并（links 见 linkStorageItems）：
+ * - 原对象里没有对应表单项的（projected 等表单不认识的类型）原样保留；
+ * - 表单项被删除，或原本产生卷而现在不再产生：去掉；
+ * - 打开时与当前生成的相同：用户没动，沿用原对象；
+ * - 否则：把表单的改动叠到原对象上。
+ * 表单项一律沿用原对象里的名称——卷声明模板改名会让已绑定的持久卷声明对不上，卷改名也会和挂载对不上；
+ * 表单生成的名称只用来在生成结果里找到对应的卷。表单里新增的项追加在末尾。
+ */
+const mergeStorageObjects = (
+  baseValue: unknown,
+  initialValue: unknown,
+  generatedValue: unknown,
+  links: Map<number, StorageLink>,
+  nameOf: (item: ManifestRecord) => string | undefined,
+  renamed: (item: ManifestRecord, name: string) => ManifestRecord,
+  mergeItem: (
+    base: ManifestRecord,
+    generated: ManifestRecord,
+  ) => ManifestRecord,
+): StorageMerge => {
+  const initialByName = indexByName(initialValue, nameOf);
+  const generatedByName = indexByName(generatedValue, nameOf);
+  const renames = new Map<string, string>();
+  const initialRenames = new Map<string, string>();
+  const usedNames = new Set<string>();
+  const merged: ManifestRecord[] = [];
+
+  getRecordArray(baseValue).forEach((baseItem, index) => {
+    const baseName = nameOf(baseItem);
+    const link = baseName ? links.get(index) : undefined;
+    if (!baseName || !link) {
+      // 表单不认识的项，原样保留
+      if (baseName) {
+        usedNames.add(baseName);
+      }
+      merged.push(baseItem);
+      return;
+    }
+    if (link.initialName) {
+      initialRenames.set(link.initialName, baseName);
+    }
+    if (link.generatedName) {
+      renames.set(link.generatedName, baseName);
+    }
+    if (link.removed || (!link.generatedName && link.initialName)) {
+      return;
+    }
+    usedNames.add(baseName);
+    const generated = link.generatedName
+      ? generatedByName.get(link.generatedName)
+      : undefined;
+    const initial = link.initialName
+      ? initialByName.get(link.initialName)
+      : undefined;
+    merged.push(
+      generated && (!initial || !same(initial, generated))
+        ? renamed(mergeItem(baseItem, generated), baseName)
+        : baseItem,
+    );
+  });
+
+  for (const [name, generated] of generatedByName) {
+    if (renames.has(name) || initialByName.has(name)) {
+      continue;
+    }
+    const finalName = uniqueStorageName(name, usedNames);
+    renames.set(name, finalName);
+    merged.push(renamed(generated, finalName));
+  }
+
+  return {
+    list: merged.length > 0 ? merged : undefined,
+    renames,
+    initialRenames,
+  };
+};
+
+/** 用表单生成的值覆盖表单建模的字段（生成结果里没有的即删掉），其余子字段沿用原对象 */
+const overlayFields = (
+  base: ManifestRecord | undefined,
+  generated: ManifestRecord | undefined,
+  fields: string[],
+) => {
+  const next: ManifestRecord = { ...(base || {}) };
+  for (const field of fields) {
+    if (generated?.[field] !== undefined) {
+      next[field] = generated[field];
+    } else {
+      delete next[field];
+    }
+  }
+  return next;
+};
+
+/** 各类卷里由表单建模的子字段；其余（emptyDir.medium、hostPath.type、defaultMode、optional…）沿用原值 */
+const VOLUME_SOURCE_FIELDS: Record<string, string[]> = {
+  persistentVolumeClaim: ['claimName'],
+  emptyDir: ['sizeLimit'],
+  hostPath: ['path'],
+  configMap: ['name', 'items'],
+  secret: ['secretName', 'items'],
+};
+
+/** 表单改过的卷：卷类型没变时只覆盖表单建模的子字段；换了类型整体用生成的 */
+const mergeVolume = (base: ManifestRecord, generated: ManifestRecord) => {
+  const sourceKey = Object.keys(VOLUME_SOURCE_FIELDS).find(
+    (key) => base[key] !== undefined,
+  );
+  if (!sourceKey || generated[sourceKey] === undefined) {
+    return generated;
+  }
+  return {
+    ...base,
+    [sourceKey]: overlayFields(
+      getRecordValue(base[sourceKey]),
+      getRecordValue(generated[sourceKey]),
+      VOLUME_SOURCE_FIELDS[sourceKey],
+    ),
+  };
+};
+
+/** 表单改过的挂载：只覆盖挂载路径 / 子路径 / 读写模式，mountPropagation 等沿用原值 */
+const mergeMount = (base: ManifestRecord, generated: ManifestRecord) =>
+  overlayFields(base, generated, ['mountPath', 'subPath', 'readOnly']);
+
+/** 表单改过的卷声明模板：访问模式 / 存储类 / 容量按表单，标签注解 / dataSource / volumeMode 等沿用原值 */
+const mergeVolumeClaimTemplate = (
+  base: ManifestRecord,
   generated: ManifestRecord,
-  containers: GeneratedContainer[],
-) => ({
-  volumes: getManifestPodSpec(generated).volumes,
-  volumeClaimTemplates: getManifestSpec(generated).volumeClaimTemplates,
-  mounts: containers.map((container) => [
-    container.id,
-    container.manifest.volumeMounts,
-  ]),
-});
+) => {
+  const baseSpec = getRecordValue(base.spec);
+  const generatedSpec = getRecordValue(generated.spec);
+  if (!baseSpec || !generatedSpec) {
+    return generated;
+  }
+  const requests = overlayFields(
+    getRecordValue(getRecordValue(baseSpec.resources)?.requests),
+    getRecordValue(getRecordValue(generatedSpec.resources)?.requests),
+    ['storage'],
+  );
+  const spec = overlayFields(baseSpec, generatedSpec, [
+    'accessModes',
+    'storageClassName',
+  ]);
+  spec.resources = {
+    ...(getRecordValue(baseSpec.resources) || {}),
+    requests,
+  };
+  return {
+    ...base,
+    metadata: {
+      ...(getRecordValue(base.metadata) || {}),
+      ...(getRecordValue(generated.metadata) || {}),
+    },
+    spec,
+  };
+};
 
 const isUnsupportedEnvValueFrom = (env?: ManifestRecord) => {
   const valueFrom = getRecordValue(env?.valueFrom);
@@ -994,19 +1239,6 @@ const mergeEnvItems = (baseEnvValue: unknown, generatedEnvValue: unknown) => {
 
   return nextEnv.length > 0 ? nextEnv : undefined;
 };
-
-const mergeNamedList = (
-  baseValue: unknown,
-  generatedValue: unknown,
-  replacedNames: Set<string>,
-  nameOf: (item: ManifestRecord) => string | undefined,
-) => [
-  ...getRecordArray(baseValue).filter((item) => {
-    const name = nameOf(item);
-    return name && !replacedNames.has(name);
-  }),
-  ...getRecordArray(generatedValue),
-];
 
 const setOrDelete = (target: ManifestRecord, key: string, value: unknown) => {
   if (value === undefined || (Array.isArray(value) && value.length === 0)) {
@@ -1052,11 +1284,37 @@ const mergeResources = (
   return Object.keys(next).length > 0 ? next : undefined;
 };
 
+const mountNameOf = (mount: ManifestRecord) => getStringValue(mount.name);
+const volumeNameOf = (volume: ManifestRecord) => getStringValue(volume.name);
+const templateNameOf = (template: ManifestRecord) =>
+  getStringValue(getRecordValue(template.metadata)?.name);
+
+const renameVolume = (volume: ManifestRecord, name: string) => ({
+  ...volume,
+  name,
+});
+const renameTemplate = (
+  template: ManifestRecord,
+  name: string,
+): ManifestRecord => ({
+  ...template,
+  metadata: { ...(getRecordValue(template.metadata) || {}), name },
+});
+/** 生成结果里的挂载按卷的回写结果改名（卷沿用原对象里的名称） */
+const renameMounts = (
+  value: unknown,
+  mountRenames: Map<string, string>,
+): ManifestRecord[] =>
+  getRecordArray(value).map((mount) => {
+    const finalName = mountRenames.get(getStringValue(mount.name) ?? '');
+    return finalName ? { ...mount, name: finalName } : mount;
+  });
+
 const mergeContainerManifest = (
   baseContainer: ManifestRecord | undefined,
   initialContainer: ManifestRecord | undefined,
   generatedContainer: ManifestRecord,
-  storage: { changed: boolean; replacedNames: Set<string> },
+  mountRenames: Pick<StorageMerge, 'renames' | 'initialRenames'>,
 ) => {
   const nextContainer: ManifestRecord = { ...(baseContainer || {}) };
   // 原对象里有、表单打开时也有的容器：只回写表单里改过的字段
@@ -1087,18 +1345,24 @@ const mergeContainerManifest = (
       mergeEnvItems(baseContainer?.env, generatedContainer.env),
     );
   }
-  if (storage.changed || !tracked) {
-    setOrDelete(
-      nextContainer,
-      'volumeMounts',
-      mergeNamedList(
-        baseContainer?.volumeMounts,
-        generatedContainer.volumeMounts,
-        storage.replacedNames,
-        (mount) => getStringValue(mount.name),
-      ),
-    );
-  }
+  // 挂载与卷一样三路合并（卷沿用原对象里的名称，生成的挂载先按 mergeStorageObjects 的结果改名）；
+  // 表单打开时还没有的容器是新增的，直接用生成的挂载
+  setOrDelete(
+    nextContainer,
+    'volumeMounts',
+    tracked
+      ? mergeStorageList(
+          baseContainer?.volumeMounts,
+          renameMounts(
+            initialContainer?.volumeMounts,
+            mountRenames.initialRenames,
+          ),
+          renameMounts(generatedContainer.volumeMounts, mountRenames.renames),
+          mountNameOf,
+          mergeMount,
+        )
+      : renameMounts(generatedContainer.volumeMounts, mountRenames.renames),
+  );
 
   return nextContainer;
 };
@@ -1189,18 +1453,52 @@ const buildUpdatedWorkloadSettingsManifest = (
     }
   }
 
-  // 存储：卷、卷声明模板与挂载一起回写（卷名由表单生成，三者必须保持一致）
-  const storage = {
-    changed: !same(
-      getStorageSignature(initialManifest, initialContainers),
-      getStorageSignature(generatedManifest, generatedContainers),
-    ),
-    replacedNames: new Set([
-      ...getSupportedStorageVolumeNames(baseManifest),
-      ...getVolumeNames(getRecordArray(generatedPodSpec.volumes)),
-      ...getTemplateNames(generatedSpec.volumeClaimTemplates),
-    ]),
-  };
+  // 存储：卷、卷声明模板、挂载按「原对象 ↔ 打开时 ↔ 当前」逐项合并（见 mergeStorageObjects），
+  // 没动的沿用原对象，表单不认识的卷原样保留
+  const allowVolumeClaimTemplates = type === 'StatefulSet';
+  const initialStorageNames = getStorageItemNames(
+    initialValues,
+    allowVolumeClaimTemplates,
+  );
+  const generatedStorageNames = getStorageItemNames(
+    values,
+    allowVolumeClaimTemplates,
+  );
+  const volumeLinks = linkStorageItems(
+    initialValues,
+    values,
+    PARSED_STORAGE_ID,
+    initialStorageNames,
+    generatedStorageNames,
+  );
+  // 同步时区的卷没有存储项，按固定名称对应
+  const hostTimeIndex = getRecordArray(podSpec.volumes).findIndex(
+    (volume) => getStringValue(volume.name) === HOST_TIME_VOLUME_NAME,
+  );
+  if (hostTimeIndex >= 0) {
+    volumeLinks.set(hostTimeIndex, {
+      initialName: indexByName(initialPodSpec.volumes, volumeNameOf).has(
+        HOST_TIME_VOLUME_NAME,
+      )
+        ? HOST_TIME_VOLUME_NAME
+        : undefined,
+      generatedName: indexByName(generatedPodSpec.volumes, volumeNameOf).has(
+        HOST_TIME_VOLUME_NAME,
+      )
+        ? HOST_TIME_VOLUME_NAME
+        : undefined,
+      removed: false,
+    });
+  }
+  const volumes = mergeStorageObjects(
+    podSpec.volumes,
+    initialPodSpec.volumes,
+    generatedPodSpec.volumes,
+    volumeLinks,
+    volumeNameOf,
+    renameVolume,
+    mergeVolume,
+  );
 
   // 容器
   const mergeContainers = (init: boolean) =>
@@ -1213,35 +1511,33 @@ const buildUpdatedWorkloadSettingsManifest = (
             (item) => item.id !== undefined && item.id === container.id,
           )?.manifest,
           container.manifest,
-          storage,
+          volumes,
         ),
       );
   podSpec.containers = mergeContainers(false);
   setOrDelete(podSpec, 'initContainers', mergeContainers(true));
+  setOrDelete(podSpec, 'volumes', volumes.list);
 
-  if (storage.changed) {
+  if (type === 'StatefulSet') {
     setOrDelete(
-      podSpec,
-      'volumes',
-      mergeNamedList(
-        podSpec.volumes,
-        generatedPodSpec.volumes,
-        storage.replacedNames,
-        (volume) => getStringValue(volume.name),
-      ),
-    );
-    if (type === 'StatefulSet') {
-      setOrDelete(
-        spec,
-        'volumeClaimTemplates',
-        mergeNamedList(
-          spec.volumeClaimTemplates,
-          generatedSpec.volumeClaimTemplates,
-          storage.replacedNames,
-          (item) => getStringValue(getRecordValue(item.metadata)?.name),
+      spec,
+      'volumeClaimTemplates',
+      mergeStorageObjects(
+        spec.volumeClaimTemplates,
+        initialSpec.volumeClaimTemplates,
+        generatedSpec.volumeClaimTemplates,
+        linkStorageItems(
+          initialValues,
+          values,
+          PARSED_TEMPLATE_ID,
+          initialStorageNames,
+          generatedStorageNames,
         ),
-      );
-    }
+        templateNameOf,
+        renameTemplate,
+        mergeVolumeClaimTemplate,
+      ).list,
+    );
   }
 
   // 优雅终止

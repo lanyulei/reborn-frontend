@@ -527,7 +527,7 @@ export default {
     '按級別推算：致命 → S2，嚴重 → S3，其餘 → S4',
   'pages.incident.rule.titleTemplate': '標題範本',
   'pages.incident.rule.titleTemplateHint':
-    '可用 {{rule}} {{business}} {{count}} {{labels.<標籤名>}}；留空為「業務：規則名」',
+    "可用 '{{rule}}' '{{business}}' '{{count}}' '{{labels.<標籤名>}}'；留空為「業務：規則名」",
   'pages.incident.rule.businessLabel': '業務標籤鍵',
   'pages.incident.rule.businessLabelHint':
     '從告警的該標籤取值匹配業務字典的「匹配標籤值」，優先於固定業務',
@@ -584,9 +584,9 @@ export default {
   'pages.incident.playbook.step.ref': '作業範本 / 流程',
   'pages.incident.playbook.step.add': '新增步驟',
   'pages.incident.playbook.step.paramsPlaceholder':
-    '參數：每行 key=value，可用 {{incident.number}} {{alert.labels.xxx}} {{ci.name}} {{business.code}}',
+    "參數：每行 key=value，可用 '{{incident.number}}' '{{alert.labels.xxx}}' '{{ci.name}}' '{{business.code}}'",
   'pages.incident.playbook.step.hint':
-    '高風險步驟恆須指揮審批；參數每行 key=value，可用 {{incident.number}} {{alert.labels.xxx}} {{ci.name}} {{business.code}}。',
+    "高風險步驟恆須指揮審批；參數每行 key=value，可用 '{{incident.number}}' '{{alert.labels.xxx}}' '{{ci.name}}' '{{business.code}}'。",
   'pages.incident.playbook.stepsInvalid':
     '至少一個步驟，且每步都要有名稱與目標',
   'pages.incident.playbook.match': '推薦條件',

@@ -3,48 +3,33 @@
  * listUsers 单页上限 100，翻页取全量；未命中的 ID（system / 已删除用户 /
  * 无用户列表权限的访问者）由调用方原样展示原始值，加载失败同样静默降级。
  */
-import { useEffect, useState } from 'react';
+import { useQuery } from '@umijs/max';
 import { listUsers } from '@/services/system/user';
 import { fetchAllPages } from '@/utils/paging';
 
 /**
- * 模块级短缓存：同一页面多处（各标签页、各表格）同时需要这份映射，
- * 并发调用共享一次请求，30 秒 内复用结果；失败不缓存。
+ * 同一页面多处（各标签页、各表格）同时需要这份映射：取数走 react-query，
+ * 并发调用共享一次请求，30 秒内复用结果（与原先手写缓存的时长一致）。
+ * 静默请求：失败不重试，切回窗口不自动刷新；失败的结果不进缓存，下次使用会重新请求。
  */
-const TTL_MS = 30_000;
-let cache: { at: number; promise: Promise<Record<string, string>> } | null =
-  null;
-
-function loadUserNames(): Promise<Record<string, string>> {
-  if (!cache || Date.now() - cache.at > TTL_MS) {
-    const promise = fetchAllPages((page, pageSize) =>
-      listUsers({ page, pageSize }, { silent: true }),
-    ).then((items) =>
-      Object.fromEntries(items.map((u) => [u.id, u.nickname || u.username])),
-    );
-    const entry = { at: Date.now(), promise };
-    cache = entry;
-    promise.catch(() => {
-      if (cache === entry) cache = null;
-    });
-  }
-  return cache.promise;
-}
+const USER_NAMES_QUERY_KEY = ['system', 'user-names'] as const;
+const NAMES_STALE_TIME_MS = 30_000;
+const NO_NAMES: Record<string, string> = {};
 
 export function useUserNames(): Record<string, string> {
-  const [names, setNames] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-    loadUserNames()
-      .then((map) => {
-        if (!cancelled) setNames(map);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return names;
+  const { data } = useQuery({
+    queryKey: USER_NAMES_QUERY_KEY,
+    queryFn: async (): Promise<Record<string, string>> => {
+      const items = await fetchAllPages((page, pageSize) =>
+        listUsers({ page, pageSize }, { silent: true }),
+      );
+      return Object.fromEntries(
+        items.map((u) => [u.id, u.nickname || u.username]),
+      );
+    },
+    staleTime: NAMES_STALE_TIME_MS,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  return data ?? NO_NAMES;
 }

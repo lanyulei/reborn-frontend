@@ -504,6 +504,8 @@ const getStorageVolumeSource = (
 type ResolvedStorage = {
   volumes: Manifest[];
   volumeClaimTemplates: Manifest[];
+  /** 各存储项（storageItems 的下标）生成的名称；没有产生卷的项不在其中 */
+  names: Map<number, string>;
   /** 容器 ID / 序号 → 该容器的挂载 */
   mountsOf: (container: CreateWorkloadContainerValues) => VolumeMountManifest[];
 };
@@ -519,6 +521,7 @@ const resolveStorage = (
 ): ResolvedStorage => {
   const volumes: Manifest[] = [];
   const volumeClaimTemplates: Manifest[] = [];
+  const names = new Map<number, string>();
   const mounts = new Map<
     CreateWorkloadContainerValues,
     VolumeMountManifest[]
@@ -539,7 +542,10 @@ const resolveStorage = (
     return name;
   };
 
-  (values.storageItems || []).filter(isStorageEnabled).forEach((item) => {
+  (values.storageItems || []).forEach((item, itemIndex) => {
+    if (!isStorageEnabled(item)) {
+      return;
+    }
     const isTemplate = item.storageType === 'volumeClaimTemplate';
     if (isTemplate && !allowVolumeClaimTemplates) {
       return;
@@ -555,6 +561,7 @@ const resolveStorage = (
     }
 
     const volumeName = uniqueName(baseName);
+    names.set(itemIndex, volumeName);
     itemMounts.forEach(({ container, mount }) => {
       mounts.set(container, [
         ...(mounts.get(container) || []),
@@ -595,6 +602,7 @@ const resolveStorage = (
   return {
     volumes,
     volumeClaimTemplates,
+    names,
     mountsOf: (container) => [
       ...(mounts.get(container) || []),
       ...(container.syncHostTimezone
@@ -609,6 +617,17 @@ const resolveStorage = (
     ],
   };
 };
+
+/**
+ * 各存储项在清单里生成的名称（storageItems 的下标 → 卷名 / 卷声明模板名），没有产生卷的项不在其中。
+ * 「编辑设置」用它把表单项与原对象里的卷对应起来。
+ */
+const getStorageItemNames = (
+  values: CreateWorkloadFormValues,
+  allowVolumeClaimTemplates: boolean,
+) =>
+  resolveStorage(values, values.containers || [], allowVolumeClaimTemplates)
+    .names;
 
 const getContainerManifest = (
   values: CreateWorkloadContainerValues,
@@ -1128,6 +1147,7 @@ export {
   checkContainers,
   checkWorkloadValues,
   createId,
+  getStorageItemNames,
   hasWorkerContainer,
   INT_OR_PERCENT_PATTERN,
   inspectYamlSubmission,

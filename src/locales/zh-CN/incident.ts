@@ -542,7 +542,7 @@ export default {
     '按级别推算：致命 → S2，严重 → S3，其余 → S4',
   'pages.incident.rule.titleTemplate': '标题模板',
   'pages.incident.rule.titleTemplateHint':
-    '可用 {{rule}} {{business}} {{count}} {{labels.<标签名>}}；留空为「业务：规则名」',
+    "可用 '{{rule}}' '{{business}}' '{{count}}' '{{labels.<标签名>}}'；留空为「业务：规则名」",
   'pages.incident.rule.businessLabel': '业务标签键',
   'pages.incident.rule.businessLabelHint':
     '从告警的该标签取值匹配业务字典的「匹配标签值」，优先于固定业务',
@@ -600,9 +600,9 @@ export default {
   'pages.incident.playbook.step.ref': '作业模板 / 流程',
   'pages.incident.playbook.step.add': '添加步骤',
   'pages.incident.playbook.step.paramsPlaceholder':
-    '参数：每行 key=value，可用 {{incident.number}} {{alert.labels.xxx}} {{ci.name}} {{business.code}}',
+    "参数：每行 key=value，可用 '{{incident.number}}' '{{alert.labels.xxx}}' '{{ci.name}}' '{{business.code}}'",
   'pages.incident.playbook.step.hint':
-    '高风险步骤恒须指挥审批；参数每行 key=value，可用 {{incident.number}} {{alert.labels.xxx}} {{ci.name}} {{business.code}}。',
+    "高风险步骤恒须指挥审批；参数每行 key=value，可用 '{{incident.number}}' '{{alert.labels.xxx}}' '{{ci.name}}' '{{business.code}}'。",
   'pages.incident.playbook.stepsInvalid':
     '至少一个步骤，且每步都要有名称与目标',
   'pages.incident.playbook.match': '推荐条件',

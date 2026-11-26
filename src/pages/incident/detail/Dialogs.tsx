@@ -589,6 +589,9 @@ export const EditModal: React.FC<DialogProps> = ({
   const submitter = useSubmitter();
   const { message } = App.useApp();
   const { options } = useIncidentOptions(['businesses']);
+  // 表单值是打开弹窗那一刻的快照，乐观锁的版本号也取那一刻的：incident 会被页面的定时刷新更新，
+  // 带着旧字段值配上最新版本号提交，会静默覆盖别人在这期间的修改
+  const [openVersion] = useState(incident.version ?? 0);
   return (
     <ModalForm<{
       title: string;
@@ -624,7 +627,7 @@ export const EditModal: React.FC<DialogProps> = ({
             ? dayjs(values.occurTime).toISOString()
             : undefined,
           isDrill: values.isDrill ?? false,
-          version: incident.version ?? 0,
+          version: openVersion,
         });
         message.success(t('common.msg.saved'));
         onDone();

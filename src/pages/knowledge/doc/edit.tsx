@@ -38,6 +38,7 @@ import {
 } from '@/services/system/domainRequest';
 import { useFormRules, useT } from '@/utils/i18n';
 import { DOC_CONTENT_MAX, DOC_TAGS_MAX, docPath } from '../components/meta';
+import { EDITOR_PREVIEW_OPTIONS } from '../components/preview';
 import { OwnerSelect, SpaceSelect } from '../components/selectors';
 import { useKnowledgeStyles } from '../components/styles';
 import '@uiw/react-md-editor/markdown-editor.css';
@@ -339,6 +340,8 @@ const DocumentEdit: React.FC = () => {
                 onChange={(v) => setContent(v ?? '')}
                 height={560}
                 preview="live"
+                // 实时预览不渲染正文里的原始 HTML（见 components/preview.ts）
+                previewOptions={EDITOR_PREVIEW_OPTIONS}
                 textareaProps={{
                   placeholder: t('pages.knowledge.edit.contentPlaceholder'),
                 }}

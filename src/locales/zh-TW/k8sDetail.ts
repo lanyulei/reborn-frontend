@@ -317,4 +317,23 @@ export default {
   'pages.k8s.detail.rollback.current': '目前修改記錄',
   'pages.k8s.detail.rollback.target': '目標修改記錄',
   'pages.k8s.detail.rollback.selectTarget': '請選擇目標修改記錄',
+
+  // ---- 通用資源詳情（任務 / 定時任務 / 服務 / 儲存 / 網路策略等） ----
+  'pages.k8s.detail.tab.resourceStatus': '資源狀態',
+  'pages.k8s.detail.tab.scheduling': '調度資訊',
+  'pages.k8s.detail.tab.health': '健康檢查',
+  'pages.k8s.detail.tab.env': '環境變數',
+  'pages.k8s.detail.tab.runs': '運行記錄',
+  'pages.k8s.detail.tab.claim': '綁定關係',
+  'pages.k8s.detail.tab.persistentVolumeClaims': '持久卷宣告',
+  'pages.k8s.detail.tab.hpaTarget': '目標與指標',
+  'pages.k8s.detail.tab.networkPolicyRules': '規則摘要',
+  'pages.k8s.detail.tab.customResources': '自訂資源',
+  'pages.k8s.detail.tab.rbac': '規則與綁定',
+  'pages.k8s.detail.job.parallelismHint':
+    '任務的並行數量請透過「編輯 YAML」調整',
+  'pages.k8s.detail.pvc.claimPodsTruncated':
+    '該命名空間的容器組較多，只檢查了前 {n} 個。',
+  'pages.k8s.detail.netpol.noRules': '暫無 ingress/egress 規則',
+  'pages.k8s.detail.noEndpoints': '暫無端點',
 };

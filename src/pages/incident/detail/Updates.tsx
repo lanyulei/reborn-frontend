@@ -148,16 +148,21 @@ const ShareLinks: React.FC<{ incident: Incident; writable: boolean }> = ({
     name: string;
     token: string;
   } | null>(null);
+  // 只采纳最后一次加载的结果：切换故障时，旧响应不覆盖新数据
+  const seq = useRef(0);
 
   const load = useCallback(async () => {
+    const current = ++seq.current;
     setLoading(true);
     try {
       const result = await listShareLinks(incident.id);
+      if (current !== seq.current) return;
       setLinks(result.items ?? []);
     } catch {
+      if (current !== seq.current) return;
       setLinks([]);
     } finally {
-      setLoading(false);
+      if (current === seq.current) setLoading(false);
     }
   }, [incident.id]);
 
@@ -353,16 +358,21 @@ export const UpdatesPanel: React.FC<{
   const [items, setItems] = useState<IncidentUpdate[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishOpen, setPublishOpen] = useState(false);
+  // 只采纳最后一次加载的结果：切换故障或连续刷新时，旧响应不覆盖新数据
+  const seq = useRef(0);
 
   const load = useCallback(async () => {
+    const current = ++seq.current;
     setLoading(true);
     try {
       const result = await listUpdates(incident.id);
+      if (current !== seq.current) return;
       setItems(result.items ?? []);
     } catch {
+      if (current !== seq.current) return;
       setItems([]);
     } finally {
-      setLoading(false);
+      if (current === seq.current) setLoading(false);
     }
   }, [incident.id]);
 

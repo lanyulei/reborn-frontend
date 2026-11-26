@@ -317,4 +317,23 @@ export default {
   'pages.k8s.detail.rollback.current': '当前修改记录',
   'pages.k8s.detail.rollback.target': '目标修改记录',
   'pages.k8s.detail.rollback.selectTarget': '请选择目标修改记录',
+
+  // ---- 通用资源详情（任务 / 定时任务 / 服务 / 存储 / 网络策略等） ----
+  'pages.k8s.detail.tab.resourceStatus': '资源状态',
+  'pages.k8s.detail.tab.scheduling': '调度信息',
+  'pages.k8s.detail.tab.health': '健康检查',
+  'pages.k8s.detail.tab.env': '环境变量',
+  'pages.k8s.detail.tab.runs': '运行记录',
+  'pages.k8s.detail.tab.claim': '绑定关系',
+  'pages.k8s.detail.tab.persistentVolumeClaims': '持久卷声明',
+  'pages.k8s.detail.tab.hpaTarget': '目标与指标',
+  'pages.k8s.detail.tab.networkPolicyRules': '规则摘要',
+  'pages.k8s.detail.tab.customResources': '定制资源',
+  'pages.k8s.detail.tab.rbac': '规则与绑定',
+  'pages.k8s.detail.job.parallelismHint':
+    '任务的并行数量请通过「编辑 YAML」调整',
+  'pages.k8s.detail.pvc.claimPodsTruncated':
+    '该命名空间的容器组较多，只检查了前 {n} 个。',
+  'pages.k8s.detail.netpol.noRules': '暂无 ingress/egress 规则',
+  'pages.k8s.detail.noEndpoints': '暂无端点',
 };

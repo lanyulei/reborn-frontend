@@ -4,49 +4,37 @@
  * 采集源列表单页上限 100，翻页取全量；未命中（已删除源 / 无同步权限的
  * 访问者）与未知值原样展示，加载失败同样静默降级。
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@umijs/max';
+import { useCallback } from 'react';
 import { listSources } from '@/services/cmdb/sync';
 import { useT } from '@/utils/i18n';
 import { fetchAllPages } from '@/utils/paging';
 
 /**
- * 模块级短缓存：同一页面多处（各标签页、各表格）同时需要这份映射，
- * 并发调用共享一次请求，30 秒 内复用结果；失败不缓存。
+ * 同一页面多处（各标签页、各表格）同时需要这份映射：取数走 react-query，
+ * 并发调用共享一次请求，30 秒内复用结果（与原先手写缓存的时长一致）。
+ * 静默请求：失败不重试，切回窗口不自动刷新；失败的结果不进缓存，下次使用会重新请求。
  */
-const TTL_MS = 30_000;
-let cache: { at: number; promise: Promise<Record<string, string>> } | null =
-  null;
-
-function loadSourceNames(): Promise<Record<string, string>> {
-  if (!cache || Date.now() - cache.at > TTL_MS) {
-    const promise = fetchAllPages((page, pageSize) =>
-      listSources({ page, pageSize }, { silent: true }),
-    ).then((items) => Object.fromEntries(items.map((s) => [s.id, s.name])));
-    const entry = { at: Date.now(), promise };
-    cache = entry;
-    promise.catch(() => {
-      if (cache === entry) cache = null;
-    });
-  }
-  return cache.promise;
-}
+const SOURCE_NAMES_QUERY_KEY = ['cmdb', 'source-names'] as const;
+const NAMES_STALE_TIME_MS = 30_000;
+const NO_NAMES: Record<string, string> = {};
 const SYNC_PREFIX = 'sync:';
 
 export function useSourceText(): (source?: string) => string {
   const t = useT();
-  const [names, setNames] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-    loadSourceNames()
-      .then((map) => {
-        if (!cancelled) setNames(map);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data } = useQuery({
+    queryKey: SOURCE_NAMES_QUERY_KEY,
+    queryFn: async (): Promise<Record<string, string>> => {
+      const items = await fetchAllPages((page, pageSize) =>
+        listSources({ page, pageSize }, { silent: true }),
+      );
+      return Object.fromEntries(items.map((s) => [s.id, s.name]));
+    },
+    staleTime: NAMES_STALE_TIME_MS,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const names = data ?? NO_NAMES;
 
   return useCallback(
     (source?: string) => {

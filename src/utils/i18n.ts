@@ -80,12 +80,21 @@ export const useValueEnum = <K extends PropertyKey>(
   );
 };
 
-/** 元数据 → 取单个枚举值文案的函数（Tag / 列 render 等） */
+/**
+ * 元数据 → 取单个枚举值文案的函数（Tag / 列 render 等）。
+ * 表里没有的值（后端新增了枚举、前端还没跟上）原样显示，不让整页崩到错误边界。
+ */
 export const useEnumText = <K extends PropertyKey>(
   meta: Record<K, { textId: string }>,
 ) => {
   const tr = useT();
-  return useCallback((key: K) => tr(meta[key].textId), [meta, tr]);
+  return useCallback(
+    (key: K) => {
+      const item = (meta as Partial<Record<K, { textId: string }>>)[key];
+      return item ? tr(item.textId) : String(key);
+    },
+    [meta, tr],
+  );
 };
 
 /** 元数据 + 顺序 → 表单选项 `{ label, value }` */

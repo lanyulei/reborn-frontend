@@ -29,7 +29,7 @@ import {
   normalizeMatchers,
   validateMatchers,
 } from '@/pages/monitor/components/MatchersEditor';
-import { listModels } from '@/services/cmdb/model';
+import { listAllModels } from '@/services/cmdb/model';
 import { createRule, testRule, updateRule } from '@/services/incident/config';
 import type {
   IncidentRule,
@@ -133,7 +133,8 @@ export const RuleDrawer: React.FC<{
   useEffect(() => {
     if (access.canCmdbModel) {
       setModelsLoading(true);
-      listModels({ page: 1, pageSize: 200 })
+      // 模型列表接口每页上限 100（原先写 200 会被参数校验拒绝，下拉恒为空）：用翻页取全量的封装
+      listAllModels()
         .then((r) =>
           setModels(
             (r.items ?? []).map((m) => ({

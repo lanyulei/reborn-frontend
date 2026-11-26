@@ -115,6 +115,13 @@ const seconds = (from?: string, to?: string) =>
     ? (new Date(to).getTime() - new Date(from).getTime()) / 1000
     : undefined;
 
+/** 服务端明确答复对象已不存在（404 / 410） */
+const isGone = (error: unknown) => {
+  const status = (error as { response?: { status?: number } })?.response
+    ?.status;
+  return status === 404 || status === 410;
+};
+
 const Overview: React.FC<{
   incident: Incident;
   context: IncidentContext | null;
@@ -379,33 +386,54 @@ const IncidentDetail: React.FC = () => {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const seq = useRef(0);
+  const contextSeq = useRef(0);
+  /** 页面上正在展示的故障的路由 id：刷新失败时据此判断能否保留页面 */
+  const shownIdRef = useRef<string | null>(null);
 
+  /** notify：失败时给一条提示（手动刷新用；后台定时刷新保持静默） */
   const load = useCallback(
-    async (silent = false) => {
+    async (silent = false, notify = false) => {
       const current = ++seq.current;
       if (!silent) setLoading(true);
       try {
         const inc = await getIncident(id, { silent: true });
         if (current !== seq.current) return;
+        shownIdRef.current = id;
         setIncident(inc);
         setError(undefined);
       } catch (e) {
         if (current !== seq.current) return;
-        setIncident(null);
-        setError(
-          getIncidentErrorMessage(e, t('pages.incident.detail.notFound')),
+        const text = getIncidentErrorMessage(
+          e,
+          t('pages.incident.detail.notFound'),
         );
+        // 这条故障还在页面上时，刷新遇到网络抖动 / 服务端错误不清空页面——页签里正在编辑的复盘、
+        // 评论会随之丢失；服务端明确答复故障已不存在时才换成错误卡片
+        if (shownIdRef.current === id && !isGone(e)) {
+          if (notify) {
+            message.error(text);
+          }
+          return;
+        }
+        shownIdRef.current = null;
+        setIncident(null);
+        setError(text);
       } finally {
         if (current === seq.current) setLoading(false);
       }
     },
-    [id, t],
+    [id, message, t],
   );
 
   const loadContext = useCallback(async () => {
+    // 只采纳最后一次加载的结果：切换故障、手动刷新与自动刷新交错时旧响应不覆盖新数据
+    const current = ++contextSeq.current;
     try {
-      setContext(await getIncidentContext(id));
+      const result = await getIncidentContext(id);
+      if (current !== contextSeq.current) return;
+      setContext(result);
     } catch {
+      if (current !== contextSeq.current) return;
       setContext(null);
     }
   }, [id]);
@@ -424,7 +452,7 @@ const IncidentDetail: React.FC = () => {
   }, [load]);
 
   const refresh = () => {
-    void load(true);
+    void load(true, true);
     void loadContext();
     setRefreshKey((k) => k + 1);
   };

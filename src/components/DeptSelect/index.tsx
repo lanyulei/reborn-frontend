@@ -1,53 +1,41 @@
 /**
  * 部门选择器（通用）：部门树下拉，值为部门 ID，可单选 / 多选，支持按名称搜索。
- * 部门数据缺省自取（模块级短缓存，多处并用只请求一次）；页面已有部门列表时
+ * 部门数据缺省自取（react-query 缓存，多处并用只请求一次）；页面已有部门列表时
  * 可经 depts 传入，避免重复请求。停用部门置灰不可选，已选中的仍正常回显。
  */
+import { useQuery } from '@umijs/max';
 import { TreeSelect } from 'antd';
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { listDepts } from '@/services/system/dept';
 import type { SystemDept } from '@/services/system/typings';
 import { useT } from '@/utils/i18n';
 import { buildTree, collectSubtreeIds, type TreeNode } from '@/utils/tree';
 
-/** 模块级短缓存：并发调用共享一次请求，30 秒内复用；失败不缓存 */
-const TTL_MS = 30_000;
-let cache: { at: number; promise: Promise<SystemDept[]> } | null = null;
-
-function loadDepts(): Promise<SystemDept[]> {
-  if (!cache || Date.now() - cache.at > TTL_MS) {
-    const promise = listDepts({ silent: true }).then((res) => res.items ?? []);
-    const entry = { at: Date.now(), promise };
-    cache = entry;
-    promise.catch(() => {
-      if (cache === entry) cache = null;
-    });
-  }
-  return cache.promise;
-}
-
-/** 部门数据变更后调用：使缓存失效，下次使用时重新拉取 */
-export function invalidateDeptCache(): void {
-  cache = null;
-}
+/**
+ * 部门列表的缓存键：部门数据变更后让缓存失效（见系统管理 / 部门页），
+ * 其它用到部门列表的地方下次使用时重新拉取。
+ */
+export const DEPTS_QUERY_KEY = ['system', 'depts'] as const;
+/** 部门列表 30 秒内复用（与原先手写缓存的时长一致） */
+const DEPTS_STALE_TIME_MS = 30_000;
+const NO_DEPTS: SystemDept[] = [];
 
 /** 全部部门（平铺）；加载失败 / 无权限时为空数组。enabled=false 时不请求 */
 export function useDeptList(enabled = true): SystemDept[] {
-  const [depts, setDepts] = useState<SystemDept[]>([]);
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    loadDepts()
-      .then((items) => {
-        if (!cancelled) setDepts(items);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled]);
-  return depts;
+  const { data } = useQuery({
+    queryKey: DEPTS_QUERY_KEY,
+    enabled,
+    queryFn: async (): Promise<SystemDept[]> => {
+      const res = await listDepts({ silent: true });
+      return res.items ?? [];
+    },
+    // 请求层已提示过，不自动重试；切回窗口不自动刷新。失败的结果不进缓存，下次使用会重新请求
+    staleTime: DEPTS_STALE_TIME_MS,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  return data ?? NO_DEPTS;
 }
 
 interface DeptTreeOption {

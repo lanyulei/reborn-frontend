@@ -171,27 +171,37 @@ const OncallGroupDetail: React.FC = () => {
   }, []);
   const [shareScope, setShareScope] = useState<string>(SCOPE_GROUP);
   const logRef = useRef<ActionType>(null);
+  // 只采纳最后一次加载的结果：切换值班组（路由参数变化）或连续刷新时，旧响应不覆盖新数据
+  const groupSeq = useRef(0);
+  const membersSeq = useRef(0);
+  const schedulesSeq = useRef(0);
 
   const loadGroup = useCallback(async () => {
+    const current = ++groupSeq.current;
     try {
       const result = await getGroup(id, { silent: true });
+      if (current !== groupSeq.current) return;
       setGroup(result.group ?? null);
     } catch {
+      if (current !== groupSeq.current) return;
       setGroup(null);
     } finally {
-      setLoading(false);
+      if (current === groupSeq.current) setLoading(false);
     }
   }, [id]);
 
   const loadMembers = useCallback(async () => {
+    const current = ++membersSeq.current;
     setMembersLoading(true);
     try {
       const { items } = await listGroupMembers(id);
+      if (current !== membersSeq.current) return;
       setMembers(items ?? []);
     } catch {
+      if (current !== membersSeq.current) return;
       setMembers([]);
     } finally {
-      setMembersLoading(false);
+      if (current === membersSeq.current) setMembersLoading(false);
     }
   }, [id]);
 
@@ -207,14 +217,17 @@ const OncallGroupDetail: React.FC = () => {
   );
 
   const loadSchedules = useCallback(async () => {
+    const current = ++schedulesSeq.current;
     setSchedulesLoading(true);
     try {
       const { items } = await listSchedules(id);
+      if (current !== schedulesSeq.current) return;
       setSchedules(items ?? []);
     } catch {
+      if (current !== schedulesSeq.current) return;
       setSchedules([]);
     } finally {
-      setSchedulesLoading(false);
+      if (current === schedulesSeq.current) setSchedulesLoading(false);
     }
   }, [id]);
 

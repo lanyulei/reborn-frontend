@@ -1,8 +1,11 @@
 /**
  * 监控告警页面共享数据 hook 与候选来源：规则分组、数据源选项、通知对象候选（值班表 / 部门）、
  * 规则候选。用户候选见 components/UserSelect/sources.ts 的 fetchMonitorUsers。
+ * 前三份是多个页面共用的参考数据，取数走 react-query：同一个缓存键在并发的调用方之间只请求一次，
+ * 30 秒内跨页面复用；写操作后由页面让缓存失效（数据源页）或重新拉取（规则页的 reload）。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@umijs/max';
+import { useCallback, useMemo } from 'react';
 import { listDatasourceOptions } from '@/services/monitor/datasource';
 import { listRules } from '@/services/monitor/rule';
 import { listRuleGroups } from '@/services/monitor/ruleGroup';
@@ -18,56 +21,70 @@ import type {
 import type { SystemDept } from '@/services/system/typings';
 import { type Translate, useT } from '@/utils/i18n';
 
+/**
+ * 参考数据的缓存口径：30 秒内复用（与原先各处手写缓存的时长一致）。
+ * 失败不自动重试——请求层已经提示过，重试只会把同一个提示重复弹几次；切回窗口、网络重连时
+ * 不自动刷新，与原先手写取数的行为一致。失败的结果不进缓存，下次使用时会重新请求。
+ */
+const REFERENCE_QUERY_OPTIONS = {
+  retry: false,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  staleTime: 30_000,
+} as const;
+
+const RULE_GROUPS_QUERY_KEY = ['monitor', 'rule-groups'] as const;
+type RuleGroupsData = { groups: RuleGroup[]; isAdmin: boolean };
+const NO_GROUPS: RuleGroup[] = [];
+
 /** 当前用户可见的规则分组（平铺）与是否超级管理员；enabled=false 时不请求 */
 export const useRuleGroups = (enabled = true) => {
-  const [groups, setGroups] = useState<RuleGroup[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(enabled);
-
-  const reload = useCallback(async () => {
-    if (!enabled) return;
-    setLoading(true);
-    try {
+  const { data, isError, isFetching, refetch } = useQuery({
+    ...REFERENCE_QUERY_OPTIONS,
+    queryKey: RULE_GROUPS_QUERY_KEY,
+    enabled,
+    queryFn: async (): Promise<RuleGroupsData> => {
       const result = await listRuleGroups({ silent: true });
-      setGroups(result.items ?? []);
-      setIsAdmin(result.isAdmin === true);
-    } catch {
-      setGroups([]);
-      setIsAdmin(false);
-    } finally {
-      setLoading(false);
-    }
-  }, [enabled]);
+      return { groups: result.items ?? [], isAdmin: result.isAdmin === true };
+    },
+  });
+  // enabled=false 时不请求（与原实现一致）
+  const reload = useCallback(async () => {
+    if (enabled) await refetch();
+  }, [enabled, refetch]);
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  return { groups, isAdmin, loading, reload };
+  // 失败时按「没有分组、非管理员」处理（与原实现一致）
+  return {
+    groups: isError ? NO_GROUPS : (data?.groups ?? NO_GROUPS),
+    isAdmin: !isError && data?.isAdmin === true,
+    loading: isFetching,
+    reload,
+  };
 };
+
+/** 数据源选项的缓存键：数据源增删改后让缓存失效（见 monitor/datasource 页面的 reload） */
+export const DATASOURCE_OPTIONS_QUERY_KEY = [
+  'monitor',
+  'datasource-options',
+] as const;
+const NO_DATASOURCES: DatasourceOption[] = [];
 
 /**
  * 数据源下拉选项（缺省数据源在前）；enabledOnly 时只含已启用的；enabled=false 时不请求。
  */
 export const useDatasourceOptions = (enabledOnly?: boolean, enabled = true) => {
   const t = useT();
-  const [items, setItems] = useState<DatasourceOption[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    listDatasourceOptions(enabledOnly)
-      .then((result) => {
-        if (!cancelled) setItems(result.items ?? []);
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) setLoaded(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [enabledOnly, enabled]);
+  const { data, isPending } = useQuery({
+    ...REFERENCE_QUERY_OPTIONS,
+    // 筛选口径不同，各自缓存
+    queryKey: [...DATASOURCE_OPTIONS_QUERY_KEY, enabledOnly],
+    enabled,
+    queryFn: async (): Promise<DatasourceOption[]> => {
+      const result = await listDatasourceOptions(enabledOnly);
+      return result.items ?? [];
+    },
+  });
+  const items = data ?? NO_DATASOURCES;
 
   const options = useMemo(
     () =>
@@ -87,7 +104,8 @@ export const useDatasourceOptions = (enabledOnly?: boolean, enabled = true) => {
     () => (items.find((item) => item.isDefault) ?? items[0])?.id,
     [items],
   );
-  return { items, options, defaultId, loaded };
+  // enabled=false 时视为未加载（与原实现一致）
+  return { items, options, defaultId, loaded: enabled && !isPending };
 };
 
 /** useDatasourceOptions 的返回值：页面取一次，下传给各表单 / 抽屉 */
@@ -114,21 +132,8 @@ export const withRefOptions = (
   return [...options, ...missing];
 };
 
-/** 模块级短缓存：多个表单并用只请求一次，30 秒内复用；失败不缓存（同 DeptSelect 的做法） */
-const TARGET_TTL_MS = 30_000;
-let targetCache: { at: number; promise: Promise<TargetOptions> } | null = null;
-
-const loadTargets = (): Promise<TargetOptions> => {
-  if (!targetCache || Date.now() - targetCache.at > TARGET_TTL_MS) {
-    const promise = listTargetOptions({ kinds: ['schedule', 'dept'] });
-    const entry = { at: Date.now(), promise };
-    targetCache = entry;
-    promise.catch(() => {
-      if (targetCache === entry) targetCache = null;
-    });
-  }
-  return targetCache.promise;
-};
+const NOTIFY_TARGETS_QUERY_KEY = ['monitor', 'notify-targets'] as const;
+const NO_TARGETS: TargetOptions = {};
 
 /**
  * 通知对象候选（值班表选项、部门列表），取自监控告警域自己的候选接口。enabled=false 时不请求
@@ -137,53 +142,39 @@ const loadTargets = (): Promise<TargetOptions> => {
  * （失败的请求不进缓存）。
  */
 export const useNotifyTargets = (enabled = true) => {
-  const [data, setData] = useState<TargetOptions>({});
-  const [failed, setFailed] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  // attempt 只用来触发重试
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    setLoading(true);
-    loadTargets()
-      .then((result) => {
-        if (cancelled) return;
-        setData(result);
-        setFailed(false);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, attempt]);
-  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  const { data, isError, isFetching, refetch } = useQuery({
+    ...REFERENCE_QUERY_OPTIONS,
+    queryKey: NOTIFY_TARGETS_QUERY_KEY,
+    enabled,
+    queryFn: () => listTargetOptions({ kinds: ['schedule', 'dept'] }),
+  });
+  const retry = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   return useMemo(
     () => ({
-      scheduleOptions: (data.schedules ?? []).map((schedule) => ({
-        value: schedule.id,
-        label: schedule.groupName
-          ? `${schedule.groupName} / ${schedule.name ?? ''}`
-          : (schedule.name ?? schedule.id),
-      })),
+      scheduleOptions: ((data ?? NO_TARGETS).schedules ?? []).map(
+        (schedule) => ({
+          value: schedule.id,
+          label: schedule.groupName
+            ? `${schedule.groupName} / ${schedule.name ?? ''}`
+            : (schedule.name ?? schedule.id),
+        }),
+      ),
       // 候选接口不区分启停（DeptSelect 把 status 为 0 / 缺失的部门当作已停用）：一律按可选处理
-      depts: (data.depts ?? []).map<SystemDept>((dept) => ({
+      depts: ((data ?? NO_TARGETS).depts ?? []).map<SystemDept>((dept) => ({
         id: dept.id,
         name: dept.name ?? dept.id,
         parentId: dept.parentId,
         status: 1,
       })),
-      failed,
-      loading,
+      // enabled=false 时没有发起过请求，不算失败（与原实现一致）
+      failed: enabled && isError,
+      loading: isFetching,
       retry,
     }),
-    [data, failed, loading, retry],
+    [data, enabled, isError, isFetching, retry],
   );
 };
 

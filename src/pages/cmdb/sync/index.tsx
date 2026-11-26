@@ -280,6 +280,8 @@ const ProviderFields: React.FC<{
         placeholder={
           editing ? t('pages.cmdb.sync.form.credential.editPlaceholder') : ''
         }
+        // 新凭据而不是登录密码：不让浏览器自动填充
+        fieldProps={{ autoComplete: 'new-password' }}
         rules={[
           {
             required: !editing,

@@ -335,4 +335,23 @@ export default {
   'pages.k8s.detail.rollback.current': 'Current revision',
   'pages.k8s.detail.rollback.target': 'Target revision',
   'pages.k8s.detail.rollback.selectTarget': 'Select the target revision',
+
+  // ---- Generic resource detail (Job / CronJob / Service / storage / NetworkPolicy…) ----
+  'pages.k8s.detail.tab.resourceStatus': 'Resource status',
+  'pages.k8s.detail.tab.scheduling': 'Scheduling',
+  'pages.k8s.detail.tab.health': 'Health checks',
+  'pages.k8s.detail.tab.env': 'Environment variables',
+  'pages.k8s.detail.tab.runs': 'Runs',
+  'pages.k8s.detail.tab.claim': 'Claim binding',
+  'pages.k8s.detail.tab.persistentVolumeClaims': 'Volume claims',
+  'pages.k8s.detail.tab.hpaTarget': 'Scale target & metrics',
+  'pages.k8s.detail.tab.networkPolicyRules': 'Rule summary',
+  'pages.k8s.detail.tab.customResources': 'Custom resources',
+  'pages.k8s.detail.tab.rbac': 'Rules & bindings',
+  'pages.k8s.detail.job.parallelismHint':
+    'Change the parallelism of a Job via "Edit YAML"',
+  'pages.k8s.detail.pvc.claimPodsTruncated':
+    'This namespace has many pods; only the first {n} were checked.',
+  'pages.k8s.detail.netpol.noRules': 'No ingress/egress rules',
+  'pages.k8s.detail.noEndpoints': 'No endpoints',
 };

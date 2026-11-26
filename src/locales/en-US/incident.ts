@@ -534,7 +534,7 @@ export default {
     'Derived: critical → S2, major → S3, otherwise S4',
   'pages.incident.rule.titleTemplate': 'Title template',
   'pages.incident.rule.titleTemplateHint':
-    'Use {{rule}} {{business}} {{count}} {{labels.<name>}}; empty = "business: rule"',
+    "Use '{{rule}}' '{{business}}' '{{count}}' '{{labels.<name>}}'; empty = \"business: rule\"",
   'pages.incident.rule.businessLabel': 'Business label key',
   'pages.incident.rule.businessLabelHint':
     'Match the label value against business "label values"; takes precedence over the fixed business',
@@ -591,9 +591,9 @@ export default {
   'pages.incident.playbook.step.ref': 'Job template / workflow',
   'pages.incident.playbook.step.add': 'Add step',
   'pages.incident.playbook.step.paramsPlaceholder':
-    'Params: key=value per line; {{incident.number}} {{alert.labels.xxx}} {{ci.name}} {{business.code}} available',
+    "Params: key=value per line; '{{incident.number}}' '{{alert.labels.xxx}}' '{{ci.name}}' '{{business.code}}' available",
   'pages.incident.playbook.step.hint':
-    'High-risk steps always need commander approval; parameters are key=value per line with {{incident.number}} {{alert.labels.xxx}} {{ci.name}} {{business.code}} available.',
+    "High-risk steps always need commander approval; parameters are key=value per line with '{{incident.number}}' '{{alert.labels.xxx}}' '{{ci.name}}' '{{business.code}}' available.",
   'pages.incident.playbook.stepsInvalid':
     'At least one step, each with a name and a target',
   'pages.incident.playbook.match': 'Recommendation',

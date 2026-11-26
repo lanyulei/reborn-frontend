@@ -458,13 +458,13 @@ export default {
   'pages.monitor.rule.form.annotations.tooltip':
     '随通知发出的说明文本，常用 summary、runbook_url；值可用 printf、humanize 等模板函数',
   'pages.monitor.rule.form.annotations.hint':
-    '值支持模板，如 {{ $labels.instance }}、{{ $value }}',
+    "值支持模板，如 '{{ $labels.instance }}'、'{{ $value }}'",
   'pages.monitor.rule.form.annotations.add': '添加附加信息',
   'pages.monitor.rule.form.annotations.rule':
     '至多 10 个；名称须以字母或下划线开头、只含字母数字下划线且不重复，值 1-2048 字符',
   'pages.monitor.rule.form.recoveryExpr': '恢复取值',
   'pages.monitor.rule.form.recoveryExpr.tooltip':
-    '告警恢复时执行的 PromQL（不带阈值），结果作为恢复值写入恢复通知；可用 {{ $labels.<标签名> }}',
+    "告警恢复时执行的 PromQL（不带阈值），结果作为恢复值写入恢复通知；可用 '{{ $labels.<标签名> }}'",
   'pages.monitor.rule.form.notify.hint':
     '规则只决定通知谁、通知几次，渠道与内容由「通知管理」决定；全部留空则交给通知路由与订阅。',
   'pages.monitor.rule.form.depts': '部门负责人',

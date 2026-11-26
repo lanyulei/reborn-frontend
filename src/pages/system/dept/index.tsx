@@ -8,9 +8,10 @@ import {
   ProFormTextArea,
   ProTable,
 } from '@ant-design/pro-components';
+import { useQueryClient } from '@umijs/max';
 import { App, Col, Form, Space, Tag, Tooltip } from 'antd';
 import React, { useRef, useState } from 'react';
-import { DeptSelect, invalidateDeptCache } from '@/components/DeptSelect';
+import { DEPTS_QUERY_KEY, DeptSelect } from '@/components/DeptSelect';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
 import { UserSelect, userLabel } from '@/components/UserSelect';
 import {
@@ -95,6 +96,7 @@ const filterDepts = (
 
 const DeptList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
+  const queryClient = useQueryClient();
   const { message } = App.useApp();
   const has = usePermissions();
   const t = useT();
@@ -383,8 +385,11 @@ const DeptList: React.FC = () => {
           request={async (params) => {
             const { items = [] } = await listDepts();
             setDepts(items);
-            // 部门选择器的缓存与本页同源数据保持一致
-            invalidateDeptCache();
+            // 部门选择器的缓存与本页同源数据保持一致：只标记过期，下次使用时重新拉取
+            void queryClient.invalidateQueries({
+              queryKey: DEPTS_QUERY_KEY,
+              refetchType: 'none',
+            });
             const keyword = String(params.keyword ?? '').trim();
             const status =
               params.status === undefined || params.status === ''

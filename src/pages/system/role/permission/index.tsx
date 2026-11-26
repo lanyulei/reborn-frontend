@@ -22,6 +22,7 @@ import {
   ELEMENT_PERMISSIONS,
   MENU_PERMISSION_CODES,
   MENU_PERMISSIONS,
+  usePermissions,
 } from '@/services/system/permissions';
 import {
   getRole,
@@ -55,10 +56,13 @@ const RolePermission: React.FC = () => {
   const t = useT();
   const { token } = theme.useToken();
   const { canAdmin: isAdmin } = useAccess();
+  const has = usePermissions();
 
   const [role, setRole] = useState<SystemRole | null>(null);
   // 内置角色的授权仅超管可改：非超管只读浏览（无保存、控件禁用、顶部提示）
   const readOnly = role?.builtin === true && !isAdmin;
+  // 保存入口与列表页的「权限」入口同一口径：没有授权元素码的用户只能浏览（直接输入地址进来的情况）
+  const canSave = has('system.role.grant');
   const [loading, setLoading] = useState(true);
   // 仅当授权成功加载后才允许保存：全量覆盖语义下，加载中 / 失败时保存会清空权限
   const [loaded, setLoaded] = useState(false);
@@ -562,7 +566,7 @@ const RolePermission: React.FC = () => {
           headerBordered
           loading={loading}
           extra={
-            readOnly || !loaded ? null : (
+            !canSave || readOnly || !loaded ? null : (
               <a
                 onClick={() => {
                   // 二次确认，避免误触覆盖权限

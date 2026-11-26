@@ -275,6 +275,8 @@ const ChannelConfigFields: React.FC<{
                       )
                     : undefined
                 }
+                // 防止浏览器把保存的站点登录密码自动填进来：填进来后保存，渠道凭据就被换成了登录密码
+                fieldProps={{ autoComplete: 'new-password' }}
                 rules={[rules.max(512)]}
               />
             </ProForm.Group>
@@ -378,6 +380,8 @@ const ChannelConfigFields: React.FC<{
             ? t('pages.notify.channel.form.secret.editPlaceholder')
             : t(meta.secretPlaceholderId)
         }
+        // 同上：这是新凭据而不是登录密码，不让浏览器自动填充
+        fieldProps={{ autoComplete: 'new-password' }}
         rules={[
           {
             required: !editing && meta.secretRequired,
@@ -399,6 +403,7 @@ const ChannelConfigFields: React.FC<{
                 ? t('pages.notify.channel.form.signSecret.editPlaceholder')
                 : t('pages.notify.channel.form.signSecret.placeholder')
             }
+            fieldProps={{ autoComplete: 'new-password' }}
             rules={[rules.max(512)]}
           />
           {editing && (

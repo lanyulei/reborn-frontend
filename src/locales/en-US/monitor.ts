@@ -502,13 +502,13 @@ export default {
   'pages.monitor.rule.form.annotations.tooltip':
     'Text sent with notifications, e.g. summary, runbook_url. Values may use template functions such as printf, humanize.',
   'pages.monitor.rule.form.annotations.hint':
-    'Values are templates, e.g. {{ $labels.instance }}, {{ $value }}',
+    "Values are templates, e.g. '{{ $labels.instance }}', '{{ $value }}'",
   'pages.monitor.rule.form.annotations.add': 'Add annotation',
   'pages.monitor.rule.form.annotations.rule':
     'Up to 10. Names start with a letter or underscore, contain only letters, digits and underscores and are unique; values are 1-2048 characters',
   'pages.monitor.rule.form.recoveryExpr': 'Recovery query',
   'pages.monitor.rule.form.recoveryExpr.tooltip':
-    'PromQL (no threshold) run when the alert resolves; its result is shown as the recovery value. {{ $labels.<name> }} is available.',
+    "PromQL (no threshold) run when the alert resolves; its result is shown as the recovery value. '{{ $labels.<name> }}' is available.",
   'pages.monitor.rule.form.notify.hint':
     'A rule sets who is notified and how often; channels and content come from Notifications. Empty = routes and subscriptions decide.',
   'pages.monitor.rule.form.depts': 'Department leaders',

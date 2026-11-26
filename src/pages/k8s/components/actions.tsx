@@ -606,7 +606,10 @@ export const useResourceActions = ({
       call: (target: ActionTarget) => Promise<unknown>,
     ) =>
       confirm({
-        title: `${t(`pages.k8s.action.${key}`)} ${rows.length} 个对象？`,
+        title: t('pages.k8s.action.batch.title', {
+          action: t(`pages.k8s.action.${key}`),
+          n: rows.length,
+        }),
         content: (
           <div style={{ maxHeight: 220, overflow: 'auto' }}>
             {rows.map((row) => (
@@ -633,9 +636,13 @@ export const useResourceActions = ({
           }
           const done = rows.length - failed - submitted;
           if (failed > 0) {
-            message.warning(`成功 ${done} 个，失败 ${failed} 个`);
+            message.warning(
+              t('pages.k8s.action.batch.partial', { done, failed }),
+            );
           } else if (submitted > 0) {
-            message.info(`已提交 ${submitted} 张变更单`);
+            message.info(
+              t('pages.k8s.action.batch.submitted', { n: submitted }),
+            );
           } else {
             message.success(t('common.msg.updated'));
           }
@@ -655,7 +662,9 @@ export const useResourceActions = ({
             run('restart', (row) => restartWorkload(clusterId, refOf(row)))
           }
         >
-          批量{t('pages.k8s.action.restart')}
+          {t('pages.k8s.action.batch.prefix', {
+            action: t('pages.k8s.action.restart'),
+          })}
         </a>,
       );
     }
@@ -670,7 +679,9 @@ export const useResourceActions = ({
             )
           }
         >
-          批量{t('pages.k8s.action.delete')}
+          {t('pages.k8s.action.batch.prefix', {
+            action: t('pages.k8s.action.delete'),
+          })}
         </a>,
       );
     }

@@ -251,20 +251,25 @@ export const PostmortemPanel: React.FC<{
   // 父级 refreshKey 触发的重载不覆盖未保存的本地编辑
   const dirtyRef = useRef(false);
   dirtyRef.current = dirty;
+  // 只采纳最后一次加载的结果：切换故障或连续刷新时，旧响应不覆盖新数据
+  const seq = useRef(0);
 
   const load = useCallback(async () => {
+    const current = ++seq.current;
     setLoading(true);
     try {
       const result = await getPostmortem(incident.id);
+      if (current !== seq.current) return;
       setPm(result);
       if (!dirtyRef.current) {
         setDoc(result.doc ?? {});
         setDirty(false);
       }
     } catch {
+      if (current !== seq.current) return;
       setPm(null);
     } finally {
-      setLoading(false);
+      if (current === seq.current) setLoading(false);
     }
   }, [incident.id]);
 

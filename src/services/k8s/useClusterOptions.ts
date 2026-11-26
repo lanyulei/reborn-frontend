@@ -12,9 +12,16 @@ import { listClusterOptions } from './cluster';
 /** 共享缓存键：失效与选择器（如 name→id 映射）都用它，不要另立第二个 key */
 export const CLUSTER_OPTIONS_KEY = ['k8s', 'cluster-options'] as const;
 
-// 显式返回类型：推断会引用 @tanstack/react-query 内部路径（TS2883 不可移植）
+// 显式返回类型：只靠推断会引用 @tanstack/react-query 内部路径（TS2883 不可移植）。
+// 泛型也要写全：留给编译器推断时 data / error 会被推成含 undefined / null 的联合类型，
+// 与这里的返回类型对不上（TS2322）。
 export const useClusterOptions = (): UseQueryResult<ClusterOption[], Error> =>
-  useQuery({
+  useQuery<
+    ClusterOption[],
+    Error,
+    ClusterOption[],
+    typeof CLUSTER_OPTIONS_KEY
+  >({
     queryKey: CLUSTER_OPTIONS_KEY,
     queryFn: async (): Promise<ClusterOption[]> => {
       const res = await listClusterOptions({ silent: true });

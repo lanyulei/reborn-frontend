@@ -65,6 +65,7 @@ import {
   buildCustomResourceDefinitionVersions,
 } from './customResourceDefinitionHelpers';
 import {
+  CLAIM_POD_LIMIT,
   useClaimPods,
   useServiceEndpoints,
   useStorageClassClaims,
@@ -188,7 +189,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
 
   const metadataTab: DetailTabItem = {
     key: 'metadata',
-    label: '元数据',
+    label: t('pages.k8s.detail.tab.metadata'),
     children: (
       <Metadata
         labels={object?.metadata?.labels}
@@ -198,12 +199,12 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   };
   const eventsTab: DetailTabItem = {
     key: 'events',
-    label: '事件',
+    label: t('pages.k8s.detail.tab.events'),
     children: <EventTable clusterId={clusterId} compact target={ref} />,
   };
   const relationsTab: DetailTabItem = {
     key: 'relations',
-    label: '关联关系',
+    label: t('pages.k8s.detail.tab.relations'),
     children: (
       <RelationsTab
         clusterId={clusterId}
@@ -226,7 +227,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
   });
   const envTab: DetailTabItem = {
     key: 'env',
-    label: '环境变量',
+    label: t('pages.k8s.detail.tab.env'),
     children: <JobEnvironmentVariables manifest={manifest} />,
   };
   const selectedPods = labelSelector ? (
@@ -259,7 +260,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       {
         key: 'resourceStatus',
-        label: '资源状态',
+        label: t('pages.k8s.detail.tab.resourceStatus'),
         children: (
           <PodResourceStatus
             pod={podDetail}
@@ -285,7 +286,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
       },
       {
         key: 'scheduling',
-        label: '调度信息',
+        label: t('pages.k8s.detail.tab.scheduling'),
         children: (
           <PodSchedulingInfo
             conditions={buildPodConditions(manifest)}
@@ -295,7 +296,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
       },
       {
         key: 'health',
-        label: '健康检查',
+        label: t('pages.k8s.detail.tab.health'),
         children: <PodHealthChecks pod={podDetail} />,
       },
       metadataTab,
@@ -305,7 +306,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
         ? [
             {
               key: 'logs',
-              label: '日志',
+              label: t('pages.k8s.detail.tab.logs'),
               children: (
                 <LogViewer
                   clusterId={clusterId}
@@ -323,7 +324,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
         : []),
       {
         key: 'metrics',
-        label: '监控',
+        label: t('pages.k8s.detail.tab.metrics'),
         children: (
           <MetricsPanel
             clusterId={clusterId}
@@ -337,7 +338,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
       <>
         <ReplicaSummary
           data={{ ...buildJobReplicaSummary(manifest), scalable: false }}
-          disabledReason="任务的并行数量请通过「编辑 YAML」调整"
+          disabledReason={t('pages.k8s.detail.job.parallelismHint')}
         />
         <ResourceBasicInfo
           columns={jobBasicInfoColumns}
@@ -348,10 +349,14 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       {
         key: 'runs',
-        label: '运行记录',
+        label: t('pages.k8s.detail.tab.runs'),
         children: <JobRunRecords object={object} />,
       },
-      { key: 'resourceStatus', label: '资源状态', children: selectedPods },
+      {
+        key: 'resourceStatus',
+        label: t('pages.k8s.detail.tab.resourceStatus'),
+        children: selectedPods,
+      },
       metadataTab,
       envTab,
       eventsTab,
@@ -367,7 +372,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       {
         key: 'runs',
-        label: '运行记录',
+        label: t('pages.k8s.detail.tab.runs'),
         children: (
           <ResourceTable
             compact
@@ -404,7 +409,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       {
         key: 'resourceStatus',
-        label: '资源状态',
+        label: t('pages.k8s.detail.tab.resourceStatus'),
         children: (
           <ServiceResourceStatus
             ports={buildServicePorts(manifest)}
@@ -426,7 +431,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       {
         key: 'resourceStatus',
-        label: '资源状态',
+        label: t('pages.k8s.detail.tab.resourceStatus'),
         children: <IngressResourceStatus rules={buildIngressRules(manifest)} />,
       },
       relationsTab,
@@ -448,7 +453,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       {
         key: 'resourceStatus',
-        label: '资源状态',
+        label: t('pages.k8s.detail.tab.resourceStatus'),
         children: (
           <RowTable
             clusterId={clusterId}
@@ -457,12 +462,14 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
             loading={claimPods.loading}
             onReload={() => void claimPods.reload()}
             cells={[
-              { key: 'node', title: '节点' },
-              { key: 'ip', title: 'IP 地址' },
+              { key: 'node', title: t('pages.k8s.kind.Node') },
+              { key: 'ip', title: t('pages.k8s.detail.ip') },
             ]}
             notice={
               claimPods.truncated
-                ? '该命名空间的容器组较多，只检查了前 200 个。'
+                ? t('pages.k8s.detail.pvc.claimPodsTruncated', {
+                    n: CLAIM_POD_LIMIT,
+                  })
                 : undefined
             }
           />
@@ -480,7 +487,11 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
       />
     );
     typeTabs = [
-      fields('claim', '绑定关系', buildPersistentVolumeRelationItems(manifest)),
+      fields(
+        'claim',
+        t('pages.k8s.detail.tab.claim'),
+        buildPersistentVolumeRelationItems(manifest),
+      ),
       metadataTab,
       eventsTab,
     ];
@@ -495,7 +506,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       {
         key: 'persistentVolumeClaims',
-        label: '持久卷声明',
+        label: t('pages.k8s.detail.tab.persistentVolumeClaims'),
         children: (
           <RowTable
             clusterId={clusterId}
@@ -503,7 +514,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
             rows={storageClassClaims.rows}
             loading={storageClassClaims.loading}
             onReload={() => void storageClassClaims.reload()}
-            cells={[{ key: 'capacity', title: '容量' }]}
+            cells={[{ key: 'capacity', title: t('pages.k8s.detail.capacity') }]}
           />
         ),
       },
@@ -518,7 +529,11 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
       />
     );
     typeTabs = [
-      fields('target', '目标与指标', buildHpaRelationItems(manifest)),
+      fields(
+        'target',
+        t('pages.k8s.detail.tab.hpaTarget'),
+        buildHpaRelationItems(manifest),
+      ),
       metadataTab,
       eventsTab,
     ];
@@ -533,9 +548,9 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       fields(
         'rules',
-        '规则摘要',
+        t('pages.k8s.detail.tab.networkPolicyRules'),
         buildNetworkPolicyRuleItems(manifest),
-        '暂无 ingress/egress 规则',
+        t('pages.k8s.detail.netpol.noRules'),
       ),
       metadataTab,
       eventsTab,
@@ -550,7 +565,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       fields(
         'parameters',
-        '参数引用',
+        t('pages.k8s.detail.basic.parameters'),
         buildIngressClassParameterItems(manifest),
       ),
       metadataTab,
@@ -566,9 +581,9 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       fields(
         'endpoints',
-        '端点',
+        t('pages.k8s.detail.basic.endpoints'),
         buildEndpointSliceEndpointItems(manifest),
-        '暂无端点',
+        t('pages.k8s.detail.noEndpoints'),
       ),
       metadataTab,
       eventsTab,
@@ -586,7 +601,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
         ? [
             {
               key: 'customResources',
-              label: '定制资源',
+              label: t('pages.k8s.detail.tab.customResources'),
               children: (() => {
                 const target: GVR = {
                   group: version.group ?? '',
@@ -637,7 +652,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
     typeTabs = [
       {
         key: 'data',
-        label: '数据',
+        label: t('pages.k8s.detail.data'),
         children: secret ? (
           // 保密字典的值默认掩码：有权限时可查看明文（记入审计）
           object && <DataSection clusterId={clusterId} object={object} secret />
@@ -675,7 +690,7 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
         ? [
             {
               key: 'rbac',
-              label: '规则与绑定',
+              label: t('pages.k8s.detail.tab.rbac'),
               children: (
                 <RbacSection clusterId={clusterId} gvr={gvr} object={object} />
               ),
@@ -715,7 +730,10 @@ const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({
           footer={null}
           onCancel={() => setLogContainer(undefined)}
           open
-          title={`容器日志 · ${name} / ${logContainer}`}
+          title={t('pages.k8s.detail.pod.logsTitle', {
+            pod: name,
+            container: logContainer,
+          })}
           width="calc(100vw - 48px)"
         >
           <LogViewer

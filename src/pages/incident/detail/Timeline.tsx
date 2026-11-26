@@ -35,6 +35,7 @@ import type {
   Incident,
   TimelineItem,
 } from '@/services/incident/typings';
+import { usePermissions } from '@/services/system/permissions';
 import { formatTime } from '@/utils/format';
 import { useT } from '@/utils/i18n';
 import {
@@ -233,6 +234,7 @@ export const TimelinePanel: React.FC<{
   refreshKey: number;
 }> = ({ incident, refreshKey }) => {
   const t = useT();
+  const has = usePermissions();
   const { message } = App.useApp();
   const { styles, cx } = useIncidentStyles();
   const [items, setItems] = useState<TimelineItem[]>([]);
@@ -278,7 +280,8 @@ export const TimelinePanel: React.FC<{
     [t],
   );
 
-  const canHandle = incident.canHandle === true;
+  // 评论 / 置顶归元素权限「处置」（incident.list.handle），与页头操作同一口径
+  const canHandle = incident.canHandle === true && has('incident.list.handle');
   const active = incident.status <= 4;
 
   return (

@@ -567,7 +567,9 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
         tableAlertOptionRender={() => (
           <Flex gap={16} align="center">
             {batchNodes}
-            <a onClick={clearSelected}>取消选择</a>
+            <a onClick={clearSelected}>
+              {t('pages.k8s.action.clearSelection')}
+            </a>
           </Flex>
         )}
         search={compact ? false : { labelWidth: 'auto' }}

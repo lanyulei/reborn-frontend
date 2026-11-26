@@ -652,4 +652,10 @@ export default {
   'pages.k8s.quota.delete.content':
     'The {kinds} of this namespace will be deleted and pods will no longer be constrained by it.',
   'pages.k8s.detail.pods.noSelector': 'No selector: no pods are selected',
+  // List batch actions
+  'pages.k8s.action.batch.title': '{action} {n} objects?',
+  'pages.k8s.action.batch.prefix': 'Bulk {action}',
+  'pages.k8s.action.batch.partial': '{done} succeeded, {failed} failed',
+  'pages.k8s.action.batch.submitted': '{n} change orders submitted',
+  'pages.k8s.action.clearSelection': 'Clear selection',
 };

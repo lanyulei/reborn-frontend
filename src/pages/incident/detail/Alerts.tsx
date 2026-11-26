@@ -10,6 +10,7 @@ import { ConfirmLink } from '@/components/TableActions';
 import { NOTIFY_SEVERITY_META } from '@/constants';
 import { detachAlert, listIncidentAlerts } from '@/services/incident/incident';
 import type { Incident, IncidentAlert } from '@/services/incident/typings';
+import { usePermissions } from '@/services/system/permissions';
 import { formatTime } from '@/utils/format';
 import { useT } from '@/utils/i18n';
 import { ATTACH_METHOD_META } from '../components/meta';
@@ -26,6 +27,7 @@ export const AlertsPanel: React.FC<{
 }> = ({ incident, refreshKey, onChanged }) => {
   const t = useT();
   const access = useAccess();
+  const has = usePermissions();
   const { message } = App.useApp();
   const [items, setItems] = useState<IncidentAlert[]>([]);
   const [total, setTotal] = useState(0);
@@ -56,7 +58,11 @@ export const AlertsPanel: React.FC<{
     void load();
   }, [load, refreshKey]);
 
-  const canHandle = incident.canHandle === true && incident.status <= 4;
+  // 关联 / 解除告警归元素权限「处置」（incident.list.handle），与页头操作同一口径
+  const canHandle =
+    incident.canHandle === true &&
+    incident.status <= 4 &&
+    has('incident.list.handle');
 
   return (
     <div>

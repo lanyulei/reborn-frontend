@@ -460,13 +460,13 @@ export default {
   'pages.monitor.rule.form.annotations.tooltip':
     '隨通知發出的說明文字，常用 summary、runbook_url；值可用 printf、humanize 等範本函數',
   'pages.monitor.rule.form.annotations.hint':
-    '值支援範本，如 {{ $labels.instance }}、{{ $value }}',
+    "值支援範本，如 '{{ $labels.instance }}'、'{{ $value }}'",
   'pages.monitor.rule.form.annotations.add': '新增附加資訊',
   'pages.monitor.rule.form.annotations.rule':
     '至多 10 個；名稱須以字母或底線開頭、只含字母數字底線且不重複，值 1-2048 字元',
   'pages.monitor.rule.form.recoveryExpr': '恢復取值',
   'pages.monitor.rule.form.recoveryExpr.tooltip':
-    '告警恢復時執行的 PromQL（不帶閾值），結果作為恢復值寫入恢復通知；可用 {{ $labels.<標籤名> }}',
+    "告警恢復時執行的 PromQL（不帶閾值），結果作為恢復值寫入恢復通知；可用 '{{ $labels.<標籤名> }}'",
   'pages.monitor.rule.form.notify.hint':
     '規則只決定通知誰、通知幾次，頻道與內容由「通知管理」決定；全部留空則交給通知路由與訂閱。',
   'pages.monitor.rule.form.depts': '部門負責人',
