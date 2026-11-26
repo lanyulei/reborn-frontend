@@ -186,11 +186,31 @@ export const useCmdbStyles = createStyles(({ token, css }) => ({
     min-width: 0;
     line-height: 22px;
   `,
+  /** 键值行的标题：标题 / 问号图标 / 冒号 / 标签依次排开并垂直居中，整体右对齐 */
   kvLabel: css`
+    display: flex;
     flex: none;
+    align-items: center;
+    justify-content: flex-end;
     min-width: 88px;
     color: ${token.colorTextTertiary};
     text-align: end;
+  `,
+  /** 问号图标：字段归属的悬停入口，位于标题与冒号之间（尺寸与配色同表单项的说明图标） */
+  kvHintIcon: css`
+    margin-inline: 4px 2px;
+    color: ${token.colorTextDescription};
+    font-size: ${token.fontSizeSM}px;
+    cursor: help;
+    &:hover {
+      color: ${token.colorText};
+    }
+  `,
+  /** 属性行标题后的标签（「敏感」）：与冒号及彼此之间留 4px，末尾不留 */
+  kvBadges: css`
+    .ant-tag {
+      margin-inline: 4px 0;
+    }
   `,
   kvValue: css`
     flex: 1;

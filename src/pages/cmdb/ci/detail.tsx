@@ -5,6 +5,7 @@
  * 未配置时为缺省布局（全部字段一组 + 每个适用关系方向一个面板）。
  * 变更记录按字段级前后对比展示（DiffView）；ref 属性渲染为可点击链接。
  */
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   ModalForm,
@@ -28,6 +29,7 @@ import {
   Spin,
   Tabs,
   Tag,
+  Tooltip,
   Typography,
   theme,
 } from 'antd';
@@ -808,9 +810,31 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
     }
     return renderAttrValue(f, value, t);
   };
-  const kv = (key: string, label: React.ReactNode, value: React.ReactNode) => (
+  // 属性行：标题后带冒号，和右侧的值区分开。字段的归属不直接展示，收在冒号左侧的问号图标里，
+  // 悬停（或键盘聚焦）可见；「敏感」标签排在冒号之后
+  const kv = (
+    key: string,
+    title: React.ReactNode,
+    value: React.ReactNode,
+    /** 字段归属的文案；有值时显示问号图标 */
+    ownership?: string,
+    badges?: React.ReactNode,
+  ) => (
     <div key={key} className={styles.kvItem}>
-      <span className={styles.kvLabel}>{label}</span>
+      <span className={styles.kvLabel}>
+        {title}
+        {ownership && (
+          <Tooltip title={ownership}>
+            <QuestionCircleOutlined
+              aria-label={t('pages.cmdb.field.column.owner')}
+              className={styles.kvHintIcon}
+              tabIndex={0}
+            />
+          </Tooltip>
+        )}
+        {':'}
+        {badges && <span className={styles.kvBadges}>{badges}</span>}
+      </span>
       <span className={styles.kvValue}>{value}</span>
     </div>
   );
@@ -1001,23 +1025,16 @@ const CIDetailBody: React.FC<{ id: string }> = ({ id }) => {
                         {group.fields.map((f) =>
                           kv(
                             f.id,
-                            <Space size={4}>
-                              {f.name}
-                              {f.owner && f.owner !== 'manual' && (
-                                <Tag style={{ marginInlineEnd: 0 }}>
-                                  {ownerText(f.owner)}
-                                </Tag>
-                              )}
-                              {f.sensitive && (
-                                <Tag
-                                  color="volcano"
-                                  style={{ marginInlineEnd: 0 }}
-                                >
-                                  {t('pages.cmdb.field.column.sensitive')}
-                                </Tag>
-                              )}
-                            </Space>,
+                            f.name,
                             renderDetailValue(f, ci.attrs?.[f.code]),
+                            f.owner && f.owner !== 'manual'
+                              ? ownerText(f.owner)
+                              : undefined,
+                            f.sensitive && (
+                              <Tag color="volcano">
+                                {t('pages.cmdb.field.column.sensitive')}
+                              </Tag>
+                            ),
                           ),
                         )}
                       </div>
