@@ -146,3 +146,42 @@ export async function queryDatasourceRange(body: {
     }),
   );
 }
+
+// ---------- 补全元数据（PromQL 编辑器自动补全；全部静默：失败只表现为无建议，不弹错误） ----------
+
+/** ListMetricNames 指标名列表（字典序），供 PromQL 补全 */
+export async function listMetricNames(
+  datasourceId: string,
+  limit?: number,
+): Promise<string[]> {
+  const res = await monitorRequest<{ names?: string[] }>(
+    `/api/v1/monitor/datasource/${datasourceId}/metric-names`,
+    { method: 'GET', params: { limit }, silent: true },
+  );
+  return res.names ?? [];
+}
+
+/** ListLabelNames 标签名列表（字典序），供 PromQL 补全 */
+export async function listLabelNames(
+  datasourceId: string,
+  limit?: number,
+): Promise<string[]> {
+  const res = await monitorRequest<{ names?: string[] }>(
+    `/api/v1/monitor/datasource/${datasourceId}/label-names`,
+    { method: 'GET', params: { limit }, silent: true },
+  );
+  return res.names ?? [];
+}
+
+/** ListLabelValues 指定标签的值列表（字典序），供 PromQL 补全 */
+export async function listLabelValues(
+  datasourceId: string,
+  label: string,
+  limit?: number,
+): Promise<string[]> {
+  const res = await monitorRequest<{ values?: string[] }>(
+    `/api/v1/monitor/datasource/${datasourceId}/label-values`,
+    { method: 'GET', params: { label, limit }, silent: true },
+  );
+  return res.values ?? [];
+}

@@ -4,7 +4,7 @@
  * 「在即时查询中打开」带入），带参数进入时自动执行一次。
  */
 import { useSearchParams } from '@umijs/max';
-import { Card, Flex, Input, Segmented, Select } from 'antd';
+import { Card, Flex, Segmented, Select } from 'antd';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { RouteTabsPage } from '@/components/RouteTabs';
@@ -12,12 +12,11 @@ import { useT } from '@/utils/i18n';
 import { METRIC_TABS } from '../components/groups';
 import { useDatasourceOptions } from '../components/hooks';
 import { MONITOR_LIMITS } from '../components/meta';
+import { PromqlEditor } from '../components/PromqlEditor';
 import { type QueryMode, QueryRunner } from '../components/QueryRunner';
-import { useMonitorStyles } from '../components/styles';
 
 const Explore: React.FC = () => {
   const t = useT();
-  const { styles } = useMonitorStyles();
   const [searchParams] = useSearchParams();
   const initialDatasource = searchParams.get('datasourceId') ?? undefined;
   const initialExpr = searchParams.get('expr') ?? '';
@@ -64,15 +63,15 @@ const Explore: React.FC = () => {
             }}
           />
         </Flex>
-        <Input.TextArea
-          className={styles.codeInput}
-          autoSize={{ minRows: 3, maxRows: 12 }}
-          maxLength={MONITOR_LIMITS.exprMax}
-          value={expr}
-          placeholder={t('pages.monitor.explore.expr.placeholder')}
-          onChange={(e) => setExpr(e.target.value)}
-          style={{ marginBottom: 12 }}
-        />
+        <div style={{ marginBottom: 12 }}>
+          <PromqlEditor
+            value={expr}
+            datasourceId={datasourceId}
+            placeholder={t('pages.monitor.explore.expr.placeholder')}
+            maxLength={MONITOR_LIMITS.exprMax}
+            onChange={setExpr}
+          />
+        </div>
         <QueryRunner
           // 切换即时 / 区间时清掉上一种模式的结果
           key={mode}

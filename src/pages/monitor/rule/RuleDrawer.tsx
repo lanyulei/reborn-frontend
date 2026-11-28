@@ -14,7 +14,7 @@ import {
   ProFormText,
   ProFormTextArea,
 } from '@ant-design/pro-components';
-import { App, Button, Col, Form, theme } from 'antd';
+import { App, Button, Col, Form } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
 import {
@@ -39,6 +39,7 @@ import { useFormRules, useSubmitter, useT } from '@/utils/i18n';
 import { GroupTreeSelect } from '../components/GroupTreeSelect';
 import type { DatasourceOptionsState } from '../components/hooks';
 import { LABEL_NAME_REGEX, MONITOR_LIMITS } from '../components/meta';
+import { PromqlEditor } from '../components/PromqlEditor';
 import { RuleActionsSection } from './RuleActionsSection';
 import { RuleCmdbSection } from './RuleCmdbSection';
 import { RuleEffectiveSection } from './RuleEffectiveSection';
@@ -88,7 +89,6 @@ export const RuleDrawer: React.FC<RuleDrawerProps> = ({
 }) => {
   const t = useT();
   const { message } = App.useApp();
-  const { token } = theme.useToken();
   const rules = useFormRules();
   const submitter = useSubmitter();
   const formRef = useRef<ProFormInstance<RuleFormValues> | undefined>(
@@ -334,18 +334,20 @@ export const RuleDrawer: React.FC<RuleDrawerProps> = ({
             />
           </Form.Item>
         </Col>
-        <ProFormTextArea
-          name="recoveryExpr"
-          label={t('pages.monitor.rule.form.recoveryExpr')}
-          tooltip={t('pages.monitor.rule.form.recoveryExpr.tooltip')}
-          colProps={FULL}
-          fieldProps={{
-            autoSize: { minRows: 1, maxRows: 6 },
-            maxLength: MONITOR_LIMITS.exprMax,
-            style: { fontFamily: token.fontFamilyCode },
-          }}
-          placeholder={'cpu_usage{instance="{{ $labels.instance }}"}'}
-        />
+        <Col span={24}>
+          <Form.Item
+            name="recoveryExpr"
+            label={t('pages.monitor.rule.form.recoveryExpr')}
+            tooltip={t('pages.monitor.rule.form.recoveryExpr.tooltip')}
+          >
+            <PromqlEditor
+              placeholder={'cpu_usage{instance="{{ $labels.instance }}"}'}
+              minRows={1}
+              maxRows={6}
+              maxLength={MONITOR_LIMITS.exprMax}
+            />
+          </Form.Item>
+        </Col>
 
         <FoldSection
           foldKey="ci"

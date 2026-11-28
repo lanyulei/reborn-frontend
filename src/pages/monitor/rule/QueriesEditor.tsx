@@ -10,7 +10,7 @@ import {
   ExclamationCircleFilled,
   PlusOutlined,
 } from '@ant-design/icons';
-import { Button, Flex, Input, Modal, Select, theme } from 'antd';
+import { Button, Flex, Modal, Select, theme } from 'antd';
 import type React from 'react';
 import { useState } from 'react';
 import { NOTIFY_SEVERITY_META } from '@/constants';
@@ -22,6 +22,7 @@ import type {
 } from '@/services/monitor/typings';
 import { useOptions, useT } from '@/utils/i18n';
 import { MONITOR_LIMITS, SEVERITY_ORDER } from '../components/meta';
+import { PromqlEditor } from '../components/PromqlEditor';
 import { QueryRunner } from '../components/QueryRunner';
 import { useMonitorStyles } from '../components/styles';
 
@@ -109,16 +110,17 @@ export const QueriesEditor: React.FC<{
           // biome-ignore lint/suspicious/noArrayIndexKey: 行无稳定标识，按位置编辑
           <div key={index} style={{ marginBottom: 12 }}>
             <div className={styles.editorRow} style={{ marginBottom: 4 }}>
-              <Input.TextArea
-                className={styles.codeInput}
-                style={{ flex: 1, minWidth: 0 }}
-                autoSize={{ minRows: 2, maxRows: 8 }}
-                maxLength={MONITOR_LIMITS.exprMax}
-                value={row.expr}
-                status={result && !result.valid ? 'error' : undefined}
-                placeholder={t('pages.monitor.rule.form.expr.placeholder')}
-                onChange={(e) => update(index, { expr: e.target.value })}
-              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <PromqlEditor
+                  value={row.expr}
+                  status={result && !result.valid ? 'error' : undefined}
+                  placeholder={t('pages.monitor.rule.form.expr.placeholder')}
+                  maxLength={MONITOR_LIMITS.exprMax}
+                  minRows={2}
+                  maxRows={8}
+                  onChange={(expr) => update(index, { expr })}
+                />
+              </div>
               <Select<MonitorSeverity>
                 style={{ width: 110, flex: 'none' }}
                 value={row.severity}

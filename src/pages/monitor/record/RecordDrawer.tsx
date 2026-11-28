@@ -50,6 +50,7 @@ import {
   withRefOptions,
 } from '../components/hooks';
 import { LABEL_NAME_REGEX } from '../components/meta';
+import { PromqlEditor } from '../components/PromqlEditor';
 import { type QueryMode, QueryRunner } from '../components/QueryRunner';
 import { useMonitorStyles } from '../components/styles';
 import { probeDatasourceWritable, useWritableDatasources } from './datasources';
@@ -374,46 +375,46 @@ export const RecordDrawer: React.FC<RecordDrawerProps> = ({
       <Col span={24}>
         <SectionTitle>{t('pages.monitor.record.section.query')}</SectionTitle>
       </Col>
-      <ProFormTextArea
-        name="expr"
-        label="PromQL"
-        colProps={FULL}
-        placeholder={t('pages.monitor.record.form.expr.placeholder')}
-        fieldProps={{
-          className: styles.codeInput,
-          autoSize: { minRows: 3, maxRows: 12 },
-        }}
-        extra={
-          <Button
-            size="small"
-            loading={validating}
-            style={{ marginTop: 8 }}
-            onClick={() => void validate()}
-          >
-            {t('pages.monitor.record.validate')}
-          </Button>
-        }
-        rules={[
-          {
-            validator: (_: unknown, value?: string) =>
-              !value?.trim()
-                ? Promise.reject(
-                    new Error(
-                      t('common.validation.required', { label: 'PromQL' }),
-                    ),
-                  )
-                : byteLength(value) > RECORD_LIMITS.exprBytesMax
+      <Col span={24}>
+        <Form.Item
+          name="expr"
+          label="PromQL"
+          extra={
+            <Button
+              size="small"
+              loading={validating}
+              style={{ marginTop: 8 }}
+              onClick={() => void validate()}
+            >
+              {t('pages.monitor.record.validate')}
+            </Button>
+          }
+          rules={[
+            {
+              validator: (_: unknown, value?: string) =>
+                !value?.trim()
                   ? Promise.reject(
                       new Error(
-                        t('pages.monitor.record.form.expr.rule', {
-                          max: RECORD_LIMITS.exprBytesMax,
-                        }),
+                        t('common.validation.required', { label: 'PromQL' }),
                       ),
                     )
-                  : Promise.resolve(),
-          },
-        ]}
-      />
+                  : byteLength(value) > RECORD_LIMITS.exprBytesMax
+                    ? Promise.reject(
+                        new Error(
+                          t('pages.monitor.record.form.expr.rule', {
+                            max: RECORD_LIMITS.exprBytesMax,
+                          }),
+                        ),
+                      )
+                    : Promise.resolve(),
+            },
+          ]}
+        >
+          <PromqlEditor
+            placeholder={t('pages.monitor.record.form.expr.placeholder')}
+          />
+        </Form.Item>
+      </Col>
       {otherIssues.length > 0 && (
         <Col span={24}>
           <Alert
