@@ -25,7 +25,7 @@ const Explore: React.FC = () => {
 
   const [datasourceId, setDatasourceId] = useState(initialDatasource);
   const [expr, setExpr] = useState(initialExpr);
-  const [mode, setMode] = useState<QueryMode>('range');
+  const [mode, setMode] = useState<QueryMode>('instant');
   // 带参数进入时自动执行一次；之后（切换模式会重建查询面板）不再自动执行半编辑的表达式
   const [autoRun, setAutoRun] = useState(
     Boolean(initialDatasource && initialExpr),
@@ -52,11 +52,11 @@ const Explore: React.FC = () => {
           <Segmented<QueryMode>
             value={mode}
             options={[
-              { value: 'range', label: t('pages.monitor.explore.mode.range') },
               {
                 value: 'instant',
                 label: t('pages.monitor.explore.mode.instant'),
               },
+              { value: 'range', label: t('pages.monitor.explore.mode.range') },
             ]}
             onChange={(next) => {
               setAutoRun(false);
