@@ -142,7 +142,7 @@ export default {
     '或签：一人同意即可；会签：需全部同意；依次审批：按顺序逐个处理',
   'component.flow.field.onEmpty': '审批人为空时',
   'component.flow.field.onEmpty.tooltip':
-    '规则解析不出任何可用用户时的处理方式',
+    '规则解析不出任何可用用户时的处理方式。拦住流程：流程停在该节点，不会自动通过；自动跳过：跳过该节点继续，这一步审批就等于直接通过',
   'component.flow.field.rejectTo': '拒绝后',
   'component.flow.field.rejectTo.placeholder': '结束流程（已拒绝）',
   'component.flow.field.rejectTo.tooltip':
@@ -158,6 +158,7 @@ export default {
   'component.flow.mode.sequential': '依次审批',
   'component.flow.onEmpty.skip': '自动跳过',
   'component.flow.onEmpty.admin': '转交流程管理员',
+  'component.flow.onEmpty.block': '拦住流程',
   'component.flow.rule.add': '添加规则',
   'component.flow.rule.user': '指定成员',
   'component.flow.rule.role': '指定角色',
@@ -177,6 +178,9 @@ export default {
   'component.flow.rule.role.placeholder': '选择角色',
   'component.flow.rule.role.text': '角色：{names}',
   'component.flow.rule.initiator.hint': '由发起人自己处理',
+  'component.flow.rule.superAdmin': '系统管理员',
+  'component.flow.rule.superAdmin.hint':
+    '由当前全部超级管理员处理，不需要事先配置账号、角色或部门',
   'component.flow.rule.deptLeader.prefix': '向上第',
   'component.flow.rule.deptLeader.suffix': '级',
   'component.flow.rule.deptLeader.direct': '直属主管',
@@ -232,6 +236,8 @@ export default {
   'component.flow.issue.START_COUNT': '流程必须有且只有一个开始节点',
   'component.flow.issue.END_MISSING': '流程缺少结束节点',
   'component.flow.issue.ADMINS_INVALID': '流程管理员设置不正确或人数超出上限',
+  'component.flow.issue.ADMINS_REQUIRED':
+    '节点设置为「转交流程管理员」，但还没有设置流程管理员',
   'component.flow.issue.EDGE_ID_INVALID': '连线标识格式不正确',
   'component.flow.issue.EDGE_ID_DUPLICATE': '连线标识重复',
   'component.flow.issue.EDGE_ENDPOINT_MISSING': '连线指向的节点不存在',

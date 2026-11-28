@@ -92,6 +92,8 @@ export interface TicketTemplate {
   ciLink?: CiLink;
   /** 表单布局：1=单列 2=双列；缺省单列 */
   formColumns?: FormColumns;
+  /** 内置模板（随版本预置）：可修改、停用，不可删除 */
+  builtin?: boolean;
 }
 
 /** 模板内容（创建 / 整组更新） */
@@ -118,6 +120,8 @@ export interface TicketCategory {
   description?: string;
   sort?: number;
   templates?: TicketTemplate[];
+  /** 内置分类（随版本预置）：可修改，不可删除 */
+  builtin?: boolean;
 }
 
 /** 优先级：1=低 2=普通 3=高 4=紧急 */

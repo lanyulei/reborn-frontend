@@ -83,6 +83,7 @@ export default {
   'pages.ticket.category.create': '新增分類',
   'pages.ticket.category.edit': '編輯分類',
   'pages.ticket.category.name': '分類名稱',
+  'pages.ticket.category.tag.builtin': '內建',
   'pages.ticket.category.templates': '範本數',
   'pages.ticket.category.delete.title': '刪除分類',
   'pages.ticket.category.delete.description':
@@ -93,6 +94,7 @@ export default {
   'pages.ticket.template.edit': '編輯範本',
   'pages.ticket.template.search.placeholder': '範本名稱',
   'pages.ticket.template.name': '範本名稱',
+  'pages.ticket.template.tag.builtin': '內建',
   'pages.ticket.template.category': '所屬分類',
   'pages.ticket.template.workflow': '審批流程',
   'pages.ticket.template.workflow.tooltip':

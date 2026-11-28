@@ -9,7 +9,7 @@ import {
   ProFormTextArea,
   ProTable,
 } from '@ant-design/pro-components';
-import { App, Drawer } from 'antd';
+import { App, Drawer, Tag } from 'antd';
 import { createStyles } from 'antd-style';
 import type React from 'react';
 import { useState } from 'react';
@@ -82,6 +82,16 @@ export const CategoryDrawer: React.FC<{
             title: t('pages.ticket.category.name'),
             dataIndex: 'name',
             ellipsis: true,
+            render: (_, record) => (
+              <>
+                {record.name}
+                {record.builtin && (
+                  <Tag color="gold" style={{ marginInlineStart: 8 }}>
+                    {t('pages.ticket.category.tag.builtin')}
+                  </Tag>
+                )}
+              </>
+            ),
           },
           {
             title: t('pages.ticket.column.description'),
@@ -107,18 +117,26 @@ export const CategoryDrawer: React.FC<{
               <a key="edit" onClick={() => setEditing(record)}>
                 {t('common.action.edit')}
               </a>,
-              <DeleteConfirmLink
-                key="delete"
-                title={t('pages.ticket.category.delete.title')}
-                description={t('pages.ticket.category.delete.description', {
-                  name: record.name,
-                })}
-                onConfirm={async () => {
-                  await deleteCategory(record.id);
-                  message.success(t('common.msg.deleted'));
-                  onChanged();
-                }}
-              />,
+              // 内置分类可以修改，不能删除
+              ...(record.builtin
+                ? []
+                : [
+                    <DeleteConfirmLink
+                      key="delete"
+                      title={t('pages.ticket.category.delete.title')}
+                      description={t(
+                        'pages.ticket.category.delete.description',
+                        {
+                          name: record.name,
+                        },
+                      )}
+                      onConfirm={async () => {
+                        await deleteCategory(record.id);
+                        message.success(t('common.msg.deleted'));
+                        onChanged();
+                      }}
+                    />,
+                  ]),
             ],
           },
         ]}

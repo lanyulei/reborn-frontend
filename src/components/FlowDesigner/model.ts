@@ -13,6 +13,7 @@ export type AssigneeRuleKind =
   | 'user'
   | 'role'
   | 'initiator'
+  | 'superAdmin'
   | 'deptLeader'
   | 'deptLeaderOf'
   | 'formUser'
@@ -36,11 +37,13 @@ export interface AssigneeRule {
 /** 多人处理模式：或签 / 会签 / 依次审批 */
 export type AssigneeMode = 'any' | 'all' | 'sequential';
 
+/** 处理人为空时的策略（与后端 biz/workflow/graph.go 的 onEmpty 一致）：skip=自动跳过 admin=转交流程管理员 block=拦住流程 */
+export type OnEmptyPolicy = 'skip' | 'admin' | 'block';
+
 export interface Assignee {
   rules: AssigneeRule[];
   mode?: AssigneeMode;
-  /** 处理人为空：skip=自动跳过 admin=转交流程管理员 */
-  onEmpty?: 'skip' | 'admin';
+  onEmpty?: OnEmptyPolicy;
 }
 
 /** 时长单位 */
@@ -182,6 +185,13 @@ export interface StepNode {
 export const hasAssignee = (node: StepNode): boolean =>
   node.kind === 'task' || node.kind === 'cc';
 
+/**
+ * 「处理人为空」的缺省值，与后端一致：人工任务缺省拦住（审批不会因为找不到处理人而自动通过），
+ * 抄送节点没有收件人时无事可做、缺省跳过。新建节点、以及随图没写这一项的节点，都按它补。
+ */
+export const defaultOnEmpty = (kind: StepKind): OnEmptyPolicy =>
+  kind === 'task' ? 'block' : 'skip';
+
 /** 条件的一行：字段 运算符 值 */
 export interface ConditionRow {
   field: string;
@@ -309,7 +319,7 @@ export const newStep = (kind: StepKind, name: string): StepNode => ({
   kind,
   id: newId(kind),
   name,
-  assignee: { rules: [], mode: 'any', onEmpty: 'skip' },
+  assignee: { rules: [], mode: 'any', onEmpty: defaultOnEmpty(kind) },
   timer:
     kind === 'timer'
       ? { mode: 'delay', duration: { value: 1, unit: 'hour' } }
@@ -703,7 +713,9 @@ const restoreDesign = (
         ...raw,
         assignee: {
           mode: saved.mode ?? 'any',
-          onEmpty: saved.onEmpty ?? 'skip',
+          // 没写按后端的缺省值显示（人工任务拦住），不能一律当成「自动跳过」：否则保存后
+          // 原本会被拦住的审批节点就真的变成跳过了
+          onEmpty: saved.onEmpty ?? defaultOnEmpty(raw.kind),
           rules,
         },
       };
@@ -982,7 +994,7 @@ const diffSignatures = (flow: Flow): Map<string, string> => {
           node.kind,
           node.name,
           node.kind === 'task' ? (node.assignee.mode ?? 'any') : '',
-          node.assignee.onEmpty ?? 'skip',
+          node.assignee.onEmpty ?? defaultOnEmpty(node.kind),
           node.assignee.rules.map(({ labels: _labels, ...rule }) => rule),
           node.rejectTo ?? '',
           // 以生成的后端字段为准：时限、定时、自动任务、子流程的配置

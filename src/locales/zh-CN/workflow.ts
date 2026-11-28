@@ -46,6 +46,9 @@ export default {
   'pages.workflow.definition.form.key.pattern':
     '2-64 位小写字母/数字/下划线/中划线，且以字母开头',
   'pages.workflow.definition.form.description': '说明',
+  'pages.workflow.definition.form.key.reserved':
+    '「builtin_」前缀保留给系统内置的流程，请换一个标识',
+  'pages.workflow.definition.tag.builtin': '内置',
   'pages.workflow.definition.form.status.tooltip':
     '停用后不能发起新的流程，进行中的流程不受影响',
 
@@ -56,7 +59,7 @@ export default {
   'pages.workflow.design.settings': '流程设置',
   'pages.workflow.design.settings.admins': '流程管理员',
   'pages.workflow.design.settings.admins.extra':
-    '节点的审批人为空且设置为「转交流程管理员」时，由这些成员处理；未设置管理员则自动跳过该节点。',
+    '节点的审批人为空且设置为「转交流程管理员」时，由这些成员处理；没有设置流程管理员时这样的流程不能发布，运行时没有可用的管理员则流程停在该节点。',
   'pages.workflow.design.unsaved': '有未保存的修改',
   'pages.workflow.design.issues': '还有 {n} 处问题，解决后才能发布',
   'pages.workflow.design.saved.issues': '草稿已保存，还有 {n} 处问题待解决',
@@ -232,6 +235,8 @@ export default {
   'pages.workflow.simulate.completed': '流程可以走到结束',
   'pages.workflow.simulate.incomplete':
     '流程没有走到结束（步骤过多，已停止推演）',
+  'pages.workflow.simulate.blocked': '流程会被拦住：节点「{node}」找不到处理人',
+  'pages.workflow.simulate.blockedStep': '找不到处理人，流程会被拦在这里',
   'pages.workflow.simulate.path': '经过的路径',
   'pages.workflow.simulate.steps': '各节点的处理人',
   'pages.workflow.simulate.skipped': '处理人为空，已跳过',

@@ -153,9 +153,13 @@ export const Simulate: React.FC<{
     }
   };
 
+  // 被拦住的节点：处理人为空且没有明确选「自动跳过」，真实运行时流程走不到它后面
+  const blockedStep = result?.steps.find((step) => step.blocked);
+
   const nodeStates = useMemo(() => {
     const states: Record<string, NodeState> = {};
-    for (const step of result?.steps ?? []) states[step.nodeId] = 'done';
+    for (const step of result?.steps ?? [])
+      states[step.nodeId] = step.blocked ? 'rejected' : 'done';
     return states;
   }, [result]);
 
@@ -228,13 +232,25 @@ export const Simulate: React.FC<{
         <>
           <Alert
             className={styles.alert}
-            type={result.status === 2 ? 'success' : 'warning'}
+            type={
+              blockedStep
+                ? 'error'
+                : result.status === 2
+                  ? 'success'
+                  : 'warning'
+            }
             showIcon
-            title={t(
-              result.status === 2
-                ? 'pages.workflow.simulate.completed'
-                : 'pages.workflow.simulate.incomplete',
-            )}
+            title={
+              blockedStep
+                ? t('pages.workflow.simulate.blocked', {
+                    node: stepTitle(blockedStep),
+                  })
+                : t(
+                    result.status === 2
+                      ? 'pages.workflow.simulate.completed'
+                      : 'pages.workflow.simulate.incomplete',
+                  )
+            }
           />
           <div className={styles.section}>
             {t('pages.workflow.simulate.path')}
@@ -257,7 +273,7 @@ export const Simulate: React.FC<{
               .map((step, index) => ({
                 // 同一节点可能经过多次，以顺序为键
                 key: `${index}-${step.nodeId}`,
-                color: step.skipped ? 'gray' : 'green',
+                color: step.blocked ? 'red' : step.skipped ? 'gray' : 'green',
                 content: (
                   <>
                     <span className={styles.stepName}>
@@ -266,7 +282,9 @@ export const Simulate: React.FC<{
                     </span>
                     {(step.type === 'userTask' || step.type === 'cc') && (
                       <div className={styles.stepMeta}>
-                        {step.skipped ? (
+                        {step.blocked ? (
+                          t('pages.workflow.simulate.blockedStep')
+                        ) : step.skipped ? (
                           t('pages.workflow.simulate.skipped')
                         ) : (
                           <Flex gap={4} align="center" wrap>

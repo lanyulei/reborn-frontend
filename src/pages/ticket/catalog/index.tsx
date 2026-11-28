@@ -4,7 +4,7 @@
  */
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
-import { App, Button, Space } from 'antd';
+import { App, Button, Space, Tag } from 'antd';
 import type React from 'react';
 import { useRef, useState } from 'react';
 import { CreateButton, DeleteConfirmLink } from '@/components/TableActions';
@@ -53,6 +53,16 @@ const Catalog: React.FC = () => {
       dataIndex: 'name',
       search: false,
       ellipsis: true,
+      render: (_, record) => (
+        <>
+          {record.name}
+          {record.builtin && (
+            <Tag color="gold" style={{ marginInlineStart: 8 }}>
+              {t('pages.ticket.template.tag.builtin')}
+            </Tag>
+          )}
+        </>
+      ),
     },
     {
       title: t('pages.ticket.template.category'),
@@ -117,18 +127,23 @@ const Catalog: React.FC = () => {
         >
           {t('common.action.copy')}
         </a>,
-        <DeleteConfirmLink
-          key="delete"
-          title={t('pages.ticket.template.delete.title')}
-          description={t('pages.ticket.template.delete.description', {
-            name: record.name,
-          })}
-          onConfirm={async () => {
-            await deleteTemplate(record.id);
-            message.success(t('common.msg.deleted'));
-            reload();
-          }}
-        />,
+        // 内置模板可以修改、复制、停用，不能删除
+        ...(record.builtin
+          ? []
+          : [
+              <DeleteConfirmLink
+                key="delete"
+                title={t('pages.ticket.template.delete.title')}
+                description={t('pages.ticket.template.delete.description', {
+                  name: record.name,
+                })}
+                onConfirm={async () => {
+                  await deleteTemplate(record.id);
+                  message.success(t('common.msg.deleted'));
+                  reload();
+                }}
+              />,
+            ]),
       ],
     },
   ];

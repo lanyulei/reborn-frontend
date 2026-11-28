@@ -33,6 +33,7 @@ import {
   conditionToExpr,
   DURATION_UNITS,
   type DurationUnit,
+  defaultOnEmpty,
   emptyCondition,
   FIELD_PERMISSION_MAX,
   FIELD_PERMISSIONS,
@@ -61,6 +62,7 @@ const RULE_KINDS: readonly AssigneeRuleKind[] = [
   'user',
   'role',
   'initiator',
+  'superAdmin',
   'deptLeader',
   'deptLeaderOf',
   'formUser',
@@ -390,6 +392,12 @@ const RuleValue: React.FC<{
         </Flex>
       );
     }
+    case 'superAdmin':
+      return (
+        <Typography.Text type="secondary" style={fill}>
+          {t('component.flow.rule.superAdmin.hint')}
+        </Typography.Text>
+      );
     default:
       return (
         <Typography.Text type="secondary" style={fill}>
@@ -1001,14 +1009,18 @@ const StepForm: React.FC<{
         extra={
           // 值班表有空档、被停用或值班人就是发起人时会没有处理人：选了自动跳过的提醒一句
           node.assignee.rules.some((r) => r.kind === 'oncall') &&
-          (node.assignee.onEmpty ?? 'skip') === 'skip'
+          (node.assignee.onEmpty ?? defaultOnEmpty(node.kind)) === 'skip'
             ? t('component.flow.rule.oncall.skipHint')
             : undefined
         }
       >
         <Radio.Group
-          value={node.assignee.onEmpty ?? 'skip'}
-          options={(['skip', 'admin'] as const).map((v) => ({
+          value={node.assignee.onEmpty ?? defaultOnEmpty(node.kind)}
+          // 只有审批节点能选「拦住」：抄送节点没有收件人时无事可做，后端一律跳过
+          options={(node.kind === 'task'
+            ? (['block', 'admin', 'skip'] as const)
+            : (['skip', 'admin'] as const)
+          ).map((v) => ({
             value: v,
             label: t(`component.flow.onEmpty.${v}`),
           }))}

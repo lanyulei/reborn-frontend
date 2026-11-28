@@ -148,7 +148,7 @@ export default {
     'Any: one approval is enough; All: everyone must approve; In order: approvers act one after another',
   'component.flow.field.onEmpty': 'When No One Is Found',
   'component.flow.field.onEmpty.tooltip':
-    'What to do when the rules resolve to no active user',
+    'What to do when the rules resolve to no active user. Hold the Flow: the flow waits at this step and does not pass by itself; Skip: the step is bypassed, so this approval counts as passed',
   'component.flow.field.rejectTo': 'On Rejection',
   'component.flow.field.rejectTo.placeholder': 'End the flow (rejected)',
   'component.flow.field.rejectTo.tooltip':
@@ -164,6 +164,7 @@ export default {
   'component.flow.mode.sequential': 'In Order',
   'component.flow.onEmpty.skip': 'Skip',
   'component.flow.onEmpty.admin': 'Hand to Workflow Admin',
+  'component.flow.onEmpty.block': 'Hold the Flow',
   'component.flow.rule.add': 'Add Rule',
   'component.flow.rule.user': 'Specific Users',
   'component.flow.rule.role': 'Roles',
@@ -183,6 +184,9 @@ export default {
   'component.flow.rule.role.placeholder': 'Select roles',
   'component.flow.rule.role.text': 'Roles: {names}',
   'component.flow.rule.initiator.hint': 'Handled by the initiator',
+  'component.flow.rule.superAdmin': 'System Administrators',
+  'component.flow.rule.superAdmin.hint':
+    'Handled by all current super admins; no account, role or department has to be set up first',
   'component.flow.rule.deptLeader.prefix': 'Level',
   'component.flow.rule.deptLeader.suffix': 'up',
   'component.flow.rule.deptLeader.direct': 'Direct leader',
@@ -243,6 +247,8 @@ export default {
   'component.flow.issue.END_MISSING': 'The flow has no end',
   'component.flow.issue.ADMINS_INVALID':
     'Workflow admins are invalid or exceed the limit',
+  'component.flow.issue.ADMINS_REQUIRED':
+    'This step is set to "Hand to Workflow Admin", but the flow has no workflow admins yet',
   'component.flow.issue.EDGE_ID_INVALID': 'A connection ID is malformed',
   'component.flow.issue.EDGE_ID_DUPLICATE': 'Duplicate connection ID',
   'component.flow.issue.EDGE_ENDPOINT_MISSING':

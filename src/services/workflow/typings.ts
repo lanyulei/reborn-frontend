@@ -57,6 +57,8 @@ export interface WorkflowDefinition {
   revision: number;
   /** 当前发布的版本号；0 = 从未发布 */
   publishedVersion?: number;
+  /** 内置流程（随版本预置）：可修改、停用，不可删除 */
+  builtin?: boolean;
   createTime?: string;
   updateTime?: string;
 }
@@ -200,6 +202,8 @@ export interface SimulatedStep {
   assignees: { id: string; name?: string }[];
   /** 处理人为空，节点被跳过 */
   skipped?: boolean;
+  /** 处理人为空且该节点没有明确选择跳过：真实运行时流程会被拦在这一步，模拟也到此为止 */
+  blocked?: boolean;
 }
 
 /** 工作日历 */

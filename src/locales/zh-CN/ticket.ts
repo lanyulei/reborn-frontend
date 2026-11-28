@@ -83,6 +83,7 @@ export default {
   'pages.ticket.category.create': '新建分类',
   'pages.ticket.category.edit': '编辑分类',
   'pages.ticket.category.name': '分类名称',
+  'pages.ticket.category.tag.builtin': '内置',
   'pages.ticket.category.templates': '模板数',
   'pages.ticket.category.delete.title': '删除分类',
   'pages.ticket.category.delete.description':
@@ -93,6 +94,7 @@ export default {
   'pages.ticket.template.edit': '编辑模板',
   'pages.ticket.template.search.placeholder': '模板名称',
   'pages.ticket.template.name': '模板名称',
+  'pages.ticket.template.tag.builtin': '内置',
   'pages.ticket.template.category': '所属分类',
   'pages.ticket.template.workflow': '审批流程',
   'pages.ticket.template.workflow.tooltip':

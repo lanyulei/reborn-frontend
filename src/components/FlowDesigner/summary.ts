@@ -29,6 +29,8 @@ export const ruleComplete = (rule: AssigneeRule): boolean => {
       return (rule.roleCodes?.length ?? 0) > 0;
     case 'initiator':
       return true;
+    case 'superAdmin':
+      return true;
     case 'deptLeader':
       return (rule.level ?? 0) >= 1;
     case 'deptLeaderOf':
@@ -59,6 +61,8 @@ export const ruleText = (rule: AssigneeRule, t: Translate): string => {
       });
     case 'initiator':
       return t('component.flow.rule.initiator');
+    case 'superAdmin':
+      return t('component.flow.rule.superAdmin');
     case 'deptLeader':
       return rule.level === 1
         ? t('component.flow.rule.deptLeader.direct')

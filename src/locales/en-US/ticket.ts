@@ -88,6 +88,7 @@ export default {
   'pages.ticket.category.create': 'New Category',
   'pages.ticket.category.edit': 'Edit Category',
   'pages.ticket.category.name': 'Category name',
+  'pages.ticket.category.tag.builtin': 'Built-in',
   'pages.ticket.category.templates': 'Templates',
   'pages.ticket.category.delete.title': 'Delete category',
   'pages.ticket.category.delete.description':
@@ -98,6 +99,7 @@ export default {
   'pages.ticket.template.edit': 'Edit Template',
   'pages.ticket.template.search.placeholder': 'Template name',
   'pages.ticket.template.name': 'Template name',
+  'pages.ticket.template.tag.builtin': 'Built-in',
   'pages.ticket.template.category': 'Category',
   'pages.ticket.template.workflow': 'Workflow',
   'pages.ticket.template.workflow.tooltip':

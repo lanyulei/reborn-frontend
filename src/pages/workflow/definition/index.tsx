@@ -86,6 +86,16 @@ const DefinitionList: React.FC = () => {
       dataIndex: 'name',
       search: false,
       ellipsis: true,
+      render: (_, record) => (
+        <>
+          {record.name}
+          {record.builtin && (
+            <Tag color="gold" style={{ marginInlineStart: 8 }}>
+              {t('pages.workflow.definition.tag.builtin')}
+            </Tag>
+          )}
+        </>
+      ),
     },
     {
       title: t('pages.workflow.definition.column.key'),
@@ -149,7 +159,8 @@ const DefinitionList: React.FC = () => {
             </a>,
           );
         }
-        if (has('workflow.definition.delete')) {
+        // 内置流程可以修改、停用，不能删除
+        if (has('workflow.definition.delete') && !record.builtin) {
           actions.push(
             <DeleteConfirmLink
               key="delete"
@@ -244,6 +255,11 @@ const DefinitionList: React.FC = () => {
             {
               pattern: KEY_PATTERN,
               message: t('pages.workflow.definition.form.key.pattern'),
+            },
+            {
+              // builtin_ 前缀保留给系统内置的流程（与后端同一规则）
+              pattern: /^(?!builtin_)/,
+              message: t('pages.workflow.definition.form.key.reserved'),
             },
           ]}
         />

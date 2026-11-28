@@ -46,6 +46,9 @@ export default {
   'pages.workflow.definition.form.key.pattern':
     '2-64 lowercase letters, digits, underscores or hyphens, starting with a letter',
   'pages.workflow.definition.form.description': 'Description',
+  'pages.workflow.definition.form.key.reserved':
+    'The "builtin_" prefix is reserved for built-in flows; choose another key',
+  'pages.workflow.definition.tag.builtin': 'Built-in',
   'pages.workflow.definition.form.status.tooltip':
     'A disabled workflow cannot be started; running instances are not affected',
 
@@ -56,7 +59,7 @@ export default {
   'pages.workflow.design.settings': 'Flow Settings',
   'pages.workflow.design.settings.admins': 'Workflow Admins',
   'pages.workflow.design.settings.admins.extra':
-    'When a step has no assignee and is set to "Hand to Workflow Admin", these members handle it; with no admins configured the step is skipped.',
+    'When a step has no assignee and is set to "Hand to Workflow Admin", these members handle it. Without workflow admins such a flow cannot be published; at run time the flow waits at that step if no admin is available.',
   'pages.workflow.design.unsaved': 'Unsaved changes',
   'pages.workflow.design.issues':
     '{n} issue(s) must be resolved before publishing',
@@ -246,6 +249,10 @@ export default {
   'pages.workflow.simulate.completed': 'The flow reaches the end',
   'pages.workflow.simulate.incomplete':
     'The flow did not reach the end (too many steps; stopped)',
+  'pages.workflow.simulate.blocked':
+    'The flow will be held: step "{node}" has no assignee',
+  'pages.workflow.simulate.blockedStep':
+    'No assignee; the flow will be held here',
   'pages.workflow.simulate.path': 'Path taken',
   'pages.workflow.simulate.steps': 'Assignees by node',
   'pages.workflow.simulate.skipped': 'No assignee; skipped',
